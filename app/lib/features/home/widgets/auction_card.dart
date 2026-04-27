@@ -55,7 +55,7 @@ class AuctionCard extends StatelessWidget {
                         '${_formatPrice(auction.currentPrice)}원',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                               fontWeight: FontWeight.w700,
-                              color: AppColors.accent,
+                              color: AppColors.primary,
                             ),
                       ),
                       if (isLive && auction.timeLeft != null)

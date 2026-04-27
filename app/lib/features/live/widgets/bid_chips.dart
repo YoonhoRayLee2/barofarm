@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../app_theme.dart';
 
 class BidChips extends StatelessWidget {
   const BidChips({super.key, required this.currentPrice, required this.onSelect});

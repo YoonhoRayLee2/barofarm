@@ -157,6 +157,9 @@
 
       const postToFlutter = (msg) => {
         try { window.FlutterChannel?.postMessage(msg); } catch (e) { /* noop */ }
+        if (!window.FlutterChannel && window.parent && window.parent !== window) {
+          window.parent.postMessage(msg, '*');
+        }
       };
 
       const showEnded = () => {

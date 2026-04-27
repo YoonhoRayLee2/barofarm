@@ -1,9 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mkdir -p /Users/uknow/desktop/barofarm/server/public)",
-      "Bash(mkdir -p /Users/uknow/desktop/barofarm/_workspace)",
-      "Bash(npx tsc *)"
+      "Bash(*)",
+      "WebSearch",
+      "WebFetch(domain:apps.apple.com)",
+      "WebFetch(domain:play.google.com)",
+      "WebFetch(domain:wyyyes.com)",
+      "WebFetch(domain:namu.wiki)",
+      "WebFetch(domain:i.nambusangsa.com)",
+      "WebFetch(domain:download.nambusangsa.com)"
     ]
   }
 }

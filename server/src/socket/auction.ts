@@ -12,6 +12,7 @@ export default function registerAuctionSocket(io: Server): void {
     socket.on('bid', ({ roomId, price, userId }: { roomId: string; price: number; userId: string }) => {
       const auction = auctions.get(roomId);
       if (!auction || auction.status !== 'live') return;
+      if (userId === auction.sellerId) return;
       if (price <= auction.currentPrice) return;
 
       auction.currentPrice = price;

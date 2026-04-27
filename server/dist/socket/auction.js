@@ -14,6 +14,8 @@ function registerAuctionSocket(io) {
             const auction = memory_1.auctions.get(roomId);
             if (!auction || auction.status !== 'live')
                 return;
+            if (userId === auction.sellerId)
+                return;
             if (price <= auction.currentPrice)
                 return;
             auction.currentPrice = price;

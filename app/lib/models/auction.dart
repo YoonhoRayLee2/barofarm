@@ -27,14 +27,17 @@ class Auction {
 
   factory Auction.fromJson(Map<String, dynamic> j) => Auction(
         id: j['id'].toString(),
-        sellerId: j['seller_id'].toString(),
-        productName: j['product_name'] as String,
-        startPrice: (j['start_price'] as num).toInt(),
-        currentPrice: (j['current_price'] ?? j['start_price'] as num).toInt(),
+        sellerId: (j['seller_id'] ?? j['sellerId']).toString(),
+        productName: (j['product_name'] ?? j['productName']) as String,
+        startPrice: ((j['start_price'] ?? j['startPrice']) as num).toInt(),
+        currentPrice:
+            ((j['current_price'] ?? j['currentPrice'] ?? j['start_price'] ?? j['startPrice']) as num).toInt(),
         status: j['status'] as String,
         topBidderId: j['top_bidder_id']?.toString(),
-        topBidder: j['top_bidder'] as String?,
-        timeLeft: (j['time_left'] as num?)?.toInt(),
+        // memState는 camelCase topBidder, DB는 top_bidder 컬럼이 없으므로 camelCase 우선
+        topBidder: (j['topBidder'] ?? j['top_bidder']) as String?,
+        // memState는 camelCase timeLeft, DB에는 time_left 컬럼 없음
+        timeLeft: ((j['timeLeft'] ?? j['time_left']) as num?)?.toInt(),
         endsAt: j['ends_at'] as String?,
         createdAt: j['created_at'] as String,
       );

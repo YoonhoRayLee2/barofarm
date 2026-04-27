@@ -256,6 +256,9 @@
 
       const postToFlutter = (message) => {
         try { window.FlutterChannel?.postMessage(message); } catch (e) { /* noop */ }
+        if (!window.FlutterChannel && window.parent && window.parent !== window) {
+          window.parent.postMessage(message, '*');
+        }
       };
 
       if (!serverUrl || !token) {

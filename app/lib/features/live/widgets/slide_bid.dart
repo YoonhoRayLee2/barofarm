@@ -101,7 +101,7 @@ class _SlideBidState extends State<SlideBid> with SingleTickerProviderStateMixin
                     decoration: BoxDecoration(
                       color: _confirmed
                           ? AppColors.success
-                          : AppColors.accent.withValues(alpha: 0.8),
+                          : AppColors.primary.withValues(alpha: 0.8),
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
@@ -134,7 +134,7 @@ class _SlideBidState extends State<SlideBid> with SingleTickerProviderStateMixin
                       ),
                       child: const Icon(
                         Icons.chevron_right,
-                        color: AppColors.accent,
+                        color: AppColors.primary,
                         size: 24,
                       ),
                     ),

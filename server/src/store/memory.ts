@@ -31,7 +31,11 @@ export function createAuction(id: string, { productName, startPrice, sellerId }:
   });
 }
 
-export function startTimer(id: string, io: Server): void {
+export function startTimer(
+  id: string,
+  io: Server,
+  onEnd?: (state: AuctionState) => void,
+): void {
   stopTimer(id); // 중복 방지
   const timer = setInterval(() => {
     const auction = auctions.get(id);
@@ -46,6 +50,8 @@ export function startTimer(id: string, io: Server): void {
       io.to(id).emit('auction:update', auction);
       io.to(id).emit('auction:ended', { id, winner: auction.topBidder, price: auction.currentPrice });
       stopTimer(id);
+      onEnd?.(auction);
+      auctions.delete(id);
     } else {
       io.to(id).emit('auction:update', auction);
     }

@@ -17,7 +17,7 @@ function createAuction(id, { productName, startPrice, sellerId }) {
         status: 'live',
     });
 }
-function startTimer(id, io) {
+function startTimer(id, io, onEnd) {
     stopTimer(id); // 중복 방지
     const timer = setInterval(() => {
         const auction = exports.auctions.get(id);
@@ -32,6 +32,8 @@ function startTimer(id, io) {
             io.to(id).emit('auction:update', auction);
             io.to(id).emit('auction:ended', { id, winner: auction.topBidder, price: auction.currentPrice });
             stopTimer(id);
+            onEnd?.(auction);
+            exports.auctions.delete(id);
         }
         else {
             io.to(id).emit('auction:update', auction);

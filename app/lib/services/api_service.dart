@@ -30,6 +30,25 @@ class ApiService {
     return Auction.fromJson(res.data as Map<String, dynamic>);
   }
 
+  Future<Auction> createAuction({
+    required String sellerId,
+    required String productName,
+    required int startPrice,
+  }) async {
+    final res = await _dio.post('/api/auctions', data: {
+      'sellerId': sellerId,
+      'productName': productName,
+      'startPrice': startPrice,
+    });
+    // 서버는 { id } 만 반환 → 전체 경매 정보 재조회
+    final id = (res.data as Map<String, dynamic>)['id'].toString();
+    return getAuction(id);
+  }
+
+  Future<void> startAuction(String auctionId) async {
+    await _dio.patch('/api/auctions/$auctionId/start');
+  }
+
   Future<Map<String, dynamic>> getToken({
     required String roomName,
     required String userId,

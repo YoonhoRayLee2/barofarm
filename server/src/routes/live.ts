@@ -14,11 +14,12 @@ interface TokenRequestBody {
 router.post('/token', async (req: Request, res: Response) => {
   const apiKey = process.env.LIVEKIT_KEY;
   const apiSecret = process.env.LIVEKIT_SECRET;
+  const liveKitUrl = process.env.LIVEKIT_URL;
 
-  if (!apiKey || !apiSecret) {
+  if (!apiKey || !apiSecret || !liveKitUrl) {
     res.status(500).json({
       error:
-        'LiveKit 환경 변수가 설정되지 않았습니다. server/.env 파일에 LIVEKIT_KEY 와 LIVEKIT_SECRET 을 등록해 주세요.',
+        'LiveKit 환경 변수가 설정되지 않았습니다. server/.env 파일에 LIVEKIT_KEY, LIVEKIT_SECRET, LIVEKIT_URL 을 모두 등록해 주세요.',
     });
     return;
   }
@@ -56,7 +57,7 @@ router.post('/token', async (req: Request, res: Response) => {
     const jwt = await token.toJwt();
     res.json({
       token: jwt,
-      serverUrl: process.env.LIVEKIT_URL ?? null,
+      serverUrl: liveKitUrl,
       role,
       roomName,
     });
