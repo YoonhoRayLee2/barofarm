@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Barofarm Live - Buyer</title>
+  <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #0A0F0D;
+      color: #FFFFFF;
+      font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif;
+      overflow: hidden;
+    }
+
+    /*
+     * Flutter 측에서 댓글/입찰 UI를 오버레이로 띄울 수 있도록
+     * 비디오 외에는 텍스트/버튼을 두지 않는다.
+     * 상태 표시(연결 중 / 종료)는 중앙에 최소한으로만 노출.
+     */
+    #stage {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background: #0A0F0D;
+      overflow: hidden;
+    }
+
+    #remoteVideo {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #0A0F0D;
+    }
+
+    /* 숨겨진 오디오 엘리먼트 (자동 재생용) */
+    #remoteAudio {
+      display: none;
+    }
+
+    .status-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 14px;
+      background: #0A0F0D;
+      color: #FFFFFF;
+      z-index: 5;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .status-overlay.hidden {
+      opacity: 0;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255, 255, 255, 0.18);
+      border-top-color: #FFFFFF;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .status-text {
+      font-size: 14px;
+      color: #C7CDD3;
+    }
+
+    .end-card {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      padding: 20px 24px;
+      text-align: center;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .end-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .end-sub {
+      font-size: 13px;
+      color: #A8AEB4;
+    }
+
+    /* 사운드 활성화 안내 (브라우저 자동재생 차단 시) */
+    .unmute-banner {
+      position: absolute;
+      left: 50%;
+      top: 24px;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.6);
+      color: #FFFFFF;
+      font-size: 13px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 8;
+      display: none;
+      cursor: pointer;
+    }
+
+    .unmute-banner.show { display: block; }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <video id="remoteVideo" autoplay playsinline></video>
+    <audio id="remoteAudio" autoplay></audio>
+
+    <div class="unmute-banner" id="unmuteBanner">탭하여 사운드 켜기</div>
+
+    <div class="status-overlay" id="statusOverlay">
+      <div class="spinner" id="statusSpinner"></div>
+      <div class="status-text" id="statusText">방송 연결 중...</div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const LK = window.LivekitClient;
+      const params = new URLSearchParams(location.search);
+      const serverUrl = params.get('serverUrl');
+      const token = params.get('token');
+
+      const $ = (id) => document.getElementById(id);
+      const remoteVideoEl = $('remoteVideo');
+      const remoteAudioEl = $('remoteAudio');
+      const statusOverlay = $('statusOverlay');
+      const statusSpinner = $('statusSpinner');
+      const statusText = $('statusText');
+      const unmuteBanner = $('unmuteBanner');
+
+      const postToFlutter = (msg) => {
+        try { window.FlutterChannel?.postMessage(msg); } catch (e) { /* noop */ }
+      };
+
+      const showEnded = () => {
+        statusSpinner.style.display = 'none';
+        statusOverlay.classList.remove('hidden');
+        statusOverlay.innerHTML =
+          '<div class="end-card">' +
+          '  <div class="end-title">방송이 종료되었습니다</div>' +
+          '  <div class="end-sub">잠시 후 자동으로 닫힙니다</div>' +
+          '</div>';
+      };
+
+      if (!serverUrl || !token) {
+        statusSpinner.style.display = 'none';
+        statusText.textContent = '연결 정보가 부족합니다.';
+        return;
+      }
+
+      const room = new LK.Room({
+        adaptiveStream: true,
+        dynacast: true,
+      });
+
+      const tryAutoplay = async () => {
+        try {
+          await remoteAudioEl.play();
+          unmuteBanner.classList.remove('show');
+        } catch (err) {
+          // 자동 재생 차단 시 사용자 탭으로 해제
+          unmuteBanner.classList.add('show');
+        }
+      };
+
+      unmuteBanner.addEventListener('click', async () => {
+        try {
+          await remoteAudioEl.play();
+          unmuteBanner.classList.remove('show');
+        } catch (e) { /* noop */ }
+      });
+
+      // 화면 어디든 탭하면 사운드 활성화 시도 (자동재생 차단 회피)
+      document.addEventListener('click', () => {
+        if (remoteAudioEl.paused) tryAutoplay();
+      });
+
+      room.on(LK.RoomEvent.TrackSubscribed, (track, _publication, participant) => {
+        if (participant.isLocal) return;
+        if (track.kind === LK.Track.Kind.Video) {
+          track.attach(remoteVideoEl);
+          statusOverlay.classList.add('hidden');
+          postToFlutter('onLiveStart');
+        } else if (track.kind === LK.Track.Kind.Audio) {
+          track.attach(remoteAudioEl);
+          tryAutoplay();
+        }
+      });
+
+      room.on(LK.RoomEvent.TrackUnsubscribed, (track) => {
+        try { track.detach(); } catch (e) { /* noop */ }
+      });
+
+      room.on(LK.RoomEvent.ParticipantDisconnected, (p) => {
+        // 셀러가 나가면 방송 종료로 간주 (간단한 휴리스틱)
+        const remaining = Array.from(room.remoteParticipants.values());
+        const stillPublishing = remaining.some((rp) => rp.videoTrackPublications.size > 0);
+        if (!stillPublishing) {
+          showEnded();
+          postToFlutter('onLiveEnd');
+        }
+      });
+
+      room.on(LK.RoomEvent.Disconnected, () => {
+        showEnded();
+        postToFlutter('onLiveEnd');
+      });
+
+      const join = async () => {
+        try {
+          await room.connect(serverUrl, token, { autoSubscribe: true });
+          statusText.textContent = '셀러 영상을 기다리는 중...';
+        } catch (err) {
+          console.error('[live-buyer] 연결 실패:', err);
+          statusSpinner.style.display = 'none';
+          statusText.textContent = '연결 실패: ' + (err?.message ?? err);
+          postToFlutter('onLiveError');
+        }
+      };
+
+      window.addEventListener('beforeunload', () => {
+        try { room.disconnect(); } catch (e) { /* noop */ }
+      });
+
+      join();
+    })();
+  </script>
+</body>
+</html>
