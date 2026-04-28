@@ -1,6 +1,6 @@
 # 바로팜 개발 페이즈 — 진행 현황
 
-> 최종 갱신: 2026-04-27 (4차)
+> 최종 갱신: 2026-04-27 (8차)
 
 ---
 
@@ -114,11 +114,22 @@
 | 3-M2 | 실물 Android/iOS 기기 빌드 + 동작 확인 | — | ❌ |
 | 3-M3 | timer_display.dart shake 애니메이션 (3초↓ 레드+shake) | `timer_display.dart` | ✅ |
 | 3-M4 | 셀러 경매 생성 화면 (POST /api/auctions + start) | `features/seller/create_auction_screen.dart` | ✅ |
-| 3-M5 | AppConfig baseUrl 환경 분리 (dev/prod) | `app_config.dart` | ❌ |
+| 3-M5 | AppConfig baseUrl 환경 분리 (Android 에뮬/iOS 시뮬/dart-define 분기) | `app_config.dart` | ✅ |
 | 3-M6 | Pretendard 폰트 assets 등록 | `pubspec.yaml` | ❌ |
+| 3-M7 | 경매 화면 레퍼런스(wyyyes) 기반 UI 전면 재설계 — 판매자 프로필 상단바, 소리끄기/팔로우/코인 칩, 하단 상품패널, 빨간 참여버튼, 메시지 입력바 | `buyer_live_screen.dart`, `live_screen.dart` | ✅ |
+| 3-M8 | ResponsiveLayout + LiveViewWidget 리팩토링 (태블릿/데스크톱 사이드패널 레이아웃) | `live_screen.dart`, `buyer_live_screen.dart` | ✅ |
+| 3-M9 | 데모 경매창 `SampleAuctionScreen` — 서버 없이 동작, 타이머·자동채팅·자동입찰 시뮬레이션 | `features/live/sample_auction_screen.dart` | ✅ |
+| 3-M10 | 홈 AppBar에 데모 버튼(▶) 추가 | `features/home/home_screen.dart` | ✅ |
+| 3-M11 | Direction B (Fresh Field) 디자인 시스템 전면 적용 — bg #0E1A12, accent #7AA53F, cta #D6473A, 타이포 스케일, ThemeData 통합 | `app_theme.dart`, 전 Flutter 파일 | ✅ |
+| 3-M12 | google_fonts 패키지 추가 | `pubspec.yaml` | ✅ |
+| 3-M13 | 역할 통합 — 로그인 시 역할 선택 제거, 경매 개설자 여부로 seller/buyer 결정 | `user.dart`, `login_screen.dart`, `api_service.dart`, `home_screen.dart`, `server/routes/` | ✅ |
+| 3-M14 | 하단 탭 전체 화면 구현 — 관심/내정보/FAB 바텀시트/설정 | `favorites_screen.dart`, `profile_screen.dart`, `settings_screen.dart`, `fab_bottom_sheet.dart`, `group_card.dart` | ✅ |
+| 3-M15 | 홈 화면 디자인 업데이트 — pill 카테고리 탭, 서브탭(지금경매/예고/곧마감), 수산 카테고리 추가 | `home_screen.dart` | ✅ |
+| 3-M16 | Live 모델 도입 (Live↔Auction 분리) — POST/GET/PATCH `/api/lives`, sockets `liveId` 룸, viewer:count, 홈 ↔ 라이브 화면 라우팅 | `routes/live.ts`, `store/memory.ts`, `socket/auction.ts`, `models/live.dart`, `home_screen.dart` | ✅ |
+| 3-M17 | 소켓/스트리밍 버그 수정 — buyer 채팅바 누락(_BottomPanel auction nullable), `_auction==null`일 때 첫 `auction:update`로 Auction.fromJson 초기화, `lobby:live:new`/`lobby:live:ended` emit 정합화, chat에 userName 전파 | `buyer_live_screen.dart`, `live_screen.dart`, `routes/live.ts`, `store/memory.ts`, `socket/auction.ts`, `socket_service.dart` | ✅ |
 
 **검증 포인트:** 실물 기기 앱 실행 + 입찰 동작 확인
-→ Android 에뮬레이터에서 LoginScreen 렌더링 확인 완료. 서버 `/api/users` 응답 정상 확인. iOS는 Xcode iOS 18.2 SDK 설치 후 가능.
+→ Android 에뮬레이터에서 LoginScreen 렌더링 확인 완료. 서버 `/api/users` 응답 정상 확인. 경매 UI wyyyes 레퍼런스 반영 완료. Fresh Field 다크 디자인 시스템 전면 적용 완료. iOS는 Xcode iOS 18.2 SDK 설치 후 가능.
 
 ---
 
@@ -145,10 +156,14 @@
 
 ```
 1. 실물 기기(Android/iOS) 연결 테스트 [3-M2]
-2. AppConfig baseUrl 환경 분리 (dev/prod) [3-M5]
-3. Pretendard 폰트 assets 등록 [3-M6]
-4. Stage 4 시작: Dockerfile + AWS 배포 준비 [4-1~]
+2. Pretendard 폰트 assets 등록 [3-M6]
+3. Stage 4 시작: Dockerfile + AWS 배포 준비 [4-1~]
 ```
+
+> 완료된 최근 작업 (2026-04-27):
+> - 3-M7~3-M10: 경매 화면 wyyyes 레퍼런스 재설계, ResponsiveLayout 리팩, SampleAuctionScreen, 데모 버튼
+> - 3-M11~3-M12: Fresh Field 다크 디자인 시스템 전면 적용 + google_fonts 추가
+> - 3-M5, 3-M16, 3-M17: AppConfig 환경 분리, Live 모델 도입, 소켓/스트리밍 버그 5건 수정
 
 ---
 
@@ -158,6 +173,6 @@
 |---|---|---|---|
 | Stage 1 (서버 인프라) | 12 / 12 | 12 | **100%** |
 | Stage 2 (경매 엔진 + LiveKit 통합) | 24 / 25 | 25 | **96%** (W5 Redis 알려진 한계) |
-| Stage 3 (Flutter 앱) | 25 / 29 | 29 | **86%** |
+| Stage 3 (Flutter 앱) | 37 / 40 | 40 | **93%** |
 | Stage 4 (배포) | 0 / 8 | 8 | **0%** |
-| **전체** | **61 / 74** | **74** | **82%** |
+| **전체** | **73 / 85** | **85** | **86%** |

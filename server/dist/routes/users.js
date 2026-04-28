@@ -8,17 +8,14 @@ const mysql_1 = __importDefault(require("../db/mysql"));
 const router = (0, express_1.Router)();
 router.post('/', async (req, res) => {
     const { name, phone, role } = req.body;
-    if (!name || !phone || !role) {
-        res.status(400).json({ error: 'name, phone, role are required' });
+    if (!name || !phone) {
+        res.status(400).json({ error: 'name and phone are required' });
         return;
     }
-    if (role !== 'seller' && role !== 'buyer') {
-        res.status(400).json({ error: 'role must be seller or buyer' });
-        return;
-    }
+    const userRole = role ?? 'buyer';
     try {
         await mysql_1.default.execute(`INSERT INTO users (name, phone, role) VALUES (?, ?, ?)
-       ON DUPLICATE KEY UPDATE name = VALUES(name), role = VALUES(role)`, [name, phone, role]);
+       ON DUPLICATE KEY UPDATE name = VALUES(name), role = VALUES(role)`, [name, phone, userRole]);
         const [rows] = await mysql_1.default.execute('SELECT id, name, phone, role, created_at FROM users WHERE phone = ?', [phone]);
         res.json(rows[0]);
     }

@@ -1,7 +1,7 @@
 ---
 name: livekit-specialist
 description: LiveKit Cloud 연동 전문가 — 토큰 발급, 방 관리, WebRTC 설정
-model: opus
+model: sonnet
 ---
 
 ## 핵심 역할
@@ -13,10 +13,6 @@ LiveKit Cloud를 통한 WebRTC 영상 스트리밍을 구현한다. 셀러 토�
 - WebView 클라이언트는 `@livekit/components-react` 또는 순수 JS livekit-client SDK 사용
 - LiveKit 서버 URL은 환경변수 `LIVEKIT_URL`로 관리
 - 셀러/바이어 권한은 토큰 단에서 제어 — 비즈니스 로직으로 분리하지 않음
-
-## 입력/출력 프로토콜
-**입력:** 토큰 발급 요건, 방 설정, WebView HTML 구현 요청
-**출력:** 서버 코드 + WebView HTML/JS 파일 → `_workspace/livekit_{feature}.md`
 
 ## 에러 핸들링
 - LIVEKIT_KEY/SECRET 미설정 시 서버 시작 단계에서 경고 출력

@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../app_theme.dart';
 
@@ -84,12 +85,16 @@ class _SlideBidState extends State<SlideBid> with SingleTickerProviderStateMixin
           return GestureDetector(
             onHorizontalDragUpdate: _onDragUpdate,
             onHorizontalDragEnd: _onDragEnd,
-            child: Container(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
               height: _trackH,
               decoration: BoxDecoration(
-                color: Colors.black38,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white24),
+                color: Colors.black.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
               ),
               child: Stack(
                 children: [
@@ -102,7 +107,7 @@ class _SlideBidState extends State<SlideBid> with SingleTickerProviderStateMixin
                       color: _confirmed
                           ? AppColors.success
                           : AppColors.primary.withValues(alpha: 0.8),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(999),
                     ),
                   ),
                   // label
@@ -127,7 +132,7 @@ class _SlideBidState extends State<SlideBid> with SingleTickerProviderStateMixin
                       height: _trackH - _margin * 2,
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(28),
                         boxShadow: const [
                           BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(1, 1)),
                         ],
@@ -140,6 +145,8 @@ class _SlideBidState extends State<SlideBid> with SingleTickerProviderStateMixin
                     ),
                   ),
                 ],
+              ),
+            ),
               ),
             ),
           );

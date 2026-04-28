@@ -1,31 +1,72 @@
 import { Server } from 'socket.io';
-import { auctions } from '../store/memory';
+import { lives, auctions } from '../store/memory';
+
+const viewerCounts = new Map<string, Set<string>>();
 
 export default function registerAuctionSocket(io: Server): void {
   io.on('connection', (socket) => {
-    socket.on('join', ({ roomId }: { roomId: string }) => {
-      socket.join(roomId);
-      const auction = auctions.get(roomId);
-      if (auction) socket.emit('auction:update', auction);
+
+    // join: { liveId } — 라이브 방 입장
+    socket.on('join', ({ liveId }: { liveId: string }) => {
+      socket.join(liveId);
+      if (!viewerCounts.has(liveId)) viewerCounts.set(liveId, new Set());
+      viewerCounts.get(liveId)!.add(socket.id);
+      io.to(liveId).emit('viewer:count', { count: viewerCounts.get(liveId)!.size });
+
+      // 현재 진행 중인 경매 상태 즉시 전송
+      const live = lives.get(liveId);
+      if (live?.currentAuctionId) {
+        const auction = auctions.get(live.currentAuctionId);
+        if (auction) socket.emit('auction:update', auction);
+      }
     });
 
-    socket.on('bid', ({ roomId, price, userId }: { roomId: string; price: number; userId: string }) => {
-      const auction = auctions.get(roomId);
-      if (!auction || auction.status !== 'live') return;
-      if (userId === auction.sellerId) return;
-      if (price <= auction.currentPrice) return;
+    // bid: { liveId, auctionId, price, userId, userName? }
+    socket.on('bid', ({ liveId, auctionId, price, userId, userName }: {
+      liveId: string;
+      auctionId: string;
+      price: number;
+      userId: string;
+      userName?: string;
+    }) => {
+      try {
+        const live = lives.get(liveId);
+        if (!live || live.status !== 'live') return;
 
-      auction.currentPrice = price;
-      auction.topBidder = userId;
+        const auction = auctions.get(auctionId);
+        if (!auction || auction.liveId !== liveId) return;
+        if (auction.status !== 'live') return;
+        if (userId === auction.sellerId) return;
+        if (price <= auction.currentPrice) return;
 
-      // 종료 10초 이내 입찰 시 +10초 자동 연장 (와이스 방식)
-      if (auction.timeLeft <= 10) auction.timeLeft += 10;
+        auction.currentPrice = price;
+        auction.topBidder = userId;
+        if (userName) auction.topBidderName = userName;
+        if (auction.timeLeft <= 10) auction.timeLeft += 10;
 
-      io.to(roomId).emit('auction:update', auction);
+        io.to(liveId).emit('auction:update', auction);
+      } catch (err) {
+        socket.emit('error', { message: (err as Error).message });
+      }
     });
 
-    socket.on('chat', ({ roomId, message, userId }: { roomId: string; message: string; userId: string }) => {
-      io.to(roomId).emit('chat:message', { userId, message, ts: Date.now() });
+    // chat: { liveId, message, userId, userName? }
+    socket.on('chat', ({ liveId, message, userId, userName }: { liveId: string; message: string; userId: string; userName?: string }) => {
+      try {
+        io.to(liveId).emit('chat:message', { userId, userName, message, ts: Date.now() });
+      } catch (err) {
+        socket.emit('error', { message: (err as Error).message });
+      }
+    });
+
+    socket.on('disconnect', () => {
+      viewerCounts.forEach((sockets, liveId) => {
+        if (sockets.has(socket.id)) {
+          sockets.delete(socket.id);
+          io.to(liveId).emit('viewer:count', { count: sockets.size });
+          if (sockets.size === 0) viewerCounts.delete(liveId);
+        }
+      });
     });
   });
 }

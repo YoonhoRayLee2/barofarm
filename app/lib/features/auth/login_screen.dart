@@ -15,7 +15,6 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
-  String _role = 'buyer';
   bool _loading = false;
 
   Future<void> _submit() async {
@@ -26,7 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = true);
     try {
       final user = await ApiService()
-          .createUser(name: name, phone: phone, role: _role);
+          .createUser(name: name, phone: phone);
       const storage = FlutterSecureStorage();
       await storage.write(key: 'current_user', value: user.toJsonString());
 
@@ -67,17 +66,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     padding: const EdgeInsets.all(24),
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 420),
-                      child: Card(
-                        color: AppColors.surface,
-                        margin: EdgeInsets.zero,
-                        shape: RoundedRectangleBorder(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
                           borderRadius: BorderRadius.circular(16),
-                          side: const BorderSide(color: AppColors.line),
+                          border: Border.all(color: AppColors.line),
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(36),
-                          child: _buildForm(context),
-                        ),
+                        padding: const EdgeInsets.all(36),
+                        child: _buildForm(context),
                       ),
                     ),
                   ),
@@ -93,50 +89,57 @@ class _LoginScreenState extends State<LoginScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (context.isMobile) const SizedBox(height: 48),
-        Text('바로팜', style: Theme.of(context).textTheme.displayMedium),
-        const SizedBox(height: 4),
-        Text(
+        // Logo
+        Image.asset(
+          'assets/barofarm_logo.png',
+          height: 72,
+          fit: BoxFit.contain,
+          alignment: Alignment.centerLeft,
+        ),
+        const SizedBox(height: 8),
+        const Text(
           '산지에서 식탁까지, 가장 짧은 거리',
-          style: Theme.of(context)
-              .textTheme
-              .bodyLarge
-              ?.copyWith(color: AppColors.inkMute),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w400,
+            color: AppColors.inkMute,
+            height: 1.55,
+          ),
         ),
         SizedBox(height: context.isMobile ? 48 : 32),
+        // Name field
         TextField(
           controller: _nameCtrl,
+          style: const TextStyle(color: AppColors.ink, fontSize: 16),
           decoration: const InputDecoration(hintText: '이름'),
           textInputAction: TextInputAction.next,
         ),
         const SizedBox(height: 12),
+        // Phone field
         TextField(
           controller: _phoneCtrl,
+          style: const TextStyle(color: AppColors.ink, fontSize: 16),
           decoration: const InputDecoration(hintText: '전화번호'),
           keyboardType: TextInputType.phone,
           textInputAction: TextInputAction.done,
           onSubmitted: (_) => _submit(),
         ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            _RoleChip(
-              label: '구매자',
-              selected: _role == 'buyer',
-              onTap: () => setState(() => _role = 'buyer'),
-            ),
-            const SizedBox(width: 8),
-            _RoleChip(
-              label: '판매자',
-              selected: _role == 'seller',
-              onTap: () => setState(() => _role = 'seller'),
-            ),
-          ],
-        ),
         const SizedBox(height: 32),
+        // CTA button
         SizedBox(
           width: double.infinity,
+          height: 52,
           child: ElevatedButton(
             onPressed: _loading ? null : _submit,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.cta,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              textStyle: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w700),
+            ),
             child: _loading
                 ? const SizedBox(
                     height: 20,
@@ -151,39 +154,3 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-class _RoleChip extends StatelessWidget {
-  const _RoleChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary : AppColors.surface,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: selected ? AppColors.primary : AppColors.line,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? AppColors.primaryInk : AppColors.inkSoft,
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
-        ),
-      ),
-    );
-  }
-}

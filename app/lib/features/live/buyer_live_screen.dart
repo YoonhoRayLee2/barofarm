@@ -2,25 +2,28 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../app_theme.dart';
 import '../../models/auction.dart';
+import '../../models/live.dart';
 import '../../models/message.dart';
 import '../../models/user.dart';
+import '../../app_config.dart';
 import '../../services/socket_service.dart';
 import '../../utils/responsive.dart';
 import 'widgets/timer_display.dart';
 import 'widgets/chat_overlay.dart';
+import 'widgets/slide_bid.dart';
 import 'widgets/static_noise_overlay.dart';
 import 'widgets/live_view/live_view_widget.dart';
 
 class BuyerLiveScreen extends StatefulWidget {
   const BuyerLiveScreen({
     super.key,
-    required this.auction,
+    required this.live,
     required this.user,
     required this.liveToken,
     required this.serverUrl,
   });
 
-  final Auction auction;
+  final Live live;
   final User user;
   final String liveToken;
   final String serverUrl;
@@ -31,27 +34,29 @@ class BuyerLiveScreen extends StatefulWidget {
 
 class _BuyerLiveScreenState extends State<BuyerLiveScreen> {
   late final String _liveUrl;
-  late Auction _auction;
+  Auction? _auction;
   final List<ChatMessage> _messages = [];
   final List<StreamSubscription> _subs = [];
   final TextEditingController _chatCtrl = TextEditingController();
   final FocusNode _chatFocus = FocusNode();
 
-  final int _viewerCount = 0;
+  int _viewerCount = 0;
+  bool _auctionEnded = false;
   bool _isMuted = false;
   bool _isFollowing = false;
   bool _chatFocused = false;
-  bool _auctionEnded = false;
   bool _streamLost = false;
+  String? _winnerName;
+  int? _winnerPrice;
 
   // estimated heights for bottom panel (without safe area)
-  static const double _panelH = 182.0;
+  static const double _panelH = 172.0;
   static const double _chatBarH = 56.0;
 
   @override
   void initState() {
     super.initState();
-    _auction = widget.auction;
+    _auction = widget.live.currentAuction;
     _liveUrl = _buildLiveUrl();
     _subscribeSocket();
     _chatFocus.addListener(() {
@@ -60,9 +65,7 @@ class _BuyerLiveScreenState extends State<BuyerLiveScreen> {
   }
 
   String _buildLiveUrl() {
-    final base =
-        widget.serverUrl.isNotEmpty ? widget.serverUrl : 'http://10.0.2.2:3000';
-    return '$base/live/live-buyer.html'
+    return '${AppConfig.baseUrl}/live/live-buyer.html'
         '?serverUrl=${Uri.encodeQueryComponent(widget.serverUrl)}'
         '&token=${Uri.encodeQueryComponent(widget.liveToken)}';
   }
@@ -81,24 +84,37 @@ class _BuyerLiveScreenState extends State<BuyerLiveScreen> {
 
   void _subscribeSocket() {
     final socket = SocketService();
-    socket.join(_auction.id);
+    socket.join(widget.live.id);
 
     _subs.add(socket.onAuctionUpdate.listen((data) {
       if (!mounted) return;
       setState(() {
-        _auction = _auction.copyWith(
-          currentPrice:
-              (data['currentPrice'] as num?)?.toInt() ?? _auction.currentPrice,
-          topBidder: data['topBidder'] as String?,
-          timeLeft: (data['timeLeft'] as num?)?.toInt(),
-          status: data['status'] as String?,
-        );
+        if (_auction == null) {
+          _auction = Auction.fromJson(Map<String, dynamic>.from(data));
+        } else {
+          _auction = _auction!.copyWith(
+            currentPrice:
+                (data['currentPrice'] as num?)?.toInt() ?? _auction!.currentPrice,
+            topBidder: data['topBidder'] as String?,
+            timeLeft: (data['timeLeft'] as num?)?.toInt(),
+            status: data['status'] as String?,
+          );
+        }
       });
     }));
 
-    _subs.add(socket.onAuctionEnded.listen((_) {
+    _subs.add(socket.onAuctionEnded.listen((data) {
       if (!mounted) return;
-      setState(() => _auctionEnded = true);
+      setState(() {
+        _auctionEnded = true;
+        _winnerName = data['winnerName'] as String?;
+        _winnerPrice = (data['price'] as num?)?.toInt();
+        _auction = _auction?.copyWith(status: 'ended');
+      });
+    }));
+
+    _subs.add(socket.onViewerCount.listen((count) {
+      if (mounted) setState(() => _viewerCount = count);
     }));
 
     _subs.add(socket.onChatMessage.listen((msg) {
@@ -108,13 +124,15 @@ class _BuyerLiveScreenState extends State<BuyerLiveScreen> {
   }
 
   void _onBid() {
-    SocketService().bid(_auction.id, _auction.currentPrice + 1000, widget.user.id);
+    final auction = _auction;
+    if (auction == null) return;
+    SocketService().bid(widget.live.id, auction.id, auction.currentPrice + 1000, widget.user.id, widget.user.name);
   }
 
   void _onSendChat() {
     final text = _chatCtrl.text.trim();
     if (text.isEmpty) return;
-    SocketService().sendChat(_auction.id, widget.user.id, text);
+    SocketService().sendChat(widget.live.id, widget.user.id, text, userName: widget.user.name);
     _chatCtrl.clear();
   }
 
@@ -149,7 +167,8 @@ class _BuyerLiveScreenState extends State<BuyerLiveScreen> {
   Widget _buildMobile(BuildContext context) {
     final kb = MediaQuery.of(context).viewInsets.bottom;
     final safeBottom = MediaQuery.of(context).padding.bottom;
-    final totalBottomH = _panelH + _chatBarH + safeBottom;
+    final isAuctionLive = _auction?.status == 'live';
+    final totalBottomH = (isAuctionLive ? _panelH : 0) + _chatBarH + safeBottom;
 
     return Stack(
       children: [
@@ -167,8 +186,8 @@ class _BuyerLiveScreenState extends State<BuyerLiveScreen> {
           left: 0,
           right: 0,
           child: _TopBar(
-            sellerId: _auction.sellerId,
-            productName: _auction.productName,
+            sellerId: widget.live.sellerId,
+            productName: _auction?.productName ?? widget.live.title,
             viewerCount: _viewerCount,
             isMuted: _isMuted,
             isFollowing: _isFollowing,
@@ -179,7 +198,7 @@ class _BuyerLiveScreenState extends State<BuyerLiveScreen> {
         ),
 
         // L2: Chat + top bidder (above bottom panel)
-        if (!_auctionEnded && !_streamLost)
+        if (!_streamLost)
           Positioned(
             left: 0,
             right: 0,
@@ -198,19 +217,20 @@ class _BuyerLiveScreenState extends State<BuyerLiveScreen> {
                     ),
                   ),
                 ),
-                if (_auction.topBidder != null) _topBidderPill(),
+                if (isAuctionLive && _auction?.topBidder != null) _topBidderPill(),
               ],
             ),
           ),
 
-        // L3: Bottom product panel + bid button + chat input
-        if (!_auctionEnded && !_streamLost)
+        // L3: Chat input (always) + bid section (live only)
+        if (!_streamLost)
           Positioned(
             bottom: kb,
             left: 0,
             right: 0,
             child: _BottomPanel(
               auction: _auction,
+              auctionLive: isAuctionLive,
               safeBottom: safeBottom,
               chatFocused: _chatFocused,
               chatCtrl: _chatCtrl,
@@ -249,8 +269,8 @@ class _BuyerLiveScreenState extends State<BuyerLiveScreen> {
                 left: 0,
                 right: 0,
                 child: _TopBar(
-                  sellerId: _auction.sellerId,
-                  productName: _auction.productName,
+                  sellerId: widget.live.sellerId,
+                  productName: _auction?.productName ?? widget.live.title,
                   viewerCount: _viewerCount,
                   isMuted: _isMuted,
                   isFollowing: _isFollowing,
@@ -260,8 +280,7 @@ class _BuyerLiveScreenState extends State<BuyerLiveScreen> {
                   onClose: () => Navigator.of(context).pop(),
                 ),
               ),
-              if (_auctionEnded)
-                Positioned.fill(child: _buildEndedOverlay()),
+              if (_auctionEnded) Positioned.fill(child: _buildEndedOverlay()),
             ],
           ),
         ),
@@ -274,7 +293,7 @@ class _BuyerLiveScreenState extends State<BuyerLiveScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (_auction.topBidder != null)
+                if (_auction?.status == 'live' && _auction?.topBidder != null)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
                     child: _topBidderPill(),
@@ -285,9 +304,10 @@ class _BuyerLiveScreenState extends State<BuyerLiveScreen> {
                     child: ChatOverlay(messages: _messages),
                   ),
                 ),
-                if (!_auctionEnded && !_streamLost)
+                if (!_streamLost)
                   _BottomPanel(
                     auction: _auction,
+                    auctionLive: _auction?.status == 'live',
                     safeBottom: 0,
                     chatFocused: false,
                     chatCtrl: _chatCtrl,
@@ -301,6 +321,41 @@ class _BuyerLiveScreenState extends State<BuyerLiveScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildEndedOverlay() {
+    return Container(
+      color: Colors.black54,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.gavel, color: Colors.white, size: 48),
+            const SizedBox(height: 16),
+            const Text('경매 종료', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            if (_winnerName != null)
+              Text('낙찰자: $_winnerName', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+            if (_winnerPrice != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text('낙찰금액: ${_fmt(_winnerPrice!)}원', style: const TextStyle(color: Colors.white70, fontSize: 14)),
+              ),
+            const SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.live,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('나가기', style: TextStyle(fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -323,7 +378,7 @@ class _BuyerLiveScreenState extends State<BuyerLiveScreen> {
                   style: TextStyle(color: Colors.white70, fontSize: 12),
                 ),
                 TextSpan(
-                  text: _auction.topBidder ?? '',
+                  text: _auction?.topBidder ?? '',
                   style: const TextStyle(
                     color: AppColors.primary,
                     fontSize: 12,
@@ -338,56 +393,6 @@ class _BuyerLiveScreenState extends State<BuyerLiveScreen> {
     );
   }
 
-  Widget _buildEndedOverlay() {
-    return Container(
-      color: Colors.black54,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.gavel, color: Colors.white, size: 48),
-            const SizedBox(height: 16),
-            const Text(
-              '경매 종료',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '최종 낙찰가: ${_fmt(_auction.currentPrice)}원',
-              style: const TextStyle(color: Colors.white70, fontSize: 16),
-            ),
-            if (_auction.topBidder != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  '낙찰자: ${_auction.topBidder}',
-                  style: const TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-              ),
-            const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.live,
-                foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text('나가기',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 // ─── Top Bar ──────────────────────────────────────────────────────────────────
@@ -572,6 +577,7 @@ class _TopBar extends StatelessWidget {
 class _BottomPanel extends StatelessWidget {
   const _BottomPanel({
     required this.auction,
+    required this.auctionLive,
     required this.safeBottom,
     required this.chatFocused,
     required this.chatCtrl,
@@ -581,7 +587,8 @@ class _BottomPanel extends StatelessWidget {
     required this.fmt,
   });
 
-  final Auction auction;
+  final Auction? auction;
+  final bool auctionLive;
   final double safeBottom;
   final bool chatFocused;
   final TextEditingController chatCtrl;
@@ -595,8 +602,8 @@ class _BottomPanel extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Product info + bid button (hidden when keyboard is open)
-        if (!chatFocused)
+        // Product info + bid (only when auction is live, hidden when keyboard is open)
+        if (auction != null && auctionLive && !chatFocused)
           Container(
             color: const Color(0xD9000000),
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
@@ -608,9 +615,9 @@ class _BottomPanel extends StatelessWidget {
                 Row(
                   children: [
                     const _SaleTypeChip(label: '일반 경매', selected: true),
-                    if (auction.timeLeft != null) ...[
+                    if (auction!.timeLeft != null) ...[
                       const SizedBox(width: 8),
-                      TimerDisplay(timeLeft: auction.timeLeft!),
+                      TimerDisplay(timeLeft: auction!.timeLeft!),
                     ],
                   ],
                 ),
@@ -635,7 +642,7 @@ class _BottomPanel extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            auction.productName,
+                            auction!.productName,
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 14,
@@ -657,15 +664,15 @@ class _BottomPanel extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '${fmt(auction.currentPrice)}원',
+                          '${fmt(auction!.currentPrice)}원',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                         Text(
-                          '시작가 ${fmt(auction.startPrice)}원',
+                          '시작가 ${fmt(auction!.startPrice)}원',
                           style: const TextStyle(
                               color: Colors.white38, fontSize: 10),
                         ),
@@ -674,33 +681,9 @@ class _BottomPanel extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                // Bid button — red, full width
-                GestureDetector(
-                  onTap: onBid,
-                  child: Container(
-                    width: double.infinity,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: AppColors.live,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '${fmt(auction.currentPrice + 1000)}원 참여',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        const Icon(Icons.double_arrow,
-                            color: Colors.white, size: 18),
-                      ],
-                    ),
-                  ),
+                SlideBid(
+                  amount: auction!.currentPrice + 1000,
+                  onConfirm: onBid,
                 ),
                 const SizedBox(height: 10),
               ],

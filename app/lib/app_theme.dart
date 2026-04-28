@@ -1,37 +1,46 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 abstract class AppColors {
   // Background
-  static const bg = Color(0xFF0A0F0D);
-  static const bgAlt = Color(0xFF111916);
-  static const surface = Color(0xFF111916);
-  static const card = Color(0xFF182218);
+  static const bg = Color(0xFF0E1A12);
+  static const bgAlt = Color(0xFF142220);
+  static const surface = Color(0xFF1A2A22);
+  static const surfaceAlt = Color(0xFF22372D);
 
   // Ink
-  static const ink = Color(0xFFFFFFFF);
-  static const inkSoft = Color(0xFFB8C4B0);
-  static const inkMute = Color(0xFF6B7A65);
-  static const line = Color(0xFF1E2A1E);
+  static const ink = Color(0xFFEDF1E2);
+  static const inkSoft = Color(0xFFB7C4A6);
+  static const inkMute = Color(0xFF7E8675);
+  static const line = Color(0xFF28392F);
 
-  // Brand
-  static const primary = Color(0xFF22C55E);
-  static const primarySoft = Color(0xFF166534);
-  static const primaryInk = Color(0xFF0A0F0D);
+  // Brand / Accent
+  static const accent = Color(0xFF7AA53F);
+  static const accentSoft = Color(0xFF5B7A35);
 
-  // Bid button gradient
+  // Semantic
+  static const success = Color(0xFF7AA53F);
+  static const warn = Color(0xFFD4A017);
+  static const danger = Color(0xFFD6473A);
+  static const info = Color(0xFF5C8BAE);
+  static const cta = Color(0xFFD6473A);
+
+  // Aliases for backwards compatibility
+  static const primary = accent;
+  static const primarySoft = accentSoft;
+  static const primaryInk = Color(0xFF0E1A12);
+  static const live = cta;
+  static const warning = warn;
+  static const card = surface;
+
+  // Legacy: bid gradient kept for any existing use
   static const bidGradientStart = Color(0xFFFFD700);
   static const bidGradientEnd = Color(0xFFFF8C00);
 
-  // Semantic
-  static const live = Color(0xFFFF3B3B);
-  static const success = Color(0xFF22C55E);
-  static const warning = Color(0xFFF59E0B);
-  static const danger = Color(0xFFEF4444);
-
-  // Timer
-  static const timerGreen = Color(0xFF22C55E);
-  static const timerAmber = Color(0xFFF59E0B);
-  static const timerRed = Color(0xFFEF4444);
+  // Timer (kept for timer_display.dart)
+  static const timerGreen = Color(0xFF7AA53F);
+  static const timerAmber = Color(0xFFD4A017);
+  static const timerRed = Color(0xFFD6473A);
 }
 
 ThemeData buildDarkTheme() => ThemeData(
@@ -39,9 +48,9 @@ ThemeData buildDarkTheme() => ThemeData(
       brightness: Brightness.dark,
       scaffoldBackgroundColor: AppColors.bg,
       colorScheme: const ColorScheme.dark(
-        primary: AppColors.primary,
+        primary: AppColors.accent,
         onPrimary: AppColors.primaryInk,
-        secondary: AppColors.primarySoft,
+        secondary: AppColors.accentSoft,
         onSecondary: AppColors.ink,
         surface: AppColors.surface,
         onSurface: AppColors.ink,
@@ -49,15 +58,15 @@ ThemeData buildDarkTheme() => ThemeData(
         outline: AppColors.line,
       ),
       cardTheme: CardTheme(
-        color: AppColors.card,
+        color: AppColors.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           side: const BorderSide(color: AppColors.line),
         ),
       ),
       dividerColor: AppColors.line,
-      textTheme: _textTheme(AppColors.ink),
+      textTheme: GoogleFonts.notoSansKrTextTheme(_textTheme(AppColors.ink)),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.bg,
         foregroundColor: AppColors.ink,
@@ -67,43 +76,105 @@ ThemeData buildDarkTheme() => ThemeData(
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.line),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.line),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
         ),
         hintStyle: const TextStyle(color: AppColors.inkMute),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.primaryInk,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          backgroundColor: AppColors.cta,
+          foregroundColor: Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           minimumSize: const Size(double.infinity, 52),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          textStyle:
+              const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: AppColors.bg,
+        indicatorColor: Colors.transparent,
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: AppColors.ink);
+          }
+          return const IconThemeData(color: AppColors.inkMute);
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const TextStyle(
+                color: AppColors.ink,
+                fontSize: 11,
+                fontWeight: FontWeight.w500);
+          }
+          return const TextStyle(
+              color: AppColors.inkMute,
+              fontSize: 11,
+              fontWeight: FontWeight.w500);
+        }),
       ),
     );
 
-// Light theme은 dark 기반으로 동일하게 유지 (앱이 다크 모드 전용)
 ThemeData buildLightTheme() => buildDarkTheme();
 
 TextTheme _textTheme(Color ink) => TextTheme(
-      displayLarge: TextStyle(fontSize: 56, fontWeight: FontWeight.w700, height: 1.05, letterSpacing: -0.02 * 56, color: ink),
-      displayMedium: TextStyle(fontSize: 40, fontWeight: FontWeight.w700, height: 1.1, letterSpacing: -0.02 * 40, color: ink),
-      headlineLarge: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, height: 1.2, letterSpacing: -0.01 * 28, color: ink),
-      headlineMedium: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, height: 1.25, letterSpacing: -0.01 * 22, color: ink),
-      headlineSmall: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, height: 1.3, color: ink),
-      bodyLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, height: 1.55, color: ink),
-      bodyMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w400, height: 1.55, color: ink),
-      bodySmall: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, height: 1.4, letterSpacing: 0.02 * 12, color: ink),
-      labelSmall: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, height: 1.2, letterSpacing: 0.08 * 11, color: ink),
+      // Display L: 32px / w700 / lh 1.1 — Gowun Dodum
+      displayLarge: GoogleFonts.gowunDodum(
+          fontSize: 32, fontWeight: FontWeight.w700, height: 1.1, color: ink),
+      // Display M: 24px / w700 / lh 1.2 — Gowun Dodum
+      displayMedium: GoogleFonts.gowunDodum(
+          fontSize: 24, fontWeight: FontWeight.w700, height: 1.2, color: ink),
+      // Headline: 20px / w600 / lh 1.3
+      headlineLarge: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          height: 1.3,
+          color: ink),
+      headlineMedium: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          height: 1.3,
+          color: ink),
+      headlineSmall: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          height: 1.3,
+          color: ink),
+      // Body L: 16px / w400 / lh 1.55
+      bodyLarge: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w400,
+          height: 1.55,
+          color: ink),
+      // Body M: 14px / w400 / lh 1.55
+      bodyMedium: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+          height: 1.55,
+          color: ink),
+      // Label: 12px / w500 / lh 1.4
+      bodySmall: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          height: 1.4,
+          color: ink),
+      // Caption: 11px / w500 / mono spacing
+      labelSmall: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          height: 1.4,
+          letterSpacing: 0.5,
+          color: ink),
     );

@@ -16,14 +16,6 @@ P2C 산지직송 라이브 커머스 barofarm의 개발 작업을 4명의 전문
 | livekit-specialist | LiveKit Cloud WebRTC 연동 |
 | qa | 레이어 간 경계면 교차 검증 |
 
-## Phase 0: 컨텍스트 확인
-
-1. `_workspace/` 존재 여부 확인
-2. 실행 모드 결정:
-   - **초기 실행**: `_workspace/` 없음 → Phase 1 진행
-   - **후속 작업**: `_workspace/` 있고 새 기능 요청 → 기존 컨텍스트 유지 후 Phase 1 진행
-   - **부분 수정**: 특정 모듈 수정 요청 → 해당 에이전트만 재호출, Phase 2로 바로 이동
-
 ## Phase 1: 작업 분석
 
 1. 요청 기능의 개발 단계 파악:
@@ -61,9 +53,8 @@ TeamCreate → TaskCreate(의존성 포함) → 팀원 자체 조율 → qa 점�
 
 ## Phase 3: 실행 및 모니터링
 
-1. 에이전트 팀 실행 (model: "opus" 필수)
-2. 모듈 완성 직후 qa 즉시 투입 — 전체 완성 후 1회 검증 금지
-3. qa가 Critical 이슈 보고 시 → 해당 에이전트 수정 요청 → qa 재검증
+1. 모듈 완성 직후 qa 즉시 투입 — 전체 완성 후 1회 검증 금지
+2. qa가 Critical 이슈 보고 시 → 해당 에이전트 수정 요청 → qa 재검증
 
 ## Phase 4: 결과 통합 및 보고
 
@@ -88,12 +79,4 @@ TeamCreate → TaskCreate(의존성 포함) → 팀원 자체 조율 → qa 점�
 1. WebRTC 직접 구현 금지 — LiveKit에 위임
 2. Flutter는 WebView로 단순하게 — 라이브 화면은 HTML/JS
 3. 경매 상태는 메모리(Map), 낙찰만 MySQL 저장
-4. 모든 Agent 호출 시 `model: "opus"` 명시
-
-## 테스트 시나리오
-
-**정상 흐름:** "LiveKit 토큰 발급 API 만들어줘"
-→ livekit-specialist + backend-dev 협업 → `POST /api/live/token` 구현 → qa 검증 → 실행 명령 안내
-
-**에러 흐름:** LIVEKIT_KEY 환경변수 미설정
-→ livekit-specialist 감지 → 사용자에게 설정 요청 안내 → 설정 확인 후 재실행
+4. 에이전트 모델: sonnet (구현) / haiku (검증·계획) — opus 사용 금지

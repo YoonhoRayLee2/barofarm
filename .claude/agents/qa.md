@@ -1,7 +1,7 @@
 ---
 name: qa
 description: API 응답 ↔ Socket.io 이벤트 ↔ Flutter 앱 정합성 검증 전문가
-model: opus
+model: haiku
 type: general-purpose
 ---
 
@@ -29,10 +29,6 @@ barofarm 레이어 간 경계면을 교차 검증한다. REST API 응답 shape, 
 - timeLeft <= 10 시 +10 연장 동작
 - 낙찰 후 메모리 삭제 확인
 - 셀러 canPublish: true / 바이어 false 분기
-
-## 입력/출력 프로토콜
-**입력:** 에이전트로부터 모듈 완성 알림 (SendMessage)
-**출력:** 이슈 목록 + 심각도 (Critical/Warning/Info) → `_workspace/qa_report_{module}.md`
 
 ## 팀 통신 프로토콜
 - **수신:** backend-dev, flutter-dev, livekit-specialist (완성 알림)

@@ -14,10 +14,16 @@ class SocketService {
   final _auctionUpdateCtrl = StreamController<Map<String, dynamic>>.broadcast();
   final _auctionEndedCtrl = StreamController<Map<String, dynamic>>.broadcast();
   final _chatCtrl = StreamController<ChatMessage>.broadcast();
+  final _lobbyLiveNewCtrl = StreamController<Map<String, dynamic>>.broadcast();
+  final _lobbyLiveEndedCtrl = StreamController<Map<String, dynamic>>.broadcast();
+  final _viewerCountCtrl = StreamController<int>.broadcast();
 
   Stream<Map<String, dynamic>> get onAuctionUpdate => _auctionUpdateCtrl.stream;
   Stream<Map<String, dynamic>> get onAuctionEnded => _auctionEndedCtrl.stream;
   Stream<ChatMessage> get onChatMessage => _chatCtrl.stream;
+  Stream<Map<String, dynamic>> get onLobbyLiveNew => _lobbyLiveNewCtrl.stream;
+  Stream<Map<String, dynamic>> get onLobbyLiveEnded => _lobbyLiveEndedCtrl.stream;
+  Stream<int> get onViewerCount => _viewerCountCtrl.stream;
 
   void connect() {
     if (_connected) return;
@@ -40,24 +46,48 @@ class SocketService {
     _socket.on('chat:message', (data) {
       _chatCtrl.add(ChatMessage.fromJson(Map<String, dynamic>.from(data as Map)));
     });
+    _socket.on('lobby:live:new', (data) {
+      _lobbyLiveNewCtrl.add(Map<String, dynamic>.from(data as Map));
+    });
+    _socket.on('lobby:live:ended', (data) {
+      _lobbyLiveEndedCtrl.add(Map<String, dynamic>.from(data as Map));
+    });
+    _socket.on('viewer:count', (data) {
+      final map = Map<String, dynamic>.from(data as Map);
+      _viewerCountCtrl.add((map['count'] as num).toInt());
+    });
   }
 
-  void join(String roomId) {
-    _socket.emit('join', {'roomId': roomId});
+  void join(String liveId) {
+    _socket.emit('join', {'liveId': liveId});
   }
 
-  void bid(String roomId, int price, String userId) {
-    _socket.emit('bid', {'roomId': roomId, 'price': price, 'userId': userId});
+  void bid(String liveId, String auctionId, int price, String userId, String? userName) {
+    _socket.emit('bid', {
+      'liveId': liveId,
+      'auctionId': auctionId,
+      'price': price,
+      'userId': userId,
+      if (userName != null) 'userName': userName,
+    });
   }
 
-  void sendChat(String roomId, String userId, String message) {
-    _socket.emit('chat', {'roomId': roomId, 'userId': userId, 'message': message});
+  void sendChat(String liveId, String userId, String message, {String? userName}) {
+    _socket.emit('chat', {
+      'liveId': liveId,
+      'userId': userId,
+      'message': message,
+      if (userName != null) 'userName': userName,
+    });
   }
 
   void dispose() {
     _auctionUpdateCtrl.close();
     _auctionEndedCtrl.close();
     _chatCtrl.close();
+    _lobbyLiveNewCtrl.close();
+    _lobbyLiveEndedCtrl.close();
+    _viewerCountCtrl.close();
     _socket.dispose();
     _connected = false;
   }

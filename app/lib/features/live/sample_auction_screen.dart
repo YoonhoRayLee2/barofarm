@@ -136,6 +136,7 @@ class _SampleAuctionScreenState extends State<SampleAuctionScreen>
         _messages.add(ChatMessage(
           userId: 'SYSTEM',
           message: '$bidder님이 ${_fmt(_currentPrice)}원에 입찰했어요!',
+            ts: DateTime.now().millisecondsSinceEpoch
         ));
       });
       _scheduleFakeBid();
@@ -149,6 +150,7 @@ class _SampleAuctionScreenState extends State<SampleAuctionScreen>
       _messages.add(ChatMessage(
         userId: 'SYSTEM',
         message: '${_fmt(_currentPrice)}원에 입찰했어요!',
+          ts: DateTime.now().millisecondsSinceEpoch
       ));
     });
   }

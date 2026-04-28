@@ -8,7 +8,8 @@
       "WebFetch(domain:wyyyes.com)",
       "WebFetch(domain:namu.wiki)",
       "WebFetch(domain:i.nambusangsa.com)",
-      "WebFetch(domain:download.nambusangsa.com)"
+      "WebFetch(domain:download.nambusangsa.com)",
+      "WebFetch(domain:api.anthropic.com)"
     ]
   }
 }

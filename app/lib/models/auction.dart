@@ -1,5 +1,6 @@
 class Auction {
   final String id;
+  final String liveId;
   final String sellerId;
   final String productName;
   final int startPrice;
@@ -13,6 +14,7 @@ class Auction {
 
   const Auction({
     required this.id,
+    required this.liveId,
     required this.sellerId,
     required this.productName,
     required this.startPrice,
@@ -27,6 +29,7 @@ class Auction {
 
   factory Auction.fromJson(Map<String, dynamic> j) => Auction(
         id: j['id'].toString(),
+        liveId: j['liveId']?.toString() ?? '',
         sellerId: (j['seller_id'] ?? j['sellerId']).toString(),
         productName: (j['product_name'] ?? j['productName']) as String,
         startPrice: ((j['start_price'] ?? j['startPrice']) as num).toInt(),
@@ -42,9 +45,10 @@ class Auction {
         createdAt: j['created_at'] as String,
       );
 
-  Auction copyWith({int? currentPrice, String? topBidder, int? timeLeft, String? status}) =>
+  Auction copyWith({String? liveId, int? currentPrice, String? topBidder, int? timeLeft, String? status}) =>
       Auction(
         id: id,
+        liveId: liveId ?? this.liveId,
         sellerId: sellerId,
         productName: productName,
         startPrice: startPrice,

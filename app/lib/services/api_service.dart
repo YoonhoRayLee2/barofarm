@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import '../app_config.dart';
 import '../models/auction.dart';
+import '../models/live.dart';
 import '../models/user.dart';
 
 class ApiService {
@@ -13,17 +14,32 @@ class ApiService {
   Future<User> createUser({
     required String name,
     required String phone,
-    required String role,
   }) async {
-    final res = await _dio.post('/api/users', data: {'name': name, 'phone': phone, 'role': role});
+    final res = await _dio.post('/api/users', data: {'name': name, 'phone': phone});
     return User.fromJson(res.data as Map<String, dynamic>);
   }
 
-  Future<List<Auction>> getAuctions() async {
-    final res = await _dio.get('/api/auctions');
+  // ── Live ────────────────────────────────────────────────
+
+  Future<List<Live>> getLives() async {
+    final res = await _dio.get('/api/lives');
     final list = res.data as List<dynamic>;
-    return list.map((e) => Auction.fromJson(e as Map<String, dynamic>)).toList();
+    return list.map((e) => Live.fromJson(e as Map<String, dynamic>)).toList();
   }
+
+  /// 응답: { id, sellerId, title, status, token, serverUrl }
+  Future<Map<String, dynamic>> createLive({
+    required String sellerId,
+    required String title,
+  }) async {
+    final res = await _dio.post('/api/lives', data: {
+      'sellerId': sellerId,
+      'title': title,
+    });
+    return res.data as Map<String, dynamic>;
+  }
+
+  // ── Auction ─────────────────────────────────────────────
 
   Future<Auction> getAuction(String id) async {
     final res = await _dio.get('/api/auctions/$id');
@@ -31,22 +47,23 @@ class ApiService {
   }
 
   Future<Auction> createAuction({
-    required String sellerId,
+    required String liveId,
     required String productName,
     required int startPrice,
   }) async {
-    final res = await _dio.post('/api/auctions', data: {
-      'sellerId': sellerId,
+    final res = await _dio.post('/api/lives/$liveId/auctions', data: {
       'productName': productName,
       'startPrice': startPrice,
     });
-    // 서버는 { id } 만 반환 → 전체 경매 정보 재조회
     final id = (res.data as Map<String, dynamic>)['id'].toString();
     return getAuction(id);
   }
 
-  Future<void> startAuction(String auctionId) async {
-    await _dio.patch('/api/auctions/$auctionId/start');
+  Future<void> startAuction({
+    required String liveId,
+    required String auctionId,
+  }) async {
+    await _dio.patch('/api/lives/$liveId/auctions/$auctionId/start');
   }
 
   Future<Map<String, dynamic>> getToken({

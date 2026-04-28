@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../app_theme.dart';
+import '../../models/live.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
 import '../../utils/responsive.dart';
 import '../live/live_screen.dart';
 
 class CreateAuctionScreen extends StatefulWidget {
-  const CreateAuctionScreen({super.key, required this.user});
+  const CreateAuctionScreen({super.key, required this.user, required this.live});
   final User user;
+  final Live live;
 
   @override
   State<CreateAuctionScreen> createState() => _CreateAuctionScreenState();
@@ -33,23 +35,18 @@ class _CreateAuctionScreenState extends State<CreateAuctionScreen> {
     try {
       final api = ApiService();
       final auction = await api.createAuction(
-        sellerId: widget.user.id,
+        liveId: widget.live.id,
         productName: _productCtrl.text.trim(),
         startPrice: int.parse(_priceCtrl.text.trim()),
       );
-      await api.startAuction(auction.id);
-      final tokenData = await api.getToken(
-        roomName: auction.id,
-        userId: widget.user.id,
-        role: widget.user.role,
-      );
+      await api.startAuction(liveId: widget.live.id, auctionId: auction.id);
       if (!mounted) return;
       await Navigator.of(context).pushReplacement(MaterialPageRoute(
         builder: (_) => LiveScreen(
-          auction: auction,
+          live: widget.live,
           user: widget.user,
-          liveToken: tokenData['token'] as String,
-          serverUrl: tokenData['serverUrl'] as String,
+          liveToken: '',
+          serverUrl: '',
         ),
       ));
     } catch (e) {
@@ -65,7 +62,7 @@ class _CreateAuctionScreenState extends State<CreateAuctionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('경매 만들기',
+        title: const Text('경매 등록',
             style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: SafeArea(

@@ -62,7 +62,7 @@ class _TimerDisplayState extends State<TimerDisplay> with SingleTickerProviderSt
           style: TextStyle(
             color: _color,
             fontSize: 16,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w900,
             fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
