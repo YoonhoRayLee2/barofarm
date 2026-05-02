@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 160" width="600" height="160">
+  <defs>
+    <linearGradient id="wbg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#00A651"></stop>
+      <stop offset="1" stop-color="#007A3D"></stop>
+    </linearGradient>
+  </defs>
+  
+  <g transform="translate(0 0)">
+    <path d="M 80 0&#xA;             C 32 0, 0 32, 0 80&#xA;             C 0 128, 32 160, 80 160&#xA;             C 128 160, 160 128, 160 80&#xA;             C 160 32, 128 0, 80 0 Z" fill="url(#wbg)"></path>
+    <circle cx="120" cy="46" r="18" fill="#FFC72C"></circle>
+    <g transform="translate(80 92)">
+      <path d="M 0 30 C -2 14, -2 4, 0 -6" stroke="#FFE38A" stroke-width="4" stroke-linecap="round" fill="none"></path>
+      <path d="M 0 8&#xA;               C -26 4, -32 -8, -32 -22&#xA;               C -22 -22, -8 -16, 0 -4 Z" fill="#FFC72C"></path>
+      <path d="M 0 0&#xA;               C 26 -4, 36 -16, 36 -30&#xA;               C 22 -30, 8 -22, 0 -10 Z" fill="#FFC72C"></path>
+    </g>
+    <g transform="translate(14 16)">
+      <rect width="38" height="20" rx="4" fill="#FFFFFF"></rect>
+      <text x="19" y="15" text-anchor="middle" font-family="-apple-system, system-ui, sans-serif" font-weight="900" font-size="13" fill="#00A651">NH</text>
+    </g>
+  </g>
+  
+  <g transform="translate(196 0)">
+    <text x="0" y="80" font-family="&#39;Pretendard&#39;, -apple-system, system-ui, sans-serif" font-weight="800" font-size="58" fill="#0B1426" letter-spacing="-2.5">NH</text>
+    <text x="76" y="80" font-family="&#39;Pretendard&#39;, -apple-system, system-ui, sans-serif" font-weight="800" font-size="58" fill="#E27542" letter-spacing="-2.5">바로</text>
+    <text x="200" y="80" font-family="&#39;Pretendard&#39;, -apple-system, system-ui, sans-serif" font-weight="800" font-size="58" fill="#0B1426" letter-spacing="-2.5">Farm</text>
+    <text x="0" y="118" font-family="&#39;Pretendard&#39;, -apple-system, system-ui, sans-serif" font-weight="500" font-size="20" fill="#8C7E68" letter-spacing="0.5">산지에서 식탁까지, 가장 빠른 길</text>
+  </g>
+</svg>

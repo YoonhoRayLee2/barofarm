@@ -1,0 +1,28 @@
+/* Route Transition Animations — Fresh Field */
+
+/* Entry state: invisible + shifted down */
+.route-enter {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+/* Active transition: animate to natural position */
+.route-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+}
+
+/* Respect user motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .route-enter {
+    opacity: 1;
+    transform: none;
+  }
+
+  .route-enter-active {
+    transition: none;
+  }
+}

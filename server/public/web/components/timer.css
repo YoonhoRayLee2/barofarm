@@ -1,0 +1,67 @@
+/*
+ * Timer Component — Fresh Field Renewal
+ * Color transitions based on remaining time.
+ */
+
+.timer {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-line);
+  border-radius: var(--radius-md);
+}
+
+.timer__number {
+  font-family: var(--font-display);
+  font-size: 38px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--color-accent);
+  transition: color var(--dur-slow) var(--ease-out);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
+}
+
+.timer__label {
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: var(--color-ink-soft);
+  margin-top: 2px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* State: warning (10–4s) */
+.timer--warn .timer__number {
+  color: var(--color-warn);
+}
+
+.timer--warn {
+  border-color: var(--color-warn);
+}
+
+/* State: danger (≤3s) + shake */
+.timer--danger .timer__number {
+  color: var(--color-danger);
+  animation: timer-shake 0.3s ease-in-out infinite;
+}
+
+.timer--danger {
+  border-color: var(--color-danger);
+  background: rgba(214,71,58,0.12);
+}
+
+@keyframes timer-shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-2px); }
+  40%       { transform: translateX(2px); }
+  60%       { transform: translateX(-2px); }
+  80%       { transform: translateX(2px); }
+}

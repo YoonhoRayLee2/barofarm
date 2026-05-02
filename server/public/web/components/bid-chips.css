@@ -1,0 +1,58 @@
+/*
+ * Bid Chips Component — Fresh Field Renewal
+ * Horizontal amount increment chip row.
+ */
+
+.bid-chips {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 2px 0;
+}
+
+.bid-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.bid-chip {
+  flex-shrink: 0;
+  height: 42px;
+  padding: 0 18px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--color-ink);
+  border: 1.5px solid var(--glass-line);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  transition: all var(--dur-fast) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  letter-spacing: -0.2px;
+}
+
+.bid-chip:hover {
+  border-color: var(--color-accent);
+}
+
+.bid-chip:active {
+  transform: scale(0.94);
+  border-color: var(--color-accent);
+  background: var(--color-accent-tint);
+}
+
+.bid-chip.is-selected {
+  border-color: var(--color-accent);
+  background: var(--color-accent-tint);
+  color: var(--color-accent);
+}

@@ -1,0 +1,192 @@
+/*
+ * Buy Button Component — Fresh Field Renewal
+ * FCFS 라이브 즉시구매 카드 + CTA.
+ */
+
+.buy-button {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-line);
+  border-radius: var(--radius-lg);
+}
+
+/* Tag row */
+.buy-button__tag-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.buy-button__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--color-bg);
+  background: var(--color-accent);
+  border-radius: var(--radius-pill);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.buy-button__tag::before {
+  content: '⚡';
+  font-size: 10px;
+}
+
+.buy-button__remaining {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--color-ink-soft);
+}
+
+.buy-button__remaining--sold-out {
+  color: var(--color-danger);
+}
+
+/* Product card */
+.buy-button__product {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.buy-button__thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-alt);
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  flex-shrink: 0;
+  border: 1px solid var(--color-line);
+}
+
+.buy-button__thumb--image { font-size: 0; }
+
+.buy-button__product-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.buy-button__product-name {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.buy-button__product-sub {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--color-ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.buy-button__price {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--color-ink);
+  white-space: nowrap;
+  letter-spacing: -0.5px;
+}
+
+/* CTA 버튼 */
+.buy-button__cta {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 14px var(--space-4);
+  background: var(--grad-cta);
+  color: var(--color-ink);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: opacity var(--dur-fast) var(--ease-out),
+              transform 0.1s var(--ease-out);
+  font-family: var(--font-body);
+  box-shadow: 0 4px 12px rgba(214, 71, 58, 0.3);
+}
+
+.buy-button__cta:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.buy-button__cta-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-ink);
+}
+
+.buy-button__cta-label {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.buy-button__cta-timer {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+  opacity: 0.95;
+}
+
+.buy-button__cta-timer--urgent {
+  color: var(--color-warn);
+  animation: bb-blink 0.8s ease-in-out infinite;
+}
+
+@keyframes bb-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.buy-button__cta--disabled,
+.buy-button__cta:disabled {
+  background: var(--color-surface-alt);
+  color: var(--color-ink-mute);
+  cursor: not-allowed;
+  opacity: 0.7;
+  box-shadow: none;
+}
+
+.buy-button__cta--disabled .buy-button__cta-arrow,
+.buy-button__cta:disabled .buy-button__cta-arrow {
+  background: var(--color-surface-tint);
+  color: var(--color-ink-mute);
+}

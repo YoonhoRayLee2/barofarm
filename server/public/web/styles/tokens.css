@@ -1,0 +1,225 @@
+/*
+ * Fresh Field Design System — Single Source of Truth
+ * Barofarm P2C Live Commerce
+ *
+ * 모든 페이지·컴포넌트는 이 토큰만 참조해야 한다.
+ * hex/rgb 리터럴을 직접 사용하지 말 것.
+ */
+
+/* ─── Dark theme (default) ─────────────────────────────────── */
+:root,
+:root[data-theme="dark"] {
+  /* Background Layers */
+  --color-bg:          #0E1A12;
+  --color-bg-alt:      #142220;
+  --color-surface:     #1A2A22;
+  --color-surface-alt: #22372D;
+
+  /* Ink (Text) */
+  --color-ink:         #EDF1E2;
+  --color-ink-soft:    #B7C4A6;
+  --color-ink-mute:    #7E8675;
+
+  /* Lines / Dividers */
+  --color-line:        #28392F;
+
+  /* Brand Accents */
+  --color-accent:      #7AA53F;
+  --color-accent-soft: #5B7A35;
+
+  /* Call To Action */
+  --color-cta:         #D6473A;
+
+  /* Semantic */
+  --color-success:     #7AA53F;
+  --color-warn:        #D4A017;
+  --color-danger:      #D6473A;
+  --color-info:        #5C8BAE;
+
+  /* Typography Families */
+  --font-display: 'Gowun Dodum', 'Pretendard', sans-serif;
+  --font-body:    'Pretendard', -apple-system, sans-serif;
+  --font-mono:    ui-monospace, 'JetBrains Mono', monospace;
+
+  /* Radii */
+  --radius-sm:   6px;
+  --radius-md:  10px;
+  --radius-lg:  14px;
+  --radius-pill: 999px;
+
+  /* Shadows */
+  --color-shadow: rgba(0, 0, 0, 0.45);
+
+  /* Overlays / Tints */
+  --color-overlay-dim:    rgba(0, 0, 0, 0.55);
+  --color-overlay-dark:   rgba(0, 0, 0, 0.25);
+  --color-accent-tint:    rgba(122, 165, 63, 0.12);
+  --color-warn-tint:      rgba(212, 160, 23, 0.12);
+  --color-bg-overlay:     rgba(14, 26, 18, 0.82);
+  --color-surface-tint:   rgba(26, 42, 34, 0.4);
+  --color-white-tint-20:  rgba(255, 255, 255, 0.2);
+  --color-white-tint-30:  rgba(255, 255, 255, 0.3);
+
+  /* Skeleton shimmer gradient stops */
+  --color-skeleton-base:  #1A2A22;
+  --color-skeleton-shine: #22372D;
+
+  /* ── DS-1: Spacing scale ──────────────────────────────────── */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* ── DS-2: Type scale ─────────────────────────────────────── */
+  --fs-xs:   11px;
+  --fs-sm:   12px;
+  --fs-base: 14px;
+  --fs-lg:   16px;
+  --fs-xl:   18px;
+  --fs-2xl:  22px;
+  --fs-3xl:  28px;
+
+  --lh-tight:   1.2;
+  --lh-normal:  1.5;
+  --lh-relaxed: 1.8;
+
+  /* ── DS-3: Motion ─────────────────────────────────────────── */
+  --dur-fast: 120ms;
+  --dur-base: 220ms;
+  --dur-slow: 360ms;
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── DS-4: Elevation ──────────────────────────────────────── */
+  --elev-1: 0 1px 2px var(--color-shadow);
+  --elev-2: 0 4px 12px var(--color-shadow);
+  --elev-3: 0 12px 32px var(--color-shadow);
+
+  /* ── DS-5: Z-index scale ──────────────────────────────────── */
+  --z-base:    0;
+  --z-sticky:  100;
+  --z-overlay: 500;
+  --z-modal:   1000;
+  --z-toast:   2000;
+
+  /* ── Live screen overrides ────────────────────────────────── */
+  --color-live-bg: #000000;
+  --fs-price:      28px;
+  --fw-price:      900;
+  --fs-timer:      32px;
+
+  /* ── Fresh Field gradients ────────────────────────────────── */
+  --grad-accent: linear-gradient(135deg, #7AA53F 0%, #5B7A35 100%);
+  --grad-cta:    linear-gradient(135deg, #E25346 0%, #D6473A 60%, #B83830 100%);
+  --grad-bg:     linear-gradient(180deg, #0E1A12 0%, #142220 100%);
+  --grad-hero:   radial-gradient(ellipse at top, rgba(122,165,63,0.18) 0%, transparent 60%);
+
+  /* ── Glass / blur surfaces ────────────────────────────────── */
+  --glass-blur: blur(12px) saturate(1.2);
+  --glass-bg:   rgba(26, 42, 34, 0.65);
+  --glass-line: rgba(237, 241, 226, 0.08);
+}
+
+/* ─── Light theme placeholder (same values, ready for future use) ── */
+:root[data-theme="light"] {
+  /* Background Layers */
+  --color-bg:          #0E1A12;
+  --color-bg-alt:      #142220;
+  --color-surface:     #1A2A22;
+  --color-surface-alt: #22372D;
+
+  /* Ink (Text) */
+  --color-ink:         #EDF1E2;
+  --color-ink-soft:    #B7C4A6;
+  --color-ink-mute:    #7E8675;
+
+  /* Lines / Dividers */
+  --color-line:        #28392F;
+
+  /* Brand Accents */
+  --color-accent:      #7AA53F;
+  --color-accent-soft: #5B7A35;
+
+  /* Call To Action */
+  --color-cta:         #D6473A;
+
+  /* Semantic */
+  --color-success:     #7AA53F;
+  --color-warn:        #D4A017;
+  --color-danger:      #D6473A;
+  --color-info:        #5C8BAE;
+
+  /* Typography Families */
+  --font-display: 'Gowun Dodum', 'Pretendard', sans-serif;
+  --font-body:    'Pretendard', -apple-system, sans-serif;
+  --font-mono:    ui-monospace, 'JetBrains Mono', monospace;
+
+  /* Radii */
+  --radius-sm:   6px;
+  --radius-md:  10px;
+  --radius-lg:  14px;
+  --radius-pill: 999px;
+
+  /* Shadows */
+  --color-shadow: rgba(0, 0, 0, 0.45);
+
+  /* Overlays / Tints */
+  --color-overlay-dim:    rgba(0, 0, 0, 0.55);
+  --color-overlay-dark:   rgba(0, 0, 0, 0.25);
+  --color-accent-tint:    rgba(122, 165, 63, 0.12);
+  --color-warn-tint:      rgba(212, 160, 23, 0.12);
+  --color-bg-overlay:     rgba(14, 26, 18, 0.82);
+  --color-surface-tint:   rgba(26, 42, 34, 0.4);
+  --color-white-tint-20:  rgba(255, 255, 255, 0.2);
+  --color-white-tint-30:  rgba(255, 255, 255, 0.3);
+
+  /* Skeleton shimmer gradient stops */
+  --color-skeleton-base:  #1A2A22;
+  --color-skeleton-shine: #22372D;
+
+  /* Spacing scale */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* Type scale */
+  --fs-xs:   11px;
+  --fs-sm:   12px;
+  --fs-base: 14px;
+  --fs-lg:   16px;
+  --fs-xl:   18px;
+  --fs-2xl:  22px;
+  --fs-3xl:  28px;
+
+  --lh-tight:   1.2;
+  --lh-normal:  1.5;
+  --lh-relaxed: 1.8;
+
+  /* Motion */
+  --dur-fast: 120ms;
+  --dur-base: 220ms;
+  --dur-slow: 360ms;
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Elevation */
+  --elev-1: 0 1px 2px var(--color-shadow);
+  --elev-2: 0 4px 12px var(--color-shadow);
+  --elev-3: 0 12px 32px var(--color-shadow);
+
+  /* Z-index scale */
+  --z-base:    0;
+  --z-sticky:  100;
+  --z-overlay: 500;
+  --z-modal:   1000;
+  --z-toast:   2000;
+}

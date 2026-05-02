@@ -1,0 +1,105 @@
+/*
+ * Slide-to-Bid Component — Fresh Field Renewal
+ * Drag the handle right >=70% to confirm bid.
+ */
+
+.slide-bid {
+  position: relative;
+  width: 100%;
+  height: 56px;
+  background: var(--grad-cta);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  user-select: none;
+  touch-action: none;
+  box-shadow: 0 4px 16px rgba(214, 71, 58, 0.4),
+              inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+/* Fill: darkens from left as handle drags right */
+.slide-bid__fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  background: rgba(0,0,0,0.35);
+  border-radius: var(--radius-pill);
+  transition: width 0.05s linear;
+  pointer-events: none;
+}
+
+/* Center label: "{amount}원 입찰" */
+.slide-bid__label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-ink);
+  pointer-events: none;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  gap: 6px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+/* Pulse arrow indicator */
+.slide-bid__label::after {
+  content: '›››';
+  font-size: 14px;
+  margin-left: 4px;
+  opacity: 0.85;
+  animation: slide-arrow 1.4s ease-in-out infinite;
+  letter-spacing: -2px;
+}
+
+@keyframes slide-arrow {
+  0%, 100% { opacity: 0.5; transform: translateX(0); }
+  50%       { opacity: 1; transform: translateX(4px); }
+}
+
+/* Drag handle */
+.slide-bid__handle {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: 48px;
+  background: rgba(255,255,255,0.95);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  transition: left 0.05s linear;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-cta);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+
+.slide-bid__handle:active {
+  cursor: grabbing;
+}
+
+/* Confirmed state */
+.slide-bid--confirmed .slide-bid__fill {
+  width: 100% !important;
+  background: var(--color-accent);
+  opacity: 0.55;
+}
+
+.slide-bid--confirmed .slide-bid__handle {
+  background: var(--color-ink);
+  cursor: default;
+  color: var(--color-accent);
+}
+
+.slide-bid--locked {
+  pointer-events: none;
+  opacity: 0.6;
+}

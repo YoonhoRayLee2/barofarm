@@ -29,7 +29,10 @@ async function deleteRoom(roomName) {
 }
 async function endAuction(state) {
     try {
-        await mysql_1.default.query('UPDATE auctions SET current_price = ?, top_bidder_id = ?, status = "ended", ends_at = NOW() WHERE id = ?', [state.currentPrice, state.topBidder ?? null, state.id]);
+        // 유찰(top_bidder_id IS NULL)은 낙찰가 무효 — 시작가가 그대로 저장되지 않도록 0 으로 기록.
+        const isVoid = !state.topBidder;
+        const finalPrice = isVoid ? 0 : state.currentPrice;
+        await mysql_1.default.query('UPDATE auctions SET current_price = ?, top_bidder_id = ?, status = "ended", image_url = ?, ends_at = NOW() WHERE id = ?', [finalPrice, state.topBidder ?? null, state.imageUrl ?? null, state.id]);
     }
     catch (e) {
         console.error('[auction] end DB save failed:', e.message);

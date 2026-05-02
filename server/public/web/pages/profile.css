@@ -1,0 +1,515 @@
+/* Profile Page — Fresh Field — T6-PROF */
+
+/* ── Page shell ──────────────────────────────────────────── */
+.profile-page {
+  background: var(--color-bg);
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
+  margin: 0 auto;
+  font-family: var(--font-body);
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* ── Top nickname bar ─────────────────────────────────────── */
+.profile-topbar {
+  display: flex;
+  align-items: center;
+  padding: max(14px, env(safe-area-inset-top)) var(--space-4) var(--space-3);
+  gap: var(--space-3);
+  background: var(--color-bg);
+}
+
+.profile-topbar__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-alt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.profile-topbar__avatar svg {
+  width: 28px;
+  height: 28px;
+  opacity: 0.55;
+}
+
+.profile-topbar__name {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.profile-topbar__icon-btn {
+  background: none;
+  border: none;
+  padding: var(--space-1);
+  cursor: pointer;
+  color: var(--color-ink-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.profile-topbar__icon-btn:active {
+  color: var(--color-ink);
+}
+
+.profile-topbar__icon-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ── Profile header (PROF-1) ─────────────────────────────── */
+.profile-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+}
+
+.profile-hero__avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-alt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.profile-hero__avatar svg {
+  width: 52px;
+  height: 52px;
+  opacity: 0.5;
+}
+
+.profile-stats {
+  flex: 1;
+  display: flex;
+  gap: var(--space-2);
+}
+
+.profile-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  padding: var(--space-2) var(--space-1);
+  border-radius: var(--radius-sm);
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.profile-stat:active {
+  background: var(--color-surface);
+}
+
+.profile-stat__num {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  color: var(--color-ink);
+  line-height: var(--lh-tight);
+}
+
+.profile-stat__label {
+  font-size: var(--fs-sm);
+  color: var(--color-ink-soft);
+  line-height: var(--lh-tight);
+}
+
+/* Edit + badge buttons */
+.profile-hero-btns {
+  display: flex;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.profile-hero-btn {
+  flex: 1;
+  background: none;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  color: var(--color-ink-soft);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.profile-hero-btn:active {
+  border-color: var(--color-accent);
+  color: var(--color-ink);
+}
+
+/* ── Interest pills (PROF-3) ──────────────────────────────── */
+.profile-interests {
+  padding: 0 var(--space-4) var(--space-3);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.profile-interests::-webkit-scrollbar {
+  display: none;
+}
+
+.profile-interests__row {
+  display: flex;
+  gap: var(--space-2);
+  width: max-content;
+}
+
+.profile-interest-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-sm);
+  font-family: var(--font-body);
+  white-space: nowrap;
+  cursor: pointer;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.profile-interest-pill.is-active {
+  border-color: var(--color-accent);
+  background: var(--color-accent-tint);
+  color: var(--color-ink);
+}
+
+/* ── Badges (PROF-4) ──────────────────────────────────────── */
+.profile-badges {
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.profile-badges::-webkit-scrollbar {
+  display: none;
+}
+
+.profile-badges__row {
+  display: flex;
+  gap: var(--space-3);
+  width: max-content;
+}
+
+.badge-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.badge-card__circle {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-alt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  position: relative;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.badge-card__circle:active {
+  transform: scale(0.93);
+}
+
+.badge-card.is-earned .badge-card__circle {
+  background: var(--color-accent-tint);
+  border: 1.5px solid var(--color-accent-soft);
+}
+
+.badge-card.is-locked .badge-card__circle {
+  opacity: 0.45;
+}
+
+.badge-card__label {
+  font-size: var(--fs-xs);
+  color: var(--color-ink-mute);
+  text-align: center;
+  white-space: nowrap;
+  max-width: 56px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badge-card.is-earned .badge-card__label {
+  color: var(--color-ink-soft);
+}
+
+/* ── Delivery widget (PROF-5) ─────────────────────────────── */
+.profile-delivery {
+  margin: 0 var(--space-4) var(--space-3);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.profile-delivery__icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.profile-delivery__text {
+  flex: 1;
+  font-size: var(--fs-sm);
+  color: var(--color-ink-soft);
+}
+
+.profile-delivery__help {
+  background: none;
+  border: none;
+  padding: var(--space-1);
+  cursor: pointer;
+  color: var(--color-ink-mute);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+
+.profile-delivery__help svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── Collector / Dealer tab toggle (PROF-2) ───────────────── */
+.profile-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-line);
+  margin: var(--space-2) 0 0;
+}
+
+.profile-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: var(--space-3) 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  color: var(--color-ink-mute);
+  cursor: pointer;
+  text-align: center;
+  position: relative;
+  transition: color var(--dur-base) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.profile-tab.is-active {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.profile-tab.is-active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-accent);
+  border-radius: var(--radius-pill);
+}
+
+/* ── Tab panels ───────────────────────────────────────────── */
+.profile-panel {
+  display: none;
+  flex-direction: column;
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+
+.profile-panel.is-active {
+  display: flex;
+  opacity: 1;
+}
+
+/* ── Icon action row (PROF-6 top) ─────────────────────────── */
+.profile-icon-row {
+  display: flex;
+  border-bottom: 1px solid var(--color-line);
+  margin-bottom: var(--space-2);
+}
+
+.profile-icon-action {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-2);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-ink-soft);
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.profile-icon-action:active {
+  color: var(--color-ink);
+}
+
+.profile-icon-action svg {
+  width: 24px;
+  height: 24px;
+  color: var(--color-ink-soft);
+}
+
+/* ── Menu group ───────────────────────────────────────────── */
+.profile-menu-group {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-1) 0;
+}
+
+.profile-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4);
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--color-line);
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--dur-fast) var(--ease-out);
+  box-sizing: border-box;
+}
+
+.profile-menu-item:active {
+  background: var(--color-surface);
+}
+
+.profile-menu-item__icon {
+  font-size: 18px;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.profile-menu-item__label {
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  color: var(--color-ink);
+  flex: 1;
+}
+
+/* ── Dealer revenue header (PROF-7) ───────────────────────── */
+.profile-revenue {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-line);
+  border-left: 3px solid var(--color-accent);
+  margin: var(--space-3) var(--space-4) var(--space-2);
+  background: var(--color-surface);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.profile-revenue__label {
+  font-size: var(--fs-sm);
+  color: var(--color-ink-soft);
+  flex: 1;
+}
+
+.profile-revenue__amount {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+/* ── LIVE floating bubble ─────────────────────────────────── */
+.profile-live-bubble {
+  position: fixed;
+  right: var(--space-4);
+  bottom: calc(68px + var(--space-4));
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--color-cta);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: var(--z-sticky);
+  box-shadow: var(--elev-2);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--dur-fast) var(--ease-out);
+  overflow: hidden;
+}
+
+.profile-live-bubble:active {
+  transform: scale(0.93);
+}
+
+.profile-live-bubble__badge {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--color-cta);
+  letter-spacing: 0.04em;
+}
+
+.profile-live-bubble__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  inset: 0;
+}
+
+/* Spacer ensures content not hidden behind fixed tab bar */
+.profile-spacer {
+  height: var(--space-7);
+}

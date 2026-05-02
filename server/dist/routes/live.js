@@ -1,10 +1,31 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createLiveRouter = createLiveRouter;
 const express_1 = require("express");
 const livekit_server_sdk_1 = require("livekit-server-sdk");
+const multer_1 = __importDefault(require("multer"));
+const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
 const memory_1 = require("../store/memory");
 const livekit_service_1 = require("../services/livekit-service");
+const UPLOADS_DIR = path_1.default.join(__dirname, '..', '..', 'public', 'uploads', 'auctions');
+// multer: 임시 파일명(timestamp)으로 저장 후 auctionId로 rename
+const upload = (0, multer_1.default)({
+    storage: multer_1.default.diskStorage({
+        destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
+        filename: (_req, _file, cb) => cb(null, `tmp_${Date.now()}.jpg`),
+    }),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+        if (file.mimetype.startsWith('image/'))
+            cb(null, true);
+        else
+            cb(new Error('이미지 파일만 허용됩니다.'));
+    },
+});
 const router = (0, express_1.Router)();
 // 기존 엔드포인트 유지 — roomName=liveId로 호출
 router.post('/token', async (req, res) => {
@@ -38,6 +59,13 @@ router.post('/token', async (req, res) => {
             canPublishData: true,
         });
         const jwt = await token.toJwt();
+        // LK-1: 토큰 응답 로깅
+        console.log('[live/token]', {
+            tokenPrefix: jwt.slice(0, 20),
+            serverUrl: liveKitUrl,
+            role: resolvedRole,
+            room: roomName,
+        });
         res.json({
             token: jwt,
             serverUrl: liveKitUrl,
@@ -46,10 +74,28 @@ router.post('/token', async (req, res) => {
         });
     }
     catch (err) {
-        console.error('[live/token] 토큰 발급 실패:', err);
+        console.error('[live/token] 실패', err);
         res.status(500).json({
             error: 'LiveKit 토큰 발급 중 오류가 발생했습니다.',
         });
+    }
+});
+// LK-4: LiveKit 도달성 헬스체크
+router.get('/health', async (_req, res) => {
+    const liveKitUrl = process.env.LIVEKIT_URL;
+    const apiKey = process.env.LIVEKIT_KEY;
+    const apiSecret = process.env.LIVEKIT_SECRET;
+    if (!liveKitUrl || !apiKey || !apiSecret) {
+        res.json({ ok: false, error: 'env-missing' });
+        return;
+    }
+    try {
+        const client = new livekit_server_sdk_1.RoomServiceClient(liveKitUrl, apiKey, apiSecret);
+        const rooms = await client.listRooms();
+        res.json({ ok: true, roomCount: rooms.length, serverUrl: liveKitUrl });
+    }
+    catch (err) {
+        res.json({ ok: false, error: err.message });
     }
 });
 exports.default = router;
@@ -84,11 +130,19 @@ function createLiveRouter(io) {
                     canPublishData: true,
                 });
                 token = await at.toJwt();
+                // LK-1: 토큰 응답 로깅
+                console.log('[live/token]', {
+                    tokenPrefix: token.slice(0, 20),
+                    serverUrl: liveKitUrl,
+                    role: 'seller',
+                    room: id,
+                });
             }
             catch (err) {
-                console.error('[lives] 토큰 발급 실패:', err);
+                console.error('[live/token] 실패', err);
             }
         }
+        io.emit('lobby:live:new', { ...liveState, currentAuction: null });
         res.json({
             id: liveState.id,
             sellerId: liveState.sellerId,
@@ -108,39 +162,134 @@ function createLiveRouter(io) {
         });
         res.json(result);
     });
-    // PATCH /api/lives/:id/end — 방송 종료
-    r.patch('/:id/end', (req, res) => {
+    // GET /api/lives/:id — 단일 라이브 조회 (메모리에 없으면 404)
+    r.get('/:id', (req, res) => {
         const liveId = String(req.params.id);
         const live = memory_1.lives.get(liveId);
         if (!live) {
             res.status(404).json({ error: 'Live not found' });
             return;
         }
+        const currentAuction = live.currentAuctionId ? (memory_1.auctions.get(live.currentAuctionId) ?? null) : null;
+        res.json({
+            liveId: live.id,
+            sellerId: live.sellerId,
+            title: live.title,
+            status: live.status,
+            startedAt: live.createdAt,
+            currentAuction: currentAuction
+                ? {
+                    auctionId: currentAuction.id,
+                    productName: currentAuction.productName,
+                    currentPrice: currentAuction.currentPrice,
+                    mode: currentAuction.mode,
+                    durationSec: currentAuction.durationSec,
+                    timeLeft: currentAuction.timeLeft,
+                    topBidder: currentAuction.topBidder,
+                    topBidderName: currentAuction.topBidderName,
+                    status: currentAuction.status,
+                    imageUrl: currentAuction.imageUrl ?? null,
+                }
+                : null,
+        });
+    });
+    // PATCH /api/lives/:id/end — 방송 종료 (셀러 전용)
+    r.patch('/:id/end', (req, res) => {
+        const liveId = String(req.params.id);
+        const { sellerId } = req.body;
+        const live = memory_1.lives.get(liveId);
+        if (!live) {
+            res.status(404).json({ error: 'Live not found' });
+            return;
+        }
+        if (sellerId && live.sellerId !== String(sellerId)) {
+            res.status(403).json({ error: '셀러 권한이 없습니다.' });
+            return;
+        }
         (0, memory_1.endLive)(liveId);
-        io.emit('lobby:live:updated', memory_1.lives.get(liveId));
+        io.emit('lobby:live:ended', { id: liveId });
         res.json({ success: true });
     });
-    // POST /api/lives/:liveId/auctions — 방송 중 상품 등록
-    r.post('/:liveId/auctions', (req, res) => {
+    // POST /api/lives/:liveId/auctions — 방송 중 상품 등록 (multipart/form-data 또는 JSON 모두 지원)
+    r.post('/:liveId/auctions', upload.single('image'), (req, res) => {
         const liveId = String(req.params.liveId);
         const live = memory_1.lives.get(liveId);
         if (!live || live.status !== 'live') {
+            // 업로드된 임시 파일 정리
+            if (req.file)
+                fs_1.default.unlink(req.file.path, () => { });
             res.status(404).json({ error: 'Live not found or not active' });
             return;
         }
-        const { productName, startPrice } = req.body;
+        const { productName, startPrice, mode, durationSec, stockTotal } = req.body;
+        console.log('[auction:create] body=', req.body, 'file=', req.file ? { name: req.file.filename, size: req.file.size } : null);
         if (!productName || startPrice === undefined) {
+            if (req.file)
+                fs_1.default.unlink(req.file.path, () => { });
             res.status(400).json({ error: 'productName, startPrice 는 필수입니다.' });
             return;
         }
+        const resolvedMode = (mode === 'fcfs' || mode === 'blind') ? mode : 'normal';
+        const resolvedDuration = durationSec !== undefined ? Number(durationSec) : 30;
+        // 모드별 durationSec 검증
+        if (resolvedMode === 'normal') {
+            if (resolvedDuration !== 30 && resolvedDuration !== 60) {
+                if (req.file)
+                    fs_1.default.unlink(req.file.path, () => { });
+                res.status(400).json({ error: 'normal 모드의 durationSec 은 30 또는 60 이어야 합니다.' });
+                return;
+            }
+        }
+        else if (resolvedMode === 'fcfs') {
+            if (resolvedDuration < 300 ||
+                resolvedDuration > 3600 ||
+                resolvedDuration % 300 !== 0) {
+                if (req.file)
+                    fs_1.default.unlink(req.file.path, () => { });
+                res.status(400).json({ error: 'fcfs 모드의 durationSec 은 300~3600 범위의 300 배수이어야 합니다.' });
+                return;
+            }
+            const resolvedStock = stockTotal !== undefined ? Number(stockTotal) : undefined;
+            if (resolvedStock === undefined || resolvedStock < 1 || resolvedStock > 99) {
+                if (req.file)
+                    fs_1.default.unlink(req.file.path, () => { });
+                res.status(400).json({ error: 'fcfs 모드의 stockTotal 은 1~99 이어야 합니다.' });
+                return;
+            }
+        }
+        else if (resolvedMode === 'blind') {
+            if (resolvedDuration !== 10 && resolvedDuration !== 20 && resolvedDuration !== 30) {
+                if (req.file)
+                    fs_1.default.unlink(req.file.path, () => { });
+                res.status(400).json({ error: 'blind 모드의 durationSec 은 10, 20, 30 중 하나이어야 합니다.' });
+                return;
+            }
+        }
         const auctionId = crypto.randomUUID();
+        // 이미지 파일을 auctionId 기반 최종 경로로 rename
+        let imageUrl;
+        if (req.file) {
+            const finalName = `${auctionId}.jpg`;
+            const finalPath = path_1.default.join(UPLOADS_DIR, finalName);
+            try {
+                fs_1.default.renameSync(req.file.path, finalPath);
+                imageUrl = `/uploads/auctions/${finalName}`;
+            }
+            catch (err) {
+                console.error('[auction] image rename failed:', err.message);
+            }
+        }
         (0, memory_1.createAuction)(auctionId, {
             liveId,
             productName: String(productName),
             startPrice: Number(startPrice),
             sellerId: live.sellerId,
+            mode: resolvedMode,
+            durationSec: resolvedDuration,
+            stockTotal: resolvedMode === 'fcfs' ? Number(stockTotal) : undefined,
+            imageUrl,
         });
-        res.json({ id: auctionId });
+        res.json({ id: auctionId, imageUrl: imageUrl ?? null });
     });
     // PATCH /api/lives/:liveId/auctions/:auctionId/start — 경매 시작
     r.patch('/:liveId/auctions/:auctionId/start', (req, res) => {
@@ -167,6 +316,68 @@ function createLiveRouter(io) {
         const updatedLive = memory_1.lives.get(liveId);
         io.emit('lobby:live:updated', updatedLive);
         res.json({ success: true });
+    });
+    // PATCH /api/lives/:liveId/auctions/:auctionId/end-fcfs — 선착순 셀러 중도 종료
+    r.patch('/:liveId/auctions/:auctionId/end-fcfs', (req, res) => {
+        const liveId = String(req.params.liveId);
+        const auctionId = String(req.params.auctionId);
+        const { sellerId } = req.body;
+        const live = memory_1.lives.get(liveId);
+        if (!live || live.status !== 'live') {
+            res.status(404).json({ error: 'Live not found or not active' });
+            return;
+        }
+        const auction = memory_1.auctions.get(auctionId);
+        if (!auction || auction.liveId !== liveId) {
+            res.status(404).json({ error: 'Auction not found in this live' });
+            return;
+        }
+        if (auction.mode !== 'fcfs') {
+            res.status(400).json({ error: '선착순 경매가 아닙니다.' });
+            return;
+        }
+        if (sellerId && auction.sellerId !== String(sellerId)) {
+            res.status(403).json({ error: '셀러 권한이 없습니다.' });
+            return;
+        }
+        if (auction.status !== 'live') {
+            res.status(409).json({ error: '진행 중인 경매가 아닙니다.' });
+            return;
+        }
+        const ok = (0, memory_1.endFcfsAuction)(auctionId, io, async (state) => {
+            await (0, livekit_service_1.endAuction)(state);
+        });
+        if (!ok) {
+            res.status(409).json({ error: '경매를 종료할 수 없습니다.' });
+            return;
+        }
+        res.json({ success: true });
+    });
+    // GET /api/lives/:liveId/auctions/:auctionId/bids — 블라인드 입찰 내역 조회
+    r.get('/:liveId/auctions/:auctionId/bids', (req, res) => {
+        const liveId = String(req.params.liveId);
+        const auctionId = String(req.params.auctionId);
+        // 메모리에 아직 있는 경우 (ended 직전) 또는 endedBlindBids에 보관된 경우 모두 처리
+        const inMemory = memory_1.auctions.get(auctionId);
+        const savedBids = memory_1.endedBlindBids.get(auctionId);
+        // 아직 메모리에 있으면서 blind가 아닌 경우
+        if (inMemory && inMemory.mode !== 'blind') {
+            res.status(404).json({ error: '블라인드 경매가 아닙니다.' });
+            return;
+        }
+        // 메모리에도 없고 endedBlindBids에도 없으면 404
+        if (!inMemory && !savedBids) {
+            res.status(404).json({ error: '경매를 찾을 수 없습니다.' });
+            return;
+        }
+        // 진행 중인 경우 403
+        if (inMemory && (inMemory.status !== 'ended' || !inMemory.revealAt)) {
+            res.status(403).json({ error: '경매 종료 후에만 조회 가능합니다.' });
+            return;
+        }
+        const bids = savedBids ?? (inMemory?.blindBids ?? []);
+        const sorted = [...bids].sort((a, b) => b.price !== a.price ? b.price - a.price : a.ts - b.ts);
+        res.json({ bids: sorted });
     });
     return r;
 }

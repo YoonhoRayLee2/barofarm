@@ -1,0 +1,162 @@
+/*
+ * Chat Overlay Component — Fresh Field
+ * 스크롤 가능한 채팅 메시지 오버레이.
+ * 컨테이너는 pointer-events: none, 리스트만 pointer-events: auto
+ */
+
+.chat-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 45%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  pointer-events: none;
+  box-sizing: border-box;
+  padding: 0 var(--space-3) var(--space-2);
+  gap: 4px;
+}
+
+/* ---- 스크롤 가능한 메시지 리스트 ---- */
+.chat-overlay__list {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  pointer-events: auto;
+  /* 상단 그라디언트 페이드: 오래된 메시지가 자연스럽게 사라짐 */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 18%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 18%);
+}
+
+.chat-overlay__list::-webkit-scrollbar { display: none; }
+
+/* ---- 새 메시지 뱃지 ---- */
+.chat-overlay__new-badge {
+  pointer-events: auto;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 5px 14px;
+  font-family: var(--font-body);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  box-shadow: var(--elev-2);
+  animation: badge-pop 0.2s var(--ease-out) both;
+}
+
+@keyframes badge-pop {
+  from { opacity: 0; transform: translateY(6px) scale(0.9); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ---- 메시지 행 ---- */
+.chat-overlay__msg {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-bottom: 4px;
+  animation: chat-slide-in var(--dur-base) var(--ease-out) both;
+  flex-shrink: 0;
+}
+
+@keyframes chat-slide-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- 아바타 ---- */
+.chat-overlay__avatar {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--grad-accent);
+  border: 1.5px solid var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--color-ink);
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+
+/* ---- 말풍선 ---- */
+.chat-overlay__bubble {
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-line);
+  border-radius: 14px;
+  padding: 5px 11px;
+  max-width: calc(100% - 38px);
+}
+
+.chat-overlay__username {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-accent);
+  margin-bottom: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.01em;
+}
+
+.chat-overlay__text {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--color-ink);
+  line-height: var(--lh-normal);
+  word-break: break-word;
+}
+
+/* ---- 시스템 메시지 ---- */
+.chat-overlay__msg.is-system .chat-overlay__bubble {
+  background: var(--color-warn-tint);
+  border-color: var(--color-warn);
+}
+.chat-overlay__msg.is-system .chat-overlay__username { color: var(--color-warn); }
+.chat-overlay__msg.is-system .chat-overlay__avatar {
+  background: var(--color-warn-tint);
+  border-color: var(--color-warn);
+  font-size: 13px;
+}
+
+/* ---- 판매자 메시지 ---- */
+.chat-overlay__avatar--seller {
+  background: var(--grad-cta);
+  font-size: 13px;
+}
+.chat-overlay__msg.is-seller .chat-overlay__bubble {
+  background: rgba(122, 165, 63, 0.18);
+  border-color: rgba(122, 165, 63, 0.4);
+}
+.chat-overlay__msg.is-seller .chat-overlay__username { color: var(--color-accent); }
+
+.chat-overlay__seller-tag {
+  display: inline-block;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  margin-right: 4px;
+  vertical-align: middle;
+  letter-spacing: 0.04em;
+}

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#00A651"></stop>
+      <stop offset="1" stop-color="#007A3D"></stop>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFE38A"></stop>
+      <stop offset="1" stop-color="#FFC72C"></stop>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFE38A"></stop>
+      <stop offset="1" stop-color="#FFC72C"></stop>
+    </radialGradient>
+  </defs>
+  
+  <path d="M 512 0&#xA;           C 200 0, 0 200, 0 512&#xA;           C 0 824, 200 1024, 512 1024&#xA;           C 824 1024, 1024 824, 1024 512&#xA;           C 1024 200, 824 0, 512 0 Z" fill="url(#bg)"></path>
+  
+  <path d="M0 760 Q 256 720, 512 760 T 1024 760 L 1024 1024 L 0 1024 Z" fill="#000" opacity="0.18"></path>
+  
+  <circle cx="780" cy="280" r="120" fill="url(#sun)" opacity="0.95"></circle>
+  <circle cx="780" cy="280" r="120" fill="none" stroke="#FFE38A" stroke-width="6" opacity="0.4"></circle>
+  
+  <g transform="translate(512 540)">
+    
+    <path d="M 0 200 C -10 100, -10 30, 0 -30" stroke="#FFE38A" stroke-width="22" stroke-linecap="round" fill="none"></path>
+    
+    <path d="M 0 60&#xA;             C -160 40, -200 -40, -200 -120&#xA;             C -130 -120, -50 -90, 0 -20 Z" fill="url(#leaf)"></path>
+    <path d="M -60 -10 C -120 -50, -160 -90, -195 -115" stroke="#00A651" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.4"></path>
+    
+    <path d="M 0 0&#xA;             C 160 -20, 220 -100, 220 -180&#xA;             C 140 -180, 50 -140, 0 -70 Z" fill="url(#leaf)"></path>
+    <path d="M 60 -70 C 130 -110, 180 -150, 215 -175" stroke="#00A651" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.4"></path>
+  </g>
+  
+  <g transform="translate(90 100)">
+    <rect x="0" y="0" width="180" height="86" rx="16" fill="#FFFFFF"></rect>
+    <text x="90" y="64" text-anchor="middle" font-family="-apple-system, system-ui, &#39;Helvetica Neue&#39;, sans-serif" font-weight="900" font-size="56" fill="#00A651" letter-spacing="-2">NH</text>
+  </g>
+</svg>

@@ -11,9 +11,10 @@ P2C 산지직송 라이브 커머스 barofarm의 개발 작업을 4명의 전문
 
 | 에이전트 | 담당 |
 |---------|------|
-| backend-dev | Node.js/Express/Socket.io — `server/src/` |
-| flutter-dev | Flutter 앱 + WebView — `app/lib/` |
-| livekit-specialist | LiveKit Cloud WebRTC 연동 |
+| backend-dev | Node.js/Express/Socket.io + `/app` 정적 서빙 — `server/src/` |
+| web-ui-dev | SPA 웹앱(페이지·컴포넌트·디자인 토큰·라우터) — `server/public/web/` |
+| shell-dev | Flutter WebView 셸 + JS 브릿지(권한·푸시·시큐어) — `app/lib/` |
+| livekit-specialist | LiveKit 토큰 발급 + 라이브 페이지 LiveKit 연동·진단 |
 | qa | 레이어 간 경계면 교차 검증 |
 
 ## Phase 1: 작업 분석
@@ -32,10 +33,13 @@ P2C 산지직송 라이브 커머스 barofarm의 개발 작업을 4명의 전문
 |----------|-----------|------|
 | 서버 REST API / DB 쿼리 | backend-dev | qa |
 | Socket.io 경매 이벤트 / 타이머 | backend-dev | qa |
-| LiveKit 토큰 발급 API | livekit-specialist → backend-dev | qa |
-| LiveKit WebView HTML/JS 클라이언트 | livekit-specialist | flutter-dev |
-| Flutter 화면 / 네이티브 UI | flutter-dev | qa |
-| Flutter ↔ 서버 연동 | flutter-dev + backend-dev | qa |
+| `/app` 정적 서빙·SPA 라우팅 | backend-dev | web-ui-dev |
+| 웹앱 페이지·컴포넌트·디자인 토큰 | web-ui-dev | qa |
+| 라이브 페이지 레이아웃·UI | web-ui-dev | livekit-specialist |
+| LiveKit 토큰 API / 진단 | livekit-specialist | backend-dev, qa |
+| 라이브 페이지 LiveKit `room.connect()` | livekit-specialist | web-ui-dev |
+| Flutter WebView 셸 / JS 브릿지 / 푸시·권한 | shell-dev | qa |
+| 웹앱 ↔ 셸 브릿지 / 웹앱 ↔ 서버 연동 | web-ui-dev + (shell-dev / backend-dev) | qa |
 | 전체 기능 통합 검증 | qa | 모든 에이전트 |
 
 ## Phase 2: 팀 구성 및 작업 할당

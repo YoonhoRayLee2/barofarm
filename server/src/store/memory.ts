@@ -3,11 +3,22 @@ import type { Server } from 'socket.io';
 export interface LiveState {
   id: string;          // UUID, LiveKit roomName
   sellerId: string;
+  sellerName?: string;
   title: string;
-  status: 'live' | 'ended';
+  thumbnailUrl?: string;
+  category?: string;
+  status: 'live' | 'ended' | 'upcoming';
+  scheduledAt?: number;
   viewerCount: number;
   currentAuctionId: string | null;
   createdAt: number;
+}
+
+export interface BlindBid {
+  userId: string;
+  userName?: string;
+  price: number;
+  ts: number;
 }
 
 export interface AuctionState {
@@ -20,23 +31,45 @@ export interface AuctionState {
   topBidderName?: string;
   timeLeft: number;
   status: 'pending' | 'live' | 'ended';
+  // 경매 모드
+  mode: 'normal' | 'fcfs' | 'blind';
+  durationSec: number;
+  // 선착순(fcfs) 전용
+  stockTotal?: number;
+  stockSold?: number;
+  // 블라인드(blind) 전용
+  blindBids?: BlindBid[];
+  revealAt?: number;
+  // 상품 이미지
+  imageUrl?: string;
 }
 
 export const lives = new Map<string, LiveState>();
 export const auctions = new Map<string, AuctionState>();
 const timers = new Map<string, NodeJS.Timeout>();
 
+// 블라인드 경매 종료 후 blindBids를 30분간 보관하는 Map
+export const endedBlindBids = new Map<string, BlindBid[]>();
+
 interface CreateLiveParams {
   sellerId: string;
+  sellerName?: string;
   title: string;
+  thumbnailUrl?: string;
+  category?: string;
+  scheduledAt?: number;
 }
 
-export function createLive(id: string, { sellerId, title }: CreateLiveParams): LiveState {
+export function createLive(id: string, { sellerId, sellerName, title, thumbnailUrl, category, scheduledAt }: CreateLiveParams): LiveState {
   const state: LiveState = {
     id,
     sellerId,
+    sellerName,
     title,
-    status: 'live',
+    thumbnailUrl,
+    category,
+    status: scheduledAt ? 'upcoming' : 'live',
+    scheduledAt,
     viewerCount: 0,
     currentAuctionId: null,
     createdAt: Date.now(),
@@ -57,19 +90,92 @@ interface CreateAuctionParams {
   productName: string;
   startPrice: number;
   sellerId: string;
+  mode?: 'normal' | 'fcfs' | 'blind';
+  durationSec?: number;
+  stockTotal?: number;
+  imageUrl?: string;
 }
 
-export function createAuction(id: string, { liveId, productName, startPrice, sellerId }: CreateAuctionParams): void {
-  auctions.set(id, {
+export function createAuction(
+  id: string,
+  { liveId, productName, startPrice, sellerId, mode = 'normal', durationSec = 30, stockTotal, imageUrl }: CreateAuctionParams,
+): void {
+  const state: AuctionState = {
     id,
     liveId,
     productName,
     sellerId,
     currentPrice: startPrice,
     topBidder: null,
-    timeLeft: 30,
+    timeLeft: durationSec,
     status: 'pending',
+    mode,
+    durationSec,
+    imageUrl,
+  };
+
+  if (mode === 'fcfs') {
+    state.stockTotal = stockTotal ?? 1;
+    state.stockSold = 0;
+  }
+
+  if (mode === 'blind') {
+    state.blindBids = [];
+  }
+
+  auctions.set(id, state);
+}
+
+function endAuctionState(
+  auc: AuctionState,
+  io: Server,
+  onEnd?: (state: AuctionState) => void,
+): void {
+  auc.timeLeft = 0;
+  auc.status = 'ended';
+
+  if (auc.mode === 'blind' && auc.blindBids && auc.blindBids.length > 0) {
+    // 정렬: price DESC, ts ASC
+    const sorted = [...auc.blindBids].sort((a, b) =>
+      b.price !== a.price ? b.price - a.price : a.ts - b.ts,
+    );
+    const winner = sorted[0];
+    auc.topBidder = winner.userId;
+    auc.topBidderName = winner.userName;
+    auc.currentPrice = winner.price;
+    auc.revealAt = Date.now();
+
+    // blindBids를 endedBlindBids에 보관 (TTL 30분)
+    endedBlindBids.set(auc.id, sorted);
+    setTimeout(() => endedBlindBids.delete(auc.id), 30 * 60 * 1000);
+  }
+
+  const live = lives.get(auc.liveId);
+  if (live) live.currentAuctionId = null;
+
+  io.to(auc.liveId).emit('auction:update', auc);
+
+  const isVoid = !auc.topBidder; // 입찰/구매자가 없으면 유찰
+  io.to(auc.liveId).emit('auction:ended', {
+    id: auc.id,
+    liveId: auc.liveId,
+    productName: auc.productName,
+    winner: auc.topBidder,
+    winnerName: auc.topBidderName,
+    price: auc.currentPrice,
+    currentPrice: auc.currentPrice,
+    finalPrice: auc.currentPrice,
+    mode: auc.mode,
+    void: isVoid,
+    endedAt: Date.now(),
+    imageUrl: auc.imageUrl ?? null,
   });
+
+  stopTimer(auc.id);
+  onEnd?.(auc);
+
+  // 블라인드는 endedBlindBids에 복사 후 삭제
+  auctions.delete(auc.id);
 }
 
 export function startTimer(
@@ -93,16 +199,7 @@ export function startTimer(
     }
     auc.timeLeft -= 1;
     if (auc.timeLeft <= 0) {
-      auc.timeLeft = 0;
-      auc.status = 'ended';
-      io.to(auc.liveId).emit('auction:update', auc);
-      io.to(auc.liveId).emit('auction:ended', { id, winner: auc.topBidder, winnerName: auc.topBidderName, price: auc.currentPrice });
-      // Live의 currentAuctionId를 null로 초기화
-      const live = lives.get(auc.liveId);
-      if (live) live.currentAuctionId = null;
-      stopTimer(id);
-      onEnd?.(auc);
-      auctions.delete(id);
+      endAuctionState(auc, io, onEnd);
     } else {
       io.to(auc.liveId).emit('auction:update', auc);
     }
@@ -116,4 +213,20 @@ export function stopTimer(id: string): void {
     clearInterval(timer);
     timers.delete(id);
   }
+}
+
+/**
+ * 선착순(fcfs) 경매를 즉시 종료한다.
+ * endAuctionState를 호출하고 onEnd 콜백을 트리거한다.
+ */
+export function endFcfsAuction(
+  id: string,
+  io: Server,
+  onEnd?: (state: AuctionState) => void,
+): boolean {
+  const auc = auctions.get(id);
+  if (!auc || auc.mode !== 'fcfs' || auc.status !== 'live') return false;
+  stopTimer(id);
+  endAuctionState(auc, io, onEnd);
+  return true;
 }

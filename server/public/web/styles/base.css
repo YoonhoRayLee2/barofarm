@@ -1,0 +1,178 @@
+/* CSS Reset + Body Base */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---- 앱 루트: 모바일은 풀스크린, 데스크톱은 폰 프레임 ---- */
+#app-root {
+  width: 100%;
+  height: 100dvh;
+  position: relative;
+  overflow: hidden;
+  /* transform → position:fixed 자식이 이 요소 기준으로 고정 (overflow:hidden에 온전히 포함) */
+  transform: translateZ(0);
+}
+
+@media (min-width: 600px) {
+  html, body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100dvh;
+    overflow: hidden;
+    background: #000;
+  }
+
+  #app-root {
+    /* 화면 높이를 꽉 채우되 390:844 비율 유지 */
+    height: 100dvh;
+    width: calc(100dvh * 390 / 844);
+    max-width: 480px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+a:hover,
+a:focus-visible {
+  color: var(--color-accent-soft);
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+  transition: background var(--dur-fast) var(--ease-in-out),
+              transform 80ms var(--ease-in-out),
+              border-color var(--dur-fast) var(--ease-in-out),
+              opacity var(--dur-fast) var(--ease-in-out);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Shared button classes */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background var(--dur-fast) var(--ease-in-out),
+              transform 80ms var(--ease-in-out),
+              border-color var(--dur-fast) var(--ease-in-out),
+              opacity var(--dur-fast) var(--ease-in-out);
+}
+
+.btn-primary {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-accent-soft);
+}
+
+/* CTA (red) and gold bid buttons: scale on press */
+.btn-cta,
+.live-create__cta,
+.slide-bid__confirm,
+.buy-button__cta {
+  transition: background var(--dur-fast) var(--ease-in-out),
+              transform 80ms var(--ease-in-out),
+              border-color var(--dur-fast) var(--ease-in-out);
+}
+
+.btn-cta:active:not(:disabled),
+.live-create__cta:active:not(:disabled),
+.slide-bid__confirm:active:not(:disabled),
+.buy-button__cta:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* focus-visible ring for keyboard users */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  width: 100%;
+  outline: none;
+  transition: border-color var(--dur-fast) var(--ease-in-out);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--color-accent);
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-ink-mute);
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+/* Scrollbar (subtle) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-line);
+  border-radius: var(--radius-pill);
+}

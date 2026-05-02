@@ -9,7 +9,11 @@
       "WebFetch(domain:namu.wiki)",
       "WebFetch(domain:i.nambusangsa.com)",
       "WebFetch(domain:download.nambusangsa.com)",
-      "WebFetch(domain:api.anthropic.com)"
+      "WebFetch(domain:api.anthropic.com)",
+      "WebFetch(domain:disquiet.io)",
+      "WebFetch(domain:iphone.apkpure.com)",
+      "WebFetch(domain:steprimo.com)",
+      "WebFetch(domain:aws.amazon.com)"
     ]
   }
 }

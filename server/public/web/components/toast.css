@@ -1,0 +1,111 @@
+/* Toast Component — Fresh Field Renewal */
+
+#toast-container {
+  position: fixed;
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: var(--space-2);
+  pointer-events: none;
+  width: min(360px, calc(100vw - 32px));
+}
+
+.toast {
+  width: 100%;
+  padding: 12px var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-line);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-ink);
+  line-height: var(--lh-normal);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: auto;
+  animation: toast-in var(--dur-base) var(--ease-out) both;
+}
+
+.toast.is-leaving {
+  animation: toast-out var(--dur-fast) var(--ease-out) both;
+}
+
+.toast--success {
+  border-left: 3px solid var(--color-success);
+}
+
+.toast--success::before {
+  content: '✓';
+  color: var(--color-success);
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.toast--error {
+  border-left: 3px solid var(--color-danger);
+}
+
+.toast--error::before {
+  content: '✕';
+  color: var(--color-danger);
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.toast--info {
+  border-left: 3px solid var(--color-info);
+}
+
+.toast--info::before {
+  content: 'ⓘ';
+  color: var(--color-info);
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.toast__icon {
+  font-size: var(--fs-lg);
+  flex-shrink: 0;
+}
+
+.toast__msg {
+  flex: 1;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast,
+  .toast.is-leaving {
+    animation: none;
+  }
+}

@@ -25,10 +25,20 @@ export async function deleteRoom(roomName: string): Promise<void> {
 
 export async function endAuction(state: AuctionState): Promise<void> {
   try {
+    // 유찰(top_bidder_id IS NULL)은 낙찰가 무효 — 시작가가 그대로 저장되지 않도록 0 으로 기록.
+    const isVoid = !state.topBidder;
+    const finalPrice = isVoid ? 0 : state.currentPrice;
     await db.query(
-      'UPDATE auctions SET current_price = ?, top_bidder_id = ?, status = "ended", ends_at = NOW() WHERE id = ?',
-      [state.currentPrice, state.topBidder ?? null, state.id],
+      'UPDATE auctions SET current_price = ?, top_bidder_id = ?, status = "ended", image_url = ?, ends_at = NOW() WHERE id = ?',
+      [finalPrice, state.topBidder ?? null, state.imageUrl ?? null, state.id],
     );
+    // 낙찰자가 있으면 bids 테이블에도 기록
+    if (state.topBidder) {
+      await db.query(
+        'INSERT IGNORE INTO bids (auction_id, bidder_id, price) VALUES (?, ?, ?)',
+        [state.id, Number(state.topBidder), state.currentPrice],
+      );
+    }
   } catch (e) {
     console.error('[auction] end DB save failed:', (e as Error).message);
   }

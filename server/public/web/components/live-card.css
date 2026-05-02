@@ -1,0 +1,383 @@
+/* LiveCard Component — Fresh Field Renewal */
+
+.live-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform var(--dur-base) var(--ease-out),
+              box-shadow var(--dur-base) var(--ease-out);
+  position: relative;
+  border: 1px solid var(--color-line);
+}
+
+.live-card:active {
+  transform: scale(0.97);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+.live-card__thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  background: linear-gradient(135deg, var(--color-surface-alt) 0%, var(--color-surface) 100%);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.live-card__thumb::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 30%, rgba(122,165,63,0.15) 0%, transparent 60%);
+  z-index: 0;
+}
+
+.live-card__thumb-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.live-card__thumb-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+  display: block;
+}
+
+.live-card__thumb-label {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-ink-mute);
+  letter-spacing: 0.04em;
+}
+
+/* LIVE badge */
+.live-card__live-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--grad-cta);
+  border-radius: var(--radius-pill);
+  padding: 4px 9px;
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--color-ink);
+  letter-spacing: 0.08em;
+  z-index: 2;
+  box-shadow: 0 2px 6px rgba(214, 71, 58, 0.4);
+}
+
+/* Legacy .live-badge selector */
+.live-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--grad-cta);
+  border-radius: var(--radius-pill);
+  padding: 4px var(--space-2);
+  z-index: 2;
+}
+
+.live-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-ink);
+  animation: live-pulse 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.live-badge__text {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--color-ink);
+  letter-spacing: 0.08em;
+}
+
+/* Pulse dot inside live-card__live-badge */
+.live-pulse {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-ink);
+  flex-shrink: 0;
+  animation: live-pulse 1.5s ease-in-out infinite;
+  box-shadow: 0 0 4px var(--color-ink);
+}
+
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(1.4); }
+}
+
+/* Viewer count chip */
+.live-card__viewers {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-radius: var(--radius-pill);
+  padding: 3px 8px;
+  z-index: 2;
+}
+
+.live-card__viewers-count {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Seller avatar */
+.live-card__seller-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--grad-accent);
+  color: var(--color-bg);
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  border: 1.5px solid var(--color-surface);
+}
+
+/* ---- Skeleton state ---- */
+.live-card.is-skeleton {
+  pointer-events: none;
+  cursor: default;
+}
+
+.live-card.is-skeleton .live-card__thumb {
+  background: var(--color-skeleton-base);
+}
+
+.live-card.is-skeleton .live-card__thumb::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-skeleton-shine) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.live-card.is-skeleton .live-card__thumb-placeholder,
+.live-card.is-skeleton .live-card__thumb-img,
+.live-card.is-skeleton .live-badge,
+.live-card.is-skeleton .live-card__live-badge,
+.live-card.is-skeleton .live-card__viewers,
+.live-card.is-skeleton .live-card__seller-avatar,
+.live-card.is-skeleton .live-card__fav-btn {
+  opacity: 0;
+}
+
+.live-card.is-skeleton .live-card__title,
+.live-card.is-skeleton .live-card__seller,
+.live-card.is-skeleton .live-card__price-label,
+.live-card.is-skeleton .live-card__price {
+  color: transparent;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--color-skeleton-base) 0%,
+    var(--color-skeleton-shine) 50%,
+    var(--color-skeleton-base) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-card.is-skeleton .live-card__thumb::after,
+  .live-card.is-skeleton .live-card__title,
+  .live-card.is-skeleton .live-card__seller,
+  .live-card.is-skeleton .live-card__price-label,
+  .live-card.is-skeleton .live-card__price {
+    animation: none;
+    background: var(--color-skeleton-base);
+  }
+
+  .live-pulse,
+  .live-badge__dot {
+    animation: none;
+  }
+}
+
+/* Info area */
+.live-card__info {
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.live-card__title {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-ink);
+  line-height: var(--lh-tight);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: -0.1px;
+}
+
+.live-card__seller-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.live-card__seller {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--color-ink-soft);
+  font-weight: 500;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Re-arrange seller row to use avatar + name */
+.live-card__seller-row {
+  align-items: center;
+}
+
+.live-card__price-area {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.live-card__price-label {
+  font-family: var(--font-body);
+  font-size: 10px;
+  color: var(--color-ink-mute);
+  font-weight: 500;
+}
+
+.live-card__price {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-accent);
+  letter-spacing: -0.3px;
+}
+
+/* Favorite button */
+.live-card__fav-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out),
+              transform var(--dur-fast) var(--ease-out),
+              background var(--dur-fast) var(--ease-out);
+  line-height: 1;
+  padding: 0;
+  z-index: 2;
+}
+
+.live-card__fav-btn.is-active {
+  color: var(--color-cta);
+  background: rgba(0,0,0,0.7);
+}
+
+.live-card__fav-btn:active {
+  transform: scale(1.25);
+}
+
+.live-card__my-badge {
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--color-bg);
+  background: var(--color-accent);
+  border-radius: var(--radius-pill);
+  padding: 2px 7px;
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ---- Upcoming (예고) state ---- */
+.live-card__upcoming-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: var(--radius-pill);
+  padding: 4px 9px;
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.06em;
+  z-index: 2;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.live-card__scheduled-at {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-ink-soft);
+}

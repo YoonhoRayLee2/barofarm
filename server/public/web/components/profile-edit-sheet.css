@@ -1,0 +1,273 @@
+/*
+ * Profile Edit Bottom Sheet — Barofarm
+ * Full-screen overlay + scrollable bottom sheet for editing avatar / nickname / delivery.
+ * All colors and spacing reference tokens.css — no literals.
+ */
+
+/* ── Backdrop / overlay ────────────────────────────────────── */
+.pes-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--color-overlay-dim);
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+.pes-backdrop.is-visible {
+  opacity: 1;
+}
+
+/* ── Sheet container ───────────────────────────────────────── */
+.pes-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  max-height: 92vh;
+  overflow-y: auto;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--elev-3);
+  display: flex;
+  flex-direction: column;
+  transform: translateY(16px);
+  transition: transform var(--dur-base) var(--ease-out);
+  font-family: var(--font-body);
+}
+.pes-backdrop.is-visible .pes-sheet {
+  transform: translateY(0);
+}
+
+/* ── Header ────────────────────────────────────────────────── */
+.pes-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 40px 1fr 40px;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-line);
+}
+.pes-close {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  border: none;
+  color: var(--color-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+.pes-close:hover {
+  background: var(--color-surface);
+}
+.pes-title {
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--color-ink);
+}
+.pes-header-spacer {
+  display: block;
+}
+
+/* ── Body ──────────────────────────────────────────────────── */
+.pes-body {
+  flex: 1;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Section ───────────────────────────────────────────────── */
+.pes-section {
+  padding-top: var(--space-4);
+  margin-top: var(--space-4);
+  border-top: 1px solid var(--color-line);
+}
+.pes-section:first-child,
+.pes-section--avatar {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 0;
+}
+.pes-section-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-xs);
+  color: var(--color-ink-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── Avatar row ────────────────────────────────────────────── */
+.pes-avatar-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+}
+.pes-avatar-btn {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  cursor: pointer;
+}
+.pes-avatar-img-wrap {
+  display: block;
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  background: var(--color-surface-alt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pes-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.pes-avatar-fallback {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--color-ink-soft);
+  text-transform: uppercase;
+}
+.pes-avatar-edit-dot {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--color-bg);
+}
+.pes-avatar-label {
+  font-size: var(--fs-sm);
+  color: var(--color-accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ── Inputs ────────────────────────────────────────────────── */
+.pes-input {
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  color: var(--color-ink);
+  width: 100%;
+  font-size: var(--fs-base);
+  font-family: var(--font-body);
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.pes-input:focus {
+  border-color: var(--color-accent);
+}
+.pes-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.pes-input::placeholder {
+  color: var(--color-ink-mute);
+}
+
+/* ── Field label (small label above input within delivery section) */
+.pes-field-label {
+  display: block;
+  font-size: var(--fs-sm);
+  color: var(--color-ink-soft);
+  margin: var(--space-3) 0 var(--space-1);
+}
+.pes-field-label:first-of-type {
+  margin-top: 0;
+}
+
+/* ── Hint (nickname unlock notice) ──────────────────────────── */
+.pes-hint {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--color-ink-mute);
+}
+.pes-hint.is-locked {
+  color: var(--color-warn);
+}
+
+/* ── Zip row (input + search button side by side) ──────────── */
+.pes-zip-row {
+  display: flex;
+  gap: var(--space-2);
+}
+.pes-input--zip {
+  flex: 1;
+}
+.pes-zip-btn {
+  flex: 0 0 auto;
+  padding: 0 var(--space-3);
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-sm);
+  font-family: var(--font-body);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pes-zip-btn:hover {
+  background: var(--color-surface-alt);
+  color: var(--color-ink);
+}
+
+/* ── Footer (sticky save) ──────────────────────────────────── */
+.pes-footer {
+  position: sticky;
+  bottom: 0;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  background: var(--color-bg);
+  border-top: 1px solid var(--color-line);
+}
+.pes-save-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--fs-base);
+  font-weight: 700;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+.pes-save-btn:hover {
+  background: var(--color-accent-soft);
+}
+.pes-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
