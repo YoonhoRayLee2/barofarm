@@ -43,6 +43,10 @@ app.use(
   }),
 );
 
+app.get('/', (req, res) => {
+  res.redirect('/app/home');
+});
+
 // SPA history fallback — 파일 확장자가 없는 /app/* 경로는 index.html 반환
 app.get('/app/*', (req, res, next) => {
   if (req.path.includes('.')) return next();
