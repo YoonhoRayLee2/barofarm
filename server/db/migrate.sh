@@ -9,9 +9,9 @@ NAME=${DB_NAME:-barofarm}
 
 run_sql() {
   if [ -z "$PASS" ]; then
-    mysql -h "$HOST" -u "$USER" "$NAME" < "$1"
+    mysql --force -h "$HOST" -u "$USER" "$NAME" < "$1"
   else
-    mysql -h "$HOST" -u "$USER" -p"$PASS" "$NAME" < "$1"
+    mysql --force -h "$HOST" -u "$USER" -p"$PASS" "$NAME" < "$1"
   fi
 }
 
