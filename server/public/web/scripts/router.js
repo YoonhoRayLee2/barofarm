@@ -253,6 +253,7 @@ register('/app/signup',       async ()       => import('/app/pages/signup.js').t
 register('/app/home',         async ()       => import('/app/pages/home.js').then(m => m.default()));
 register('/app/profile',      async ()       => import('/app/pages/profile.js').then(m => m.default()));
 register('/app/chat',         async ()       => import('/app/pages/chat.js').then(m => m.default()));
+register('/app/chat-room/:id', async (p) => import('/app/pages/chat-room.js').then(m => m.default(p)));
 register('/app/settings',     async ()       => import('/app/pages/settings.js').then(m => m.default()));
 register('/app/live-create',  async ()       => import('/app/pages/live-create.js').then(m => m.default()));
 register('/app/create-auction', async ()     => import('/app/pages/create-auction.js').then(m => m.default()));
@@ -264,10 +265,17 @@ register('/app/live-seller/:liveId', async (p) => import('/app/pages/live-seller
 register('/app/live-buyer/:liveId',  async (p) => import('/app/pages/live-buyer.js').then(m => m.default(p)));
 register('/app/profile/history',     async ()  => import('/app/pages/profile-history.js').then(m => m.default()));
 register('/app/profile/orders',      async ()  => import('/app/pages/profile-orders.js').then(m => m.default()));
-register('/app/seller/dashboard',    async ()  => import('/app/pages/seller-dashboard.js').then(m => m.default()));
+register('/app/seller/sales',        async ()  => import('/app/pages/seller-sales.js').then(m => m.default()));
+register('/app/seller/unshipped',    async ()  => import('/app/pages/seller-unshipped.js').then(m => m.default()));
+register('/app/order-detail/:id',    async (p) => import('/app/pages/order-detail.js').then(m => m.default(p)));
 register('/app/terms',               async ()  => import('/app/pages/terms.js').then(m => m.default()));
 register('/app/privacy',             async ()  => import('/app/pages/privacy.js').then(m => m.default()));
 register('/app/_storybook',          async ()  => import('/app/pages/_storybook.js').then(m => m.default()));
+register('/app/dm',                  async ()  => import('/app/pages/dm.js').then(m => m.default()));
+register('/app/user/:id',            async (p) => import('/app/pages/user-profile.js').then(m => m.default(p)));
+register('/app/consignment/apply',   async ()  => import('/app/pages/consignment-apply.js').then(m => m.default()));
+register('/app/consignment/find',    async ()  => import('/app/pages/consignment-find.js').then(m => m.default()));
+register('/app/consignment/:id',     async (p) => import('/app/pages/consignment-detail.js').then(m => m.default(p)));
 
 /* ----------------------------- Global handlers ----------------------------- */
 

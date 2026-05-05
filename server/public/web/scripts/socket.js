@@ -81,6 +81,15 @@ export function bidBlind(socket, { liveId, auctionId, userId, userName, price })
   socket.emit('bid:blind', { liveId, auctionId, userId, userName, price });
 }
 
+/**
+ * Join a giveaway (free draw).
+ * @param {Socket} socket
+ * @param {{ liveId: string, auctionId: string, userId: string, userName: string }} opts
+ */
+export function joinGiveaway(socket, { liveId, auctionId, userId, userName }) {
+  socket.emit('giveaway:join', { liveId, auctionId, userId, userName });
+}
+
 /* ---------------- Listeners ---------------- */
 
 /**
@@ -202,6 +211,28 @@ export function onBlindBidCount(socket, cb) {
 export function onBidRejected(socket, cb) {
   socket.on('bid:rejected', cb);
   return () => socket.off('bid:rejected', cb);
+}
+
+/**
+ * Subscribe to giveaway:count — participant count broadcast.
+ * @param {Socket} socket
+ * @param {(data: { auctionId: string, count: number, participants: Array<{userId:string,userName:string}> }) => void} cb
+ * @returns {() => void} unsubscribe
+ */
+export function onGiveawayCount(socket, cb) {
+  socket.on('giveaway:count', cb);
+  return () => socket.off('giveaway:count', cb);
+}
+
+/**
+ * Subscribe to giveaway:join:ack — own join acknowledged.
+ * @param {Socket} socket
+ * @param {(data: { ok: boolean, alreadyJoined?: boolean, count?: number, error?: string }) => void} cb
+ * @returns {() => void} unsubscribe
+ */
+export function onGiveawayJoinAck(socket, cb) {
+  socket.on('giveaway:join:ack', cb);
+  return () => socket.off('giveaway:join:ack', cb);
 }
 
 /**

@@ -402,7 +402,16 @@ export default async function load(params) {
     _viewerNames = viewers || [];
   });
 
-  unsubFns.push(unsubAuctionUpdate, unsubAuctionEnded, unsubChat, unsubViewers, unsubViewerList);
+  // Giveaway participant count (for seller's auction info row)
+  const unsubGiveawayCount = Sock.onGiveawayCount(socket, ({ auctionId, count }) => {
+    if (!currentAuction || currentAuction.mode !== 'giveaway') return;
+    if (currentAuction.id != null && String(currentAuction.id) !== String(auctionId)) return;
+    currentAuction.giveawayCount = count;
+    const currentPrice = page.querySelector('#ls-current-price');
+    if (currentPrice) currentPrice.textContent = `[무료나눔] ${count}명 참여 중`;
+  });
+
+  unsubFns.push(unsubAuctionUpdate, unsubAuctionEnded, unsubChat, unsubViewers, unsubViewerList, unsubGiveawayCount);
 
   // ---- Auction UI helpers ----
   /** @type {{ id?: string, productName?: string, currentPrice?: number, currentBidder?: string, remaining?: number, mode?: string, stockTotal?: number, stockSold?: number } | null} */
@@ -434,7 +443,10 @@ export default async function load(params) {
     if (productName) productName.textContent = auction.productName || '';
 
     const mode = auction.mode || 'normal';
-    const modeLabel = mode === 'fcfs' ? '[선착순] ' : mode === 'blind' ? '[블라인드] ' : '';
+    const modeLabel = mode === 'fcfs' ? '[선착순] '
+      : mode === 'blind' ? '[블라인드] '
+      : mode === 'giveaway' ? '[무료나눔] '
+      : '';
 
     if (currentPrice) {
       if (mode === 'fcfs') {
@@ -443,6 +455,9 @@ export default async function load(params) {
         currentPrice.textContent = `${modeLabel}${(total - sold)}/${total}개 남음`;
       } else if (mode === 'blind') {
         currentPrice.textContent = '[블라인드] 비공개 입찰';
+      } else if (mode === 'giveaway') {
+        const cnt = auction.giveawayCount != null ? auction.giveawayCount : 0;
+        currentPrice.textContent = `[무료나눔] ${cnt}명 참여 중`;
       } else {
         currentPrice.textContent = modeLabel + (auction.currentPrice || auction.startPrice || 0).toLocaleString() + '원';
       }
@@ -453,6 +468,8 @@ export default async function load(params) {
         bidder.textContent = auction.currentBidder ? `최고 입찰자: ${auction.currentBidder}` : '입찰 없음';
       } else if (mode === 'fcfs') {
         bidder.textContent = `판매 수: ${auction.stockSold || 0}`;
+      } else if (mode === 'giveaway') {
+        bidder.textContent = '추첨 대기 중';
       } else {
         bidder.textContent = '비공개 입찰 진행 중';
       }
@@ -498,6 +515,63 @@ export default async function load(params) {
   function showWonOverlay(auction) {
     const backdrop = document.createElement('div');
     backdrop.className = 'won-overlay';
+
+    // Giveaway 모드: 슬롯 머신 애니메이션
+    if (auction.mode === 'giveaway') {
+      if (auction.void || !auction.winnerName) {
+        backdrop.innerHTML = `
+          <div class="won-card">
+            <div class="won-card__emoji">📭</div>
+            <div class="won-card__title">무효</div>
+            <div class="won-card__price">참여자가 없습니다</div>
+          </div>
+        `;
+      } else {
+        backdrop.innerHTML = `
+          <div class="won-card won-card--giveaway">
+            <div class="won-card__emoji">🎁</div>
+            <div class="won-slot" id="won-slot-names">
+              <div class="won-slot__name" id="won-slot-display">...</div>
+            </div>
+            <div class="won-card__winner-msg" id="won-winner-msg" style="display:none;"></div>
+          </div>
+        `;
+        const slotEl = backdrop.querySelector('#won-slot-display');
+        const msgEl = backdrop.querySelector('#won-winner-msg');
+        const names = (auction.participants || []).map(p => p.userName);
+        if (names.length === 0) names.push(auction.winnerName);
+
+        let idx = 0;
+        let interval = 80;
+        let elapsed = 0;
+        const totalMs = 2800;
+
+        const spin = () => {
+          if (!slotEl) return;
+          slotEl.textContent = names[idx % names.length];
+          idx++;
+          elapsed += interval;
+          if (elapsed >= totalMs) {
+            slotEl.textContent = auction.winnerName;
+            slotEl.classList.add('won-slot__name--winner');
+            if (msgEl) {
+              msgEl.textContent = `${auction.winnerName}님 당첨 축하합니다! 🎉`;
+              msgEl.style.display = 'block';
+            }
+            return;
+          }
+          if (elapsed > totalMs * 0.6) {
+            interval = Math.min(interval * 1.15, 400);
+          }
+          setTimeout(spin, interval);
+        };
+        setTimeout(spin, 0);
+      }
+      page.appendChild(backdrop);
+      setTimeout(() => backdrop.remove(), 7000);
+      return;
+    }
+
     const isVoid = auction.void === true || !auction.winnerName;
     if (isVoid) {
       backdrop.innerHTML = `
@@ -569,6 +643,10 @@ export default async function load(params) {
               <input type="radio" name="am-mode" value="blind" />
               <span>블라인드</span>
             </label>
+            <label class="auction-modal__mode-opt">
+              <input type="radio" name="am-mode" value="giveaway" />
+              <span>무료나눔</span>
+            </label>
           </div>
         </div>
 
@@ -613,6 +691,14 @@ export default async function load(params) {
             <label><input type="radio" name="am-dur-blind" value="10" checked /> 10초</label>
             <label><input type="radio" name="am-dur-blind" value="20" /> 20초</label>
             <label><input type="radio" name="am-dur-blind" value="30" /> 30초</label>
+          </div>
+        </div>
+
+        <!-- Giveaway: 10초 후 자동 추첨 -->
+        <div class="auction-modal__mode-opts" id="am-opts-giveaway" style="display:none">
+          <div class="am-giveaway-info">
+            🎁 시작 후 10초 동안 참여자를 모집한 뒤,<br>
+            자동으로 한 명을 무작위 추첨합니다.
           </div>
         </div>
 
@@ -685,6 +771,7 @@ export default async function load(params) {
     const optsNormal = backdrop.querySelector('#am-opts-normal');
     const optsFcfs = backdrop.querySelector('#am-opts-fcfs');
     const optsBlind = backdrop.querySelector('#am-opts-blind');
+    const optsGiveaway = backdrop.querySelector('#am-opts-giveaway');
 
     const startPriceField = backdrop.querySelector('#am-start-price-field');
 
@@ -692,8 +779,9 @@ export default async function load(params) {
       optsNormal.style.display = mode === 'normal' ? '' : 'none';
       optsFcfs.style.display = mode === 'fcfs' ? '' : 'none';
       optsBlind.style.display = mode === 'blind' ? '' : 'none';
-      // 블라인드는 시작가 없음 (0원 고정)
-      startPriceField.style.display = mode === 'blind' ? 'none' : '';
+      optsGiveaway.style.display = mode === 'giveaway' ? '' : 'none';
+      // 블라인드/무료나눔은 시작가 없음 (0원 고정)
+      startPriceField.style.display = (mode === 'blind' || mode === 'giveaway') ? 'none' : '';
     }
 
     modeRadios.forEach((r) => r.addEventListener('change', () => switchMode(r.value)));
@@ -701,9 +789,10 @@ export default async function load(params) {
     backdrop.querySelector('#am-submit').addEventListener('click', async () => {
       const productName = backdrop.querySelector('#am-product-name').value.trim();
       const mode = backdrop.querySelector('input[name="am-mode"]:checked').value;
-      const startPrice = mode === 'blind' ? 0 : parseInt(backdrop.querySelector('#am-start-price').value, 10);
+      const isPriceless = mode === 'blind' || mode === 'giveaway';
+      const startPrice = isPriceless ? 0 : parseInt(backdrop.querySelector('#am-start-price').value, 10);
 
-      if (!productName || (mode !== 'blind' && (isNaN(startPrice) || startPrice < 0))) {
+      if (!productName || (!isPriceless && (isNaN(startPrice) || startPrice < 0))) {
         showToast('상품명과 시작가를 올바르게 입력하세요.', 'error');
         return;
       }
@@ -723,6 +812,7 @@ export default async function load(params) {
       } else if (mode === 'blind') {
         payload.durationSec = parseInt(backdrop.querySelector('input[name="am-dur-blind"]:checked').value, 10);
       }
+      // mode === 'giveaway': durationSec, stockTotal 전송 불필요 (서버 기본 10초)
 
       const btn = backdrop.querySelector('#am-submit');
       btn.disabled = true;
@@ -732,7 +822,11 @@ export default async function load(params) {
         await api.startAuction(liveId, auction.id);
         if (previewUrl) URL.revokeObjectURL(previewUrl);
         backdrop.remove();
-        showToast(`경매 시작: ${productName} (${mode === 'normal' ? '일반' : mode === 'fcfs' ? '선착순' : '블라인드'})`);
+        const modeLabelText = mode === 'normal' ? '일반'
+          : mode === 'fcfs' ? '선착순'
+          : mode === 'blind' ? '블라인드'
+          : '무료나눔';
+        showToast(`경매 시작: ${productName} (${modeLabelText})`);
       } catch (err) {
         showToast('경매 등록 실패: ' + err.message, 'error');
         btn.disabled = false;

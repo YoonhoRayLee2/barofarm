@@ -198,6 +198,22 @@ export default async function load(params) {
   blindBidWrap.style.display = 'none';
   bidControls.appendChild(blindBidWrap);
 
+  // Giveaway mode container
+  const giveawayWrap = document.createElement('div');
+  giveawayWrap.className = 'lb-giveaway-area';
+  giveawayWrap.id = 'lb-giveaway-wrap';
+  giveawayWrap.style.display = 'none';
+  giveawayWrap.innerHTML = `
+    <div class="lb-giveaway-header">
+      <span class="lb-giveaway-badge">🎁 무료나눔</span>
+      <span id="lb-giveaway-count" class="lb-giveaway-count">0명 참여 중</span>
+    </div>
+    <button id="lb-giveaway-btn" class="lb-giveaway-btn" type="button">
+      무료나눔 참여하기
+    </button>
+  `;
+  bidControls.appendChild(giveawayWrap);
+
   // ---- Actions bar (bottom) ----
   const actionsBar = document.createElement('div');
   actionsBar.className = 'lb-actions-bar';
@@ -239,6 +255,10 @@ export default async function load(params) {
   const endedAuctions = [];
   // 내 구매 내역 (실시간 누적, product-sheet history 탭에 반영)
   const myPurchases = [];
+
+  // ---- Giveaway state ----
+  let giveawayParticipants = [];  // 참여자 목록 (슬롯 애니메이션용)
+  let giveawayJoined = false;     // 내가 이미 참여했는지
 
   // ---- Components ----
   const chatOverlay = createChatOverlay();
@@ -314,6 +334,7 @@ export default async function load(params) {
   function modeBadgeText(mode) {
     if (mode === 'fcfs') return '선착순';
     if (mode === 'blind') return '블라인드';
+    if (mode === 'giveaway') return '무료나눔';
     return '일반 경매';
   }
 
@@ -321,13 +342,28 @@ export default async function load(params) {
     currentMode = mode;
     const isFcfs = mode === 'fcfs';
     const isBlind = mode === 'blind';
+    const isGiveaway = mode === 'giveaway';
 
     // slide-bid-wrap: updateSlideBid() 가 normal 여부 판단해서 표시/숨김
     slideBidWrap.style.display = 'none';
     fcfsBidWrap.style.display = isFcfs ? '' : 'none';
     blindBidWrap.style.display = isBlind ? '' : 'none';
+    giveawayWrap.style.display = isGiveaway ? '' : 'none';
 
     if (mode !== 'normal' && slideBidComp) { slideBidComp.destroy(); slideBidComp = null; }
+
+    // 모드 전환 시 giveaway 상태 초기화 (다른 모드로 가면)
+    if (!isGiveaway) {
+      giveawayJoined = false;
+      giveawayParticipants = [];
+      const joinBtn = page.querySelector('#lb-giveaway-btn');
+      if (joinBtn) {
+        joinBtn.disabled = false;
+        joinBtn.textContent = '무료나눔 참여하기';
+      }
+      const countEl = page.querySelector('#lb-giveaway-count');
+      if (countEl) countEl.textContent = '0명 참여 중';
+    }
   }
 
   function setupFcfsMode(auction) {
@@ -395,6 +431,7 @@ export default async function load(params) {
       if (slideBidComp) { slideBidComp.destroy(); slideBidComp = null; }
       slideBidWrap.style.display = 'none';
       switchBidMode('normal');
+      // giveaway 상태 리셋은 switchBidMode('normal')에서 처리됨
       return;
     }
 
@@ -450,6 +487,8 @@ export default async function load(params) {
     } else if (mode === 'blind') {
       if (productPriceEl) productPriceEl.textContent = '비공개 입찰';
       if (!blindBidComp) setupBlindMode();
+    } else if (mode === 'giveaway') {
+      if (productPriceEl) productPriceEl.textContent = '🎁 무료나눔';
     }
 
     // Timer
@@ -486,6 +525,67 @@ export default async function load(params) {
   function showWonOverlay(auction) {
     const backdrop = document.createElement('div');
     backdrop.className = 'won-overlay';
+
+    // Giveaway 모드: 슬롯 머신 애니메이션
+    if (auction.mode === 'giveaway') {
+      if (auction.void || !auction.winnerName) {
+        backdrop.innerHTML = `
+          <div class="won-card">
+            <div class="won-card__emoji">📭</div>
+            <div class="won-card__title">무효</div>
+            <div class="won-card__price">참여자가 없습니다</div>
+            <button class="won-card__confirm-btn" id="won-confirm-btn">확인</button>
+          </div>
+        `;
+      } else {
+        backdrop.innerHTML = `
+          <div class="won-card won-card--giveaway">
+            <div class="won-card__emoji">🎁</div>
+            <div class="won-slot" id="won-slot-names">
+              <div class="won-slot__name" id="won-slot-display">...</div>
+            </div>
+            <div class="won-card__winner-msg" id="won-winner-msg" style="display:none;"></div>
+          </div>
+        `;
+        const slotEl = backdrop.querySelector('#won-slot-display');
+        const msgEl = backdrop.querySelector('#won-winner-msg');
+        const names = (auction.participants || giveawayParticipants).map(p => p.userName);
+        if (names.length === 0) names.push(auction.winnerName);
+
+        let idx = 0;
+        let interval = 80;
+        let elapsed = 0;
+        const totalMs = 2800;
+
+        const spin = () => {
+          if (!slotEl) return;
+          slotEl.textContent = names[idx % names.length];
+          idx++;
+          elapsed += interval;
+          if (elapsed >= totalMs) {
+            slotEl.textContent = auction.winnerName;
+            slotEl.classList.add('won-slot__name--winner');
+            if (msgEl) {
+              msgEl.textContent = `${auction.winnerName}님 당첨 축하합니다! 🎉`;
+              msgEl.style.display = 'block';
+            }
+            spawnConfetti(backdrop);
+            return;
+          }
+          if (elapsed > totalMs * 0.6) {
+            interval = Math.min(interval * 1.15, 400);
+          }
+          setTimeout(spin, interval);
+        };
+        setTimeout(spin, 0);
+      }
+      page.appendChild(backdrop);
+      const confirmBtn = backdrop.querySelector('#won-confirm-btn');
+      if (confirmBtn) confirmBtn.addEventListener('click', () => backdrop.remove());
+      setTimeout(() => { if (backdrop.parentNode) backdrop.remove(); }, 7000);
+      return;
+    }
+
     const isVoid = auction.void === true || !auction.winnerName;
     if (isVoid) {
       backdrop.innerHTML = `
@@ -905,6 +1005,32 @@ export default async function load(params) {
     if (blindBidComp) blindBidComp.updateCount(count);
   });
 
+  const unsubGiveawayCount = Sock.onGiveawayCount(socket, ({ auctionId, count, participants }) => {
+    giveawayParticipants = participants || [];
+    if (currentAuctionId && String(currentAuctionId) !== String(auctionId)) return;
+    const countEl = page.querySelector('#lb-giveaway-count');
+    if (countEl) countEl.textContent = `${count}명 참여 중`;
+  });
+
+  const unsubGiveawayJoinAck = Sock.onGiveawayJoinAck(socket, ({ ok, alreadyJoined, count, error }) => {
+    if (!ok) {
+      if (error === 'giveaway ended') showToast('무료나눔이 이미 종료되었습니다', { variant: 'error' });
+      else showToast(error || '참여 실패', { variant: 'error' });
+      return;
+    }
+    giveawayJoined = true;
+    const joinBtn = page.querySelector('#lb-giveaway-btn');
+    if (joinBtn) {
+      joinBtn.disabled = true;
+      joinBtn.textContent = '참여 완료!';
+    }
+    if (count != null) {
+      const countEl = page.querySelector('#lb-giveaway-count');
+      if (countEl) countEl.textContent = `${count}명 참여 중`;
+    }
+    if (!alreadyJoined) showToast('무료나눔에 참여했습니다! 🎁', { variant: 'success' });
+  });
+
   function _openViewerModal(names) {
     const appRoot = document.getElementById('app-root') || page;
     const backdrop = document.createElement('div');
@@ -1004,7 +1130,8 @@ export default async function load(params) {
 
   unsubFns.push(
     unsubAuctionUpdate, unsubAuctionEnded, unsubChat, unsubViewers, unsubViewerList,
-    unsubBlindBidCount, unsubPurchaseMade, unsubBidBlindAck, unsubBidRejected, unsubLiveEnded,
+    unsubBlindBidCount, unsubGiveawayCount, unsubGiveawayJoinAck,
+    unsubPurchaseMade, unsubBidBlindAck, unsubBidRejected, unsubLiveEnded,
   );
 
   // ---- Event listeners ----
@@ -1035,6 +1162,24 @@ export default async function load(params) {
 
   // Products button
   page.querySelector('#lb-products-btn').addEventListener('click', openProductSheet);
+
+  // Giveaway join button
+  const giveawayBtn = page.querySelector('#lb-giveaway-btn');
+  if (giveawayBtn) {
+    giveawayBtn.addEventListener('click', () => {
+      if (giveawayJoined) return;
+      if (!currentAuctionId || currentMode !== 'giveaway') {
+        showToast('진행 중인 무료나눔이 없습니다', { variant: 'error' });
+        return;
+      }
+      Sock.joinGiveaway(socket, {
+        liveId,
+        auctionId: currentAuctionId,
+        userId: String(user.id),
+        userName: user.nickname || user.username || '익명',
+      });
+    });
+  }
 
   // Chat input
   const chatInput = page.querySelector('#lb-chat-input');

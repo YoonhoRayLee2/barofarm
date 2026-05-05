@@ -50,6 +50,78 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/users/:id/public-profile?viewerId=
+router.get('/:id/public-profile', async (req: Request, res: Response) => {
+  const userId = Number(req.params.id);
+  const viewerId = Number(req.query.viewerId) || 0;
+
+  try {
+    const [rows] = await pool.execute(
+      `SELECT u.id, u.nickname, u.name, u.avatar_url,
+              (SELECT COUNT(*) FROM auctions WHERE seller_id = ? AND status = 'ended') AS sales_count,
+              (SELECT COUNT(*) FROM follows WHERE following_id = ?) AS follower_count,
+              (SELECT COUNT(*) FROM follows WHERE follower_id = ?) AS following_count,
+              (SELECT COUNT(*) FROM follows WHERE follower_id = ? AND following_id = ?) AS is_following
+       FROM users u WHERE u.id = ?`,
+      [userId, userId, userId, viewerId, userId, userId],
+    ) as [unknown[], unknown];
+
+    const user = (rows as any[])[0];
+    if (!user) return res.status(404).json({ error: 'user not found' });
+
+    res.json({
+      id: user.id,
+      displayName: user.nickname || user.name,
+      avatarUrl: user.avatar_url ?? null,
+      salesCount: Number(user.sales_count),
+      followerCount: Number(user.follower_count),
+      followingCount: Number(user.following_count),
+      isFollowing: Number(user.is_following) > 0,
+    });
+  } catch (err) {
+    console.error('[users] GET /:id/public-profile', err);
+    res.status(500).json({ error: 'database error' });
+  }
+});
+
+// POST /api/users/:id/follow
+router.post('/:id/follow', async (req: Request, res: Response) => {
+  const followingId = Number(req.params.id);
+  const { followerId } = req.body as { followerId?: number };
+  if (!followerId) return res.status(400).json({ error: 'followerId required' });
+  if (followerId === followingId) return res.status(400).json({ error: 'cannot follow yourself' });
+
+  try {
+    await pool.execute(
+      'INSERT INTO follows (follower_id, following_id) VALUES (?, ?)',
+      [followerId, followingId],
+    );
+    res.json({ ok: true });
+  } catch (err: any) {
+    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'already_following' });
+    console.error('[users] POST /:id/follow', err);
+    res.status(500).json({ error: 'database error' });
+  }
+});
+
+// DELETE /api/users/:id/follow
+router.delete('/:id/follow', async (req: Request, res: Response) => {
+  const followingId = Number(req.params.id);
+  const { followerId } = req.body as { followerId?: number };
+  if (!followerId) return res.status(400).json({ error: 'followerId required' });
+
+  try {
+    await pool.execute(
+      'DELETE FROM follows WHERE follower_id = ? AND following_id = ?',
+      [followerId, followingId],
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[users] DELETE /:id/follow', err);
+    res.status(500).json({ error: 'database error' });
+  }
+});
+
 // GET /api/users/:id — 퍼블릭 프로필
 router.get('/:id', async (req: Request, res: Response) => {
   const userId = req.params.id;
@@ -236,84 +308,45 @@ router.get('/:id/lives', async (req: Request, res: Response) => {
   }
 
   try {
-    const [rows] = await pool.execute(
-      `SELECT
-         seller_id,
-         COUNT(*) AS total_auctions,
-         SUM(CASE WHEN status = 'ended' AND top_bidder_id IS NOT NULL THEN current_price ELSE 0 END) AS total_revenue,
-         MIN(created_at) AS started_at,
-         MAX(ends_at) AS ended_at
-       FROM auctions
-       WHERE seller_id = ?
-       GROUP BY seller_id`,
+    // DB에서 라이브 목록 조회 (서버 재시작 후에도 기록 유지)
+    const [dbLives] = await pool.execute(
+      `SELECT id, seller_id, title, thumbnail_url, status, created_at, scheduled_at
+       FROM lives WHERE seller_id = ?
+       ORDER BY created_at DESC`,
       [sellerId],
     ) as [unknown[], unknown];
 
-    const dbSummary = (rows as Array<{
-      seller_id: number;
-      total_auctions: number;
-      total_revenue: number;
-      started_at: string;
-      ended_at: string;
-    }>)[0] ?? null;
-
-    // 메모리에서 현재 진행 중인/종료된 라이브(sellerId 일치)
-    const memoryLives: Array<{
-      liveId: string;
-      title: string;
-      status: 'live' | 'ended' | 'upcoming';
-      startedAt: number;
-      endedAt: number | null;
-      totalAuctions: number;
-      totalRevenue: number;
-      currentViewers: number | null;
-      productCount: number;
-    }> = [];
-
-    for (const [liveId, live] of lives.entries()) {
-      if (live.sellerId === sellerId) {
-        // 해당 라이브의 경매 건수를 메모리 auctions Map에서 집계
-        let productCount = 0;
+    const result = (dbLives as any[]).map((r) => {
+      const liveId = String(r.id);
+      // 메모리에 살아 있는 라이브면 실시간 데이터로 보완
+      const memLive = lives.get(liveId);
+      let productCount = 0;
+      if (memLive) {
         for (const auc of auctions.values()) {
           if (auc.liveId === liveId) productCount++;
         }
-
-        memoryLives.push({
-          liveId,
-          title: live.title,
-          status: live.status,
-          startedAt: live.createdAt,
-          endedAt: null,
-          totalAuctions: productCount,
-          totalRevenue: 0,
-          currentViewers: live.status === 'live' ? live.viewerCount : null,
-          productCount,
-        });
       }
-    }
+      return {
+        liveId,
+        sellerId: r.seller_id,
+        title: r.title || '라이브 방송',
+        thumbnailUrl: r.thumbnail_url ?? null,
+        status: memLive ? memLive.status : r.status,
+        startedAt: Number(r.created_at),
+        endedAt: null,
+        totalAuctions: productCount || null,
+        totalRevenue: null,
+        currentViewers: memLive?.status === 'live' ? memLive.viewerCount : null,
+        productCount,
+      };
+    });
 
-    // 라이브 중 우선, 이후 startedAt DESC 정렬
-    memoryLives.sort((a, b) => {
+    // 진행 중 우선, 이후 최신순
+    result.sort((a, b) => {
       if (a.status === 'live' && b.status !== 'live') return -1;
       if (a.status !== 'live' && b.status === 'live') return 1;
       return b.startedAt - a.startedAt;
     });
-
-    // DB 요약이 있으면 종료된 라이브 집계 항목으로 추가 (auctions 테이블에 live_id 없으므로 seller 단위 집계)
-    const result = [...memoryLives];
-    if (dbSummary) {
-      result.push({
-        liveId: `db-summary-${sellerId}`,
-        title: '종료된 라이브 기록 (집계)',
-        status: 'ended',
-        startedAt: new Date(dbSummary.started_at).getTime(),
-        endedAt: dbSummary.ended_at ? new Date(dbSummary.ended_at).getTime() : null,
-        totalAuctions: Number(dbSummary.total_auctions),
-        totalRevenue: Number(dbSummary.total_revenue),
-        currentViewers: null,
-        productCount: Number(dbSummary.total_auctions),
-      });
-    }
 
     res.json(result);
   } catch (err) {
@@ -348,18 +381,20 @@ router.get('/:id/dashboard-summary', async (req: Request, res: Response) => {
       total_revenue: number;
     }>)[0] ?? { total_auctions: 0, total_sold: 0, total_revenue: 0 };
 
-    // 메모리에서 라이브 카운트 집계
-    let liveCount = 0;
-    let ongoingCount = 0;
-    let endedCount = 0;
-
-    for (const live of lives.values()) {
-      if (live.sellerId === userId) {
-        liveCount++;
-        if (live.status === 'live') ongoingCount++;
-        else endedCount++;
-      }
-    }
+    // DB에서 라이브 카운트 집계 (서버 재시작 후에도 정확)
+    const [liveRows] = await pool.execute(
+      `SELECT
+         COUNT(*) AS live_count,
+         SUM(CASE WHEN status = 'ended' THEN 1 ELSE 0 END) AS ended_count,
+         SUM(CASE WHEN status = 'live'  THEN 1 ELSE 0 END) AS ongoing_count
+       FROM lives WHERE seller_id = ?`,
+      [userId],
+    ) as [unknown[], unknown];
+    const dbLiveStats = (liveRows as Array<{live_count:number;ended_count:number;ongoing_count:number}>)[0]
+      ?? { live_count: 0, ended_count: 0, ongoing_count: 0 };
+    const liveCount    = Number(dbLiveStats.live_count);
+    const endedCount   = Number(dbLiveStats.ended_count);
+    const ongoingCount = Number(dbLiveStats.ongoing_count);
 
     res.json({
       userId: Number(userId),
@@ -446,13 +481,21 @@ router.get('/:id/orders', async (req: Request, res: Response) => {
   try {
     const [rows] = await pool.execute(
       `SELECT
-         a.id           AS auction_id,
+         a.id              AS auction_id,
          a.product_name,
-         a.current_price AS final_price,
+         a.current_price   AS final_price,
          a.image_url,
-         a.ends_at      AS order_at,
-         a.mode
+         a.ends_at         AS order_at,
+         a.mode,
+         a.delivery_status,
+         a.live_id,
+         a.seller_id,
+         s.nickname        AS seller_name,
+         l.title           AS live_title,
+         l.created_at      AS live_created_at
        FROM auctions a
+       JOIN users s ON s.id = a.seller_id
+       LEFT JOIN lives l ON l.id = a.live_id
        WHERE a.top_bidder_id = ?
          AND a.status = 'ended'
        ORDER BY a.ends_at DESC`,
@@ -466,18 +509,133 @@ router.get('/:id/orders', async (req: Request, res: Response) => {
       image_url: string | null;
       order_at: string;
       mode: string | null;
+      delivery_status: string | null;
+      live_id: string | null;
+      seller_id: number;
+      seller_name: string | null;
+      live_title: string | null;
+      live_created_at: string | null;
     }>).map(r => ({
-      auctionId:   r.auction_id,
-      productName: r.product_name,
-      finalPrice:  Number(r.final_price),
-      imageUrl:    r.image_url ?? null,
-      orderAt:     r.order_at,
-      mode:        r.mode ?? null,
+      auctionId:      r.auction_id,
+      productName:    r.product_name,
+      finalPrice:     Number(r.final_price),
+      imageUrl:       r.image_url ?? null,
+      orderAt:        r.order_at,
+      mode:           r.mode ?? null,
+      deliveryStatus: r.delivery_status ?? 'payment_complete',
+      liveId:         r.live_id ?? null,
+      sellerId:       r.seller_id,
+      sellerName:     r.seller_name || '알 수 없음',
+      liveTitle:      r.live_title ?? null,
+      liveCreatedAt:  r.live_created_at ?? null,
     }));
 
     res.json(orders);
   } catch (err) {
     console.error('[users] GET /:id/orders error:', err);
+    res.status(500).json({ error: 'database error' });
+  }
+});
+
+// GET /api/users/:id/sales — 셀러의 판매 내역
+router.get('/:id/sales', async (req: Request, res: Response) => {
+  const sellerId = req.params.id;
+  if (!sellerId) {
+    res.status(400).json({ error: 'user id is required' });
+    return;
+  }
+
+  try {
+    const [rows] = await pool.execute(
+      `SELECT
+         a.id AS auction_id,
+         a.product_name,
+         a.current_price AS final_price,
+         a.mode,
+         a.delivery_status,
+         a.image_url,
+         a.ends_at AS sold_at,
+         b.nickname AS buyer_name,
+         a.top_bidder_id AS buyer_id
+       FROM auctions a
+       LEFT JOIN users b ON b.id = a.top_bidder_id
+       WHERE a.seller_id = ?
+         AND a.status = 'ended'
+       ORDER BY a.ends_at DESC`,
+      [sellerId],
+    ) as [unknown[], unknown];
+
+    const sales = (rows as Array<{
+      auction_id: string;
+      product_name: string;
+      final_price: number;
+      mode: string;
+      delivery_status: string;
+      image_url: string | null;
+      sold_at: string;
+      buyer_name: string | null;
+      buyer_id: string | null;
+    }>).map(r => ({
+      auctionId:      r.auction_id,
+      productName:    r.product_name,
+      finalPrice:     Number(r.final_price),
+      mode:           r.mode,
+      deliveryStatus: r.delivery_status,
+      imageUrl:       r.image_url ?? null,
+      soldAt:         r.sold_at,
+      buyerName:      r.buyer_name ?? null,
+      buyerId:        r.buyer_id ?? null,
+    }));
+
+    res.json(sales);
+  } catch (err) {
+    console.error('[users] GET /:id/sales error:', err);
+    res.status(500).json({ error: 'database error' });
+  }
+});
+
+// GET /api/users/:id/unshipped — 미발송 주문 목록 (delivery_status = payment_complete)
+router.get('/:id/unshipped', async (req: Request, res: Response) => {
+  const sellerId = Number(req.params.id);
+  if (!sellerId) {
+    res.status(400).json({ error: 'seller id required' });
+    return;
+  }
+
+  try {
+    const [rows] = await pool.execute(
+      `SELECT
+         a.id          AS auction_id,
+         a.product_name,
+         a.current_price AS final_price,
+         a.image_url,
+         a.ends_at     AS paid_at,
+         u.id          AS buyer_id,
+         u.nickname    AS buyer_name,
+         u.avatar_url  AS buyer_avatar
+       FROM auctions a
+       JOIN users u ON u.id = a.top_bidder_id
+       WHERE a.seller_id = ?
+         AND a.delivery_status = 'payment_complete'
+         AND a.top_bidder_id IS NOT NULL
+       ORDER BY a.ends_at ASC`,
+      [sellerId],
+    ) as [unknown[], unknown];
+
+    const list = (rows as any[]).map((r) => ({
+      auctionId:   r.auction_id,
+      productName: r.product_name,
+      finalPrice:  r.final_price != null ? Number(r.final_price) : null,
+      imageUrl:    r.image_url ?? null,
+      paidAt:      r.paid_at ?? null,
+      buyerId:     r.buyer_id,
+      buyerName:   r.buyer_name || '알 수 없음',
+      buyerAvatar: r.buyer_avatar ?? null,
+    }));
+
+    res.json(list);
+  } catch (err) {
+    console.error('[users] GET /:id/unshipped', err);
     res.status(500).json({ error: 'database error' });
   }
 });

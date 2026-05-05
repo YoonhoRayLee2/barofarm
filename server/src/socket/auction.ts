@@ -169,6 +169,56 @@ export default function registerAuctionSocket(io: Server): void {
       }
     });
 
+    // giveaway:join: { liveId, auctionId, userId, userName } — 무료나눔 참여
+    socket.on('giveaway:join', ({ liveId, auctionId, userId, userName }: {
+      liveId: string;
+      auctionId: string;
+      userId: string;
+      userName?: string;
+    }) => {
+      try {
+        const live = lives.get(liveId);
+        if (!live || live.status !== 'live') {
+          socket.emit('giveaway:join:ack', { ok: false, error: 'live not found' });
+          return;
+        }
+        const auction = auctions.get(auctionId);
+        if (!auction || auction.liveId !== liveId) {
+          socket.emit('giveaway:join:ack', { ok: false, error: 'auction not found' });
+          return;
+        }
+        if (auction.mode !== 'giveaway') {
+          socket.emit('giveaway:join:ack', { ok: false, error: 'not a giveaway' });
+          return;
+        }
+        if (auction.status !== 'live') {
+          socket.emit('giveaway:join:ack', { ok: false, error: 'giveaway ended' });
+          return;
+        }
+        if (userId === auction.sellerId) {
+          socket.emit('giveaway:join:ack', { ok: false, error: 'seller cannot join' });
+          return;
+        }
+
+        if (!auction.giveawayParticipants) auction.giveawayParticipants = [];
+        // 중복 참여 방지
+        const alreadyJoined = auction.giveawayParticipants.some(p => p.userId === userId);
+        if (alreadyJoined) {
+          socket.emit('giveaway:join:ack', { ok: true, alreadyJoined: true, count: auction.giveawayParticipants.length });
+          return;
+        }
+
+        auction.giveawayParticipants.push({ userId, userName: userName || '익명' });
+        const count = auction.giveawayParticipants.length;
+        const participants = auction.giveawayParticipants;
+
+        socket.emit('giveaway:join:ack', { ok: true, count });
+        io.to(liveId).emit('giveaway:count', { auctionId, count, participants });
+      } catch (err) {
+        socket.emit('error', { message: (err as Error).message });
+      }
+    });
+
     // chat: { liveId, message, userId, userName? }
     socket.on('chat', ({ liveId, message, userId, userName }: { liveId: string; message: string; userId: string; userName?: string }) => {
       try {

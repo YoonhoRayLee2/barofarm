@@ -1,0 +1,484 @@
+/* Order Detail Page — Fresh Field */
+
+.od-page {
+  background: var(--color-bg);
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
+  margin: 0 auto;
+  font-family: var(--font-body);
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+}
+
+.od-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: max(14px, env(safe-area-inset-top)) var(--space-4) 14px;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-bg-overlay);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+}
+
+.od-header__back {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  font-size: 18px;
+  color: var(--color-ink);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.od-header__back:active {
+  background: var(--color-surface-alt);
+  transform: scale(0.94);
+}
+
+.od-header__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  color: var(--color-ink);
+  letter-spacing: -0.3px;
+}
+
+.od-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4) 0 var(--space-5);
+}
+
+.od-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 80px var(--space-5);
+  font-size: 13px;
+  color: var(--color-ink-soft);
+}
+
+.od-loading__dot {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--color-surface-alt);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: od-spin 0.85s linear infinite;
+}
+
+@keyframes od-spin {
+  to { transform: rotate(360deg); }
+}
+
+.od-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 80px var(--space-5);
+  text-align: center;
+}
+
+.od-empty__icon {
+  font-size: 56px;
+  opacity: 0.4;
+}
+
+.od-empty__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--color-ink-soft);
+}
+
+.od-empty__retry {
+  padding: 12px 28px;
+  background: var(--grad-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-bg);
+  cursor: pointer;
+}
+
+/* ── Product card ──────────────────────────────────────────── */
+.od-card {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  margin: 0 var(--space-4);
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+}
+
+.od-card__thumb {
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-surface-alt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.od-card__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.od-card__thumb-fallback {
+  font-size: 36px;
+  opacity: 0.5;
+}
+
+.od-card__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.od-card__name {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--color-ink);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.od-card__price {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  color: var(--color-accent);
+  letter-spacing: -0.3px;
+}
+
+.od-card__meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.od-card__mode {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-ink-soft);
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+}
+
+.od-card__date {
+  font-size: 11px;
+  color: var(--color-ink-mute);
+}
+
+/* ── Stepper ───────────────────────────────────────────────── */
+.od-stepper {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin: var(--space-5) var(--space-4);
+  padding: var(--space-4) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  position: relative;
+}
+
+.od-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Connector line between steps (rendered as ::before on each step except first) */
+.od-step::before {
+  content: '';
+  position: absolute;
+  top: 14px;             /* circle is 28px → midline at 14px */
+  right: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--color-line);
+  z-index: -1;
+}
+
+.od-step:first-child::before {
+  display: none;
+}
+
+/* Connector line color: previous step done means current step's incoming line is accent */
+.od-step--done::before,
+.od-step--active::before {
+  background: var(--color-accent);
+}
+
+.od-step__circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  font-family: var(--font-display);
+  border: 2px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-ink-mute);
+  transition: all var(--dur-base) var(--ease-out);
+}
+
+.od-step--done .od-step__circle {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-bg);
+}
+
+.od-step--active .od-step__circle {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-bg);
+  box-shadow: 0 0 0 4px var(--color-accent-tint);
+}
+
+.od-step__label {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--color-ink-mute);
+  text-align: center;
+  letter-spacing: -0.2px;
+}
+
+.od-step--done .od-step__label,
+.od-step--active .od-step__label {
+  color: var(--color-ink);
+}
+
+/* ── Delivery info ─────────────────────────────────────────── */
+.od-delivery-info {
+  margin: var(--space-5) var(--space-4) 0;
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+}
+
+.od-delivery-info__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--color-ink);
+  letter-spacing: -0.3px;
+  margin-bottom: var(--space-3);
+}
+
+.od-delivery-info__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.od-delivery-info__row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.od-delivery-info__row dt {
+  flex-shrink: 0;
+  width: 72px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--color-ink-soft);
+}
+
+.od-delivery-info__row dd {
+  flex: 1;
+  font-size: var(--fs-base);
+  color: var(--color-ink);
+  margin: 0;
+  word-break: break-all;
+}
+
+/* ── Tracking info ─────────────────────────────────────────── */
+.od-tracking-info {
+  border-color: var(--color-accent);
+}
+
+.od-tracking-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.od-tracking-header .od-delivery-info__title {
+  margin-bottom: 0;
+}
+
+.od-tracking-btn {
+  height: 32px;
+  padding: 0 14px;
+  background: var(--color-accent);
+  border: none;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-bg);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity var(--dur-fast) var(--ease-out);
+  flex-shrink: 0;
+}
+
+.od-tracking-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.od-tracking-no-info {
+  font-size: 13px;
+  color: var(--color-ink-mute);
+  margin: 0;
+}
+
+
+/* ── Ship form ─────────────────────────────────────────────── */
+.od-ship-form {
+  margin: var(--space-5) var(--space-4) 0;
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: calc(52px + var(--space-5) + env(safe-area-inset-bottom));
+}
+
+.od-ship-form__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--color-ink);
+  letter-spacing: -0.3px;
+  margin-bottom: var(--space-2);
+}
+
+.od-ship-form__label {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--color-ink-soft);
+  margin-top: var(--space-2);
+}
+
+.od-ship-form__required {
+  color: var(--color-accent);
+}
+
+.od-ship-form__select,
+.od-ship-form__input {
+  width: 100%;
+  height: 48px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-3);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  color: var(--color-ink);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.od-ship-form__select:focus,
+.od-ship-form__input:focus {
+  border-color: var(--color-accent);
+}
+
+.od-ship-form__select option {
+  background: var(--color-bg);
+}
+
+/* ── Action button ─────────────────────────────────────────── */
+.od-action-btn {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0 auto;
+  max-width: 480px;
+  width: calc(100% - var(--space-4) * 2);
+  margin-left: auto;
+  margin-right: auto;
+  height: 52px;
+  background: var(--grad-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--color-bg);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+  margin-bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
+}
+
+.od-action-btn:active {
+  transform: scale(0.97);
+}
+
+.od-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.od-card__party {
+  font-size: 12px;
+  color: var(--color-ink-soft);
+  margin-top: 4px;
+}
+.od-card__party-name {
+  font-weight: 700;
+  color: var(--color-ink);
+}

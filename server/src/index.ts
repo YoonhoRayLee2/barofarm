@@ -10,7 +10,12 @@ import userRoutes from './routes/users';
 import authRoutes from './routes/auth';
 import { createFavoritesRouter } from './routes/favorites';
 import productsRouter from './routes/products';
+import auctionRouter from './routes/auctions';
+import trackingRouter from './routes/tracking';
+import chatRoomsRouter from './routes/chat-rooms';
+import consignmentsRouter from './routes/consignments';
 import registerAuctionSocket from './socket/auction';
+import registerChatSocket from './socket/chat';
 import pool from './db/mysql';
 
 const app = express();
@@ -59,8 +64,13 @@ app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/favorites', createFavoritesRouter(io, pool));
 app.use('/api/products', productsRouter);
+app.use('/api/auctions', auctionRouter);
+app.use('/api/tracking', trackingRouter);
+app.use('/api/chat-rooms', chatRoomsRouter);
+app.use('/api/consignments', consignmentsRouter);
 
 registerAuctionSocket(io);
+registerChatSocket(io);
 
 if (!process.env.JWT_SECRET) {
   console.warn('[auth] JWT_SECRET not set — using insecure default');

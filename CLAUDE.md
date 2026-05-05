@@ -163,3 +163,24 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 4. **모니터링**: `until <check>; do sleep N; done` 패턴으로 1회 확인, 반복 폴링 금지
 5. **결과 보고**: 에이전트 완료 후 핵심 변경사항만 1~2줄 요약
 
+---
+
+## Barofarm 개발 패턴 & 함정
+
+### SPA 페이지 스크롤 패턴 (필수)
+`#app-root { height:100dvh; overflow:hidden }` — 모든 하위 페이지는 이 제약을 받는다.
+올바른 패턴: 페이지 루트 `height:100dvh; display:flex; flex-direction:column; overflow:hidden` + 스크롤 영역 `flex:1; overflow-y:auto`
+참고 구현: `profile-orders.css`
+
+### fixed overlay 포인터 이벤트 함정
+`position:fixed; opacity:0` overlay는 반드시 초기값 `pointer-events:none` 필요.
+없으면 보이지 않아도 전체 화면 클릭을 가로챔 — chat-room.js `initMenuPanel()` 참고.
+
+### 상품 카테고리
+barofarm 카테고리: `['과일', '채소', '수산', '축산', '곡물', '기타']`
+카드게임 카테고리(포켓몬 등) 사용 금지.
+
+### DB 마이그레이션
+`server/db/migrations/*.sql` 파일은 서버 시작 시 자동 적용되지 않는다.
+신규 마이그레이션 작성 후 반드시 사용자에게 수동 실행 안내: `SOURCE server/db/migrations/NNN_xxx.sql;`
+

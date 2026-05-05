@@ -749,6 +749,46 @@
   display: inline-block;
 }
 
+/* ---- Giveaway: 모달 안내 배너 ---- */
+.am-giveaway-info {
+  padding: 12px 14px;
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--color-ink-soft);
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* ---- Giveaway: 슬롯 머신 (판매자 결과 오버레이) ---- */
+.won-card--giveaway .won-slot {
+  margin: 12px 0;
+  padding: 16px 24px;
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-md);
+  min-width: 180px;
+  text-align: center;
+}
+.won-slot__name {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--color-ink);
+  letter-spacing: -0.5px;
+  transition: color 0.2s;
+}
+.won-slot__name--winner {
+  color: var(--color-accent);
+  font-size: 28px;
+}
+.won-card__winner-msg {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-ink);
+  margin-top: 8px;
+  text-align: center;
+}
+
 /* ---- Timer progress bar ---- */
 .ls-timer-bar-wrap {
   display: flex;

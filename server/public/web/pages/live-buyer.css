@@ -673,6 +673,73 @@
   }
 }
 
+/* ---- Giveaway (무료나눔) ---- */
+.lb-giveaway-area {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px;
+}
+.lb-giveaway-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.lb-giveaway-badge {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-accent);
+}
+.lb-giveaway-count {
+  font-size: 12px;
+  color: var(--color-ink-soft);
+}
+.lb-giveaway-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--grad-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-bg);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  letter-spacing: -0.2px;
+}
+.lb-giveaway-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 슬롯 머신 */
+.won-card--giveaway .won-slot {
+  margin: 12px 0;
+  padding: 16px 24px;
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-md);
+  min-width: 180px;
+  text-align: center;
+}
+.won-slot__name {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--color-ink);
+  letter-spacing: -0.5px;
+  transition: color 0.2s;
+}
+.won-slot__name--winner {
+  color: var(--color-accent);
+  font-size: 28px;
+}
+.won-card__winner-msg {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-ink);
+  margin-top: 8px;
+  text-align: center;
+}
+
 /* ---- Product sheet (바텀시트) ---- */
 .product-sheet-backdrop {
   position: fixed;

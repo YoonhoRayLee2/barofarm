@@ -333,7 +333,7 @@ function buildDelivery() {
 function buildCollectorPanel() {
   const panel = document.createElement('div');
   panel.className = 'profile-panel';
-  panel.id = 'panel-collector';
+  panel.id = 'panel-buyer';
 
   /* 3-icon action row */
   const iconRow = document.createElement('div');
@@ -341,7 +341,7 @@ function buildCollectorPanel() {
 
   [
     { svg: svgClock(),   label: '리스팅 경매 현황',  action: () => showToast('리스팅 경매 현황 — 준비 중', { duration: 1800 }) },
-    { svg: svgPlay(),    label: '상품 문의 채팅',    action: () => showToast('상품 문의 채팅 — 준비 중', { duration: 1800 }) },
+    { svg: svgPlay(),    label: '상품 문의 채팅',    action: () => navigate('/app/dm') },
     { svg: svgPercent(), label: '가격 제안 내역',    action: () => showToast('가격 제안 내역 — 준비 중', { duration: 1800 }) },
   ].forEach(({ svg, label, action }) => {
     const btn = document.createElement('button');
@@ -359,6 +359,7 @@ function buildCollectorPanel() {
   menuGroup.className = 'profile-menu-group';
 
   [
+    { icon: '📋', label: '딜러 위탁 신청하기', path: '/app/consignment/apply' },
     { icon: '🛍️', label: '주문 목록',       path: '/app/profile/orders' },
     { icon: '💳', label: '결제 수단 관리',   path: null },
     { icon: '🏠', label: '배송지 관리',      path: null },
@@ -382,7 +383,7 @@ function buildCollectorPanel() {
 function buildDealerPanel() {
   const panel = document.createElement('div');
   panel.className = 'profile-panel';
-  panel.id = 'panel-dealer';
+  panel.id = 'panel-seller';
 
   /* Revenue header */
   const revenue = document.createElement('div');
@@ -405,8 +406,10 @@ function buildDealerPanel() {
   menuGroup.className = 'profile-menu-group';
 
   [
-    { icon: '📋', label: '판매 목록',              path: '/app/seller/dashboard' },
-    { icon: '📤', label: '미발송 구매자 모아보기',  path: null },
+    { icon: '📤', label: '미발송 구매자 모아보기',  path: '/app/seller/unshipped' },
+    { icon: '📦', label: '판매내역',                path: '/app/seller/sales' },
+    { icon: '💬', label: '상품 문의 채팅',           path: '/app/dm' },
+    { icon: '🔍', label: '판매 대행 상품 찾기',     path: '/app/consignment/find' },
     { icon: '⏱️', label: '리스팅 경매 시작하기',   path: '/app/live-create' },
     { icon: '💸', label: '받은 가격 제안',          path: null },
     { icon: '✏️', label: '내 상품 수정 · 관리',    path: '/app/my-products' },
@@ -431,8 +434,8 @@ function buildTabs(collectorPanel, dealerPanel) {
   tabBar.className = 'profile-tabs';
 
   const tabs = [
-    { id: 'collector', label: '컬렉터', panel: collectorPanel },
-    { id: 'dealer',    label: '딜러',   panel: dealerPanel    },
+    { id: 'buyer',  label: '구매자', panel: collectorPanel },
+    { id: 'seller', label: '판매자', panel: dealerPanel    },
   ];
 
   function activate(tab) {

@@ -1,0 +1,1 @@
+ALTER TABLE auctions ADD COLUMN live_id VARCHAR(64) NULL;

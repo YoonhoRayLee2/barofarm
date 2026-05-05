@@ -21,6 +21,11 @@ export interface BlindBid {
   ts: number;
 }
 
+export interface GiveawayParticipant {
+  userId: string;
+  userName: string;
+}
+
 export interface AuctionState {
   id: string;
   liveId: string;
@@ -32,7 +37,7 @@ export interface AuctionState {
   timeLeft: number;
   status: 'pending' | 'live' | 'ended';
   // 경매 모드
-  mode: 'normal' | 'fcfs' | 'blind';
+  mode: 'normal' | 'fcfs' | 'blind' | 'giveaway';
   durationSec: number;
   // 선착순(fcfs) 전용
   stockTotal?: number;
@@ -40,6 +45,8 @@ export interface AuctionState {
   // 블라인드(blind) 전용
   blindBids?: BlindBid[];
   revealAt?: number;
+  // 무료나눔(giveaway) 전용
+  giveawayParticipants?: GiveawayParticipant[];
   // 상품 이미지
   imageUrl?: string;
 }
@@ -90,7 +97,7 @@ interface CreateAuctionParams {
   productName: string;
   startPrice: number;
   sellerId: string;
-  mode?: 'normal' | 'fcfs' | 'blind';
+  mode?: 'normal' | 'fcfs' | 'blind' | 'giveaway';
   durationSec?: number;
   stockTotal?: number;
   imageUrl?: string;
@@ -123,6 +130,11 @@ export function createAuction(
     state.blindBids = [];
   }
 
+  if (mode === 'giveaway') {
+    state.giveawayParticipants = [];
+    state.currentPrice = 0;
+  }
+
   auctions.set(id, state);
 }
 
@@ -150,6 +162,14 @@ function endAuctionState(
     setTimeout(() => endedBlindBids.delete(auc.id), 30 * 60 * 1000);
   }
 
+  if (auc.mode === 'giveaway' && auc.giveawayParticipants && auc.giveawayParticipants.length > 0) {
+    const idx = Math.floor(Math.random() * auc.giveawayParticipants.length);
+    const winner = auc.giveawayParticipants[idx];
+    auc.topBidder = winner.userId;
+    auc.topBidderName = winner.userName;
+    auc.currentPrice = 0;
+  }
+
   const live = lives.get(auc.liveId);
   if (live) live.currentAuctionId = null;
 
@@ -169,6 +189,7 @@ function endAuctionState(
     void: isVoid,
     endedAt: Date.now(),
     imageUrl: auc.imageUrl ?? null,
+    participants: auc.mode === 'giveaway' ? (auc.giveawayParticipants ?? []) : undefined,
   });
 
   stopTimer(auc.id);

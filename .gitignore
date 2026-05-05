@@ -4,6 +4,8 @@ References/
 # Server
 server/.env
 server/node_modules/
+server/*.png
+server/*.jpg
 
 # Flutter
 app/.dart_tool/

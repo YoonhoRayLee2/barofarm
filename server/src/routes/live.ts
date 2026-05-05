@@ -448,14 +448,14 @@ export function createLiveRouter(io: Server) {
 
     console.log('[auction:create] body=', req.body, 'file=', req.file ? { name: req.file.filename, size: req.file.size } : null);
 
-    if (!productName || startPrice === undefined) {
+    const resolvedMode = (['fcfs', 'blind', 'giveaway'].includes(mode ?? '')) ? mode as 'fcfs' | 'blind' | 'giveaway' : 'normal';
+    const resolvedDuration = resolvedMode === 'giveaway' ? 10 : (durationSec !== undefined ? Number(durationSec) : 30);
+
+    if (!productName || (resolvedMode !== 'giveaway' && startPrice === undefined)) {
       if (req.file) fs.unlink(req.file.path, () => {});
       res.status(400).json({ error: 'productName, startPrice 는 필수입니다.' });
       return;
     }
-
-    const resolvedMode = (mode === 'fcfs' || mode === 'blind') ? mode : 'normal';
-    const resolvedDuration = durationSec !== undefined ? Number(durationSec) : 30;
 
     // 모드별 durationSec 검증
     if (resolvedMode === 'normal') {
@@ -486,6 +486,8 @@ export function createLiveRouter(io: Server) {
         res.status(400).json({ error: 'blind 모드의 durationSec 은 10, 20, 30 중 하나이어야 합니다.' });
         return;
       }
+    } else if (resolvedMode === 'giveaway') {
+      // durationSec 고정 10초, 서버에서 강제
     }
 
     const auctionId = crypto.randomUUID();
@@ -506,7 +508,7 @@ export function createLiveRouter(io: Server) {
     createAuction(auctionId, {
       liveId,
       productName: String(productName),
-      startPrice: Number(startPrice),
+      startPrice: resolvedMode === 'giveaway' ? 0 : Number(startPrice),
       sellerId: live.sellerId,
       mode: resolvedMode,
       durationSec: resolvedDuration,
@@ -517,14 +519,15 @@ export function createLiveRouter(io: Server) {
     // DB에도 저장 (영속화)
     try {
       await pool.query(
-        `INSERT INTO auctions (id, seller_id, product_name, start_price, current_price, mode, image_url, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
+        `INSERT INTO auctions (id, seller_id, live_id, product_name, start_price, current_price, mode, image_url, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
         [
           auctionId,
           Number(live.sellerId),
+          liveId,
           String(productName),
-          Number(startPrice),
-          Number(startPrice),
+          resolvedMode === 'giveaway' ? 0 : Number(startPrice),
+          resolvedMode === 'giveaway' ? 0 : Number(startPrice),
           resolvedMode,
           imageUrl ?? null,
         ],
