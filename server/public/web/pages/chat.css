@@ -2,9 +2,10 @@
 
 .ch-page {
   background: var(--color-bg);
-  min-height: 100dvh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   max-width: 480px;
   margin: 0 auto;
   font-family: var(--font-body);
@@ -110,6 +111,8 @@
 
 .ch-content {
   flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
 }

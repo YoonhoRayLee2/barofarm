@@ -249,9 +249,18 @@ export default async function load(params = {}) {
       <button class="pd-btn pd-btn--cta" id="pd-buy-btn">구매하기</button>
     `;
     page.querySelector('#pd-buy-btn').addEventListener('click', async () => {
-      if (!currentUser.deliveryAddress) {
+      // 최신 배송지 정보를 서버에서 직접 조회 (캐시된 user 객체는 delivery 필드가 없을 수 있음)
+      let freshUser;
+      try {
+        freshUser = await api.getUser(currentUser.id);
+      } catch {
+        freshUser = currentUser;
+      }
+      const deliveryAddr = freshUser.delivery?.address || freshUser.deliveryAddress || null;
+
+      if (!deliveryAddr) {
         showToast('배송지를 먼저 등록해주세요');
-        navigate('/app/profile');
+        navigate('/app/delivery-addresses');
         return;
       }
 
@@ -271,7 +280,7 @@ export default async function load(params = {}) {
           </div>
           <div class="pd-confirm-sheet__row">
             <span class="pd-confirm-sheet__label">배송지</span>
-            <span class="pd-confirm-sheet__value pd-confirm-sheet__value--addr">${escapeHtml(currentUser.deliveryAddress)}</span>
+            <span class="pd-confirm-sheet__value pd-confirm-sheet__value--addr">${escapeHtml(deliveryAddr)}</span>
           </div>
           <div class="pd-confirm-sheet__actions">
             <button class="pd-confirm-sheet__cancel">취소</button>

@@ -510,6 +510,7 @@ export default async function load() {
   /* Root page element */
   const page = document.createElement('div');
   page.className = 'profile-page';
+  page.dataset.theme = 'light';
 
   /* 1. Top nickname bar (sticky) */
   const topbar = buildTopbar(nickname);

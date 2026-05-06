@@ -43,6 +43,7 @@ export default async function load() {
 
   const page = document.createElement('div');
   page.className = 'ch-page';
+  page.dataset.theme = 'light';
 
   /* ---------------- Header ---------------- */
   const header = document.createElement('header');
