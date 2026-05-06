@@ -270,3 +270,88 @@
   color: var(--color-danger);
   border: 1.5px solid var(--color-danger);
 }
+
+/* ── Purchase confirm sheet ──────────────────────────────── */
+.pd-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: var(--z-modal, 1000);
+  display: flex;
+  align-items: flex-end;
+}
+.pd-confirm-sheet {
+  width: 100%;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: var(--space-5) var(--space-4)
+    max(var(--space-6), env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  font-family: var(--font-body);
+  color: var(--color-ink);
+}
+.pd-confirm-sheet__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--color-ink);
+  margin-bottom: var(--space-1);
+}
+.pd-confirm-sheet__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+}
+.pd-confirm-sheet__label {
+  color: var(--color-ink-soft);
+  flex-shrink: 0;
+}
+.pd-confirm-sheet__value {
+  color: var(--color-ink);
+  text-align: right;
+  font-weight: 600;
+}
+.pd-confirm-sheet__value--addr {
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  max-width: 60%;
+  color: var(--color-ink-soft);
+}
+.pd-confirm-sheet__actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+.pd-confirm-sheet__cancel,
+.pd-confirm-sheet__ok {
+  flex: 1;
+  height: 48px;
+  border-radius: var(--radius-md);
+  border: none;
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity var(--dur-fast) var(--ease-out),
+    transform 80ms var(--ease-out);
+}
+.pd-confirm-sheet__cancel:active,
+.pd-confirm-sheet__ok:active {
+  transform: scale(0.97);
+}
+.pd-confirm-sheet__cancel {
+  background: var(--color-surface-alt);
+  color: var(--color-ink-soft);
+}
+.pd-confirm-sheet__ok {
+  background: var(--color-cta);
+  color: var(--color-ink);
+}
+.pd-confirm-sheet__ok:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

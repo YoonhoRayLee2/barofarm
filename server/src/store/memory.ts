@@ -31,6 +31,7 @@ export interface AuctionState {
   liveId: string;
   productName: string;
   sellerId: string;
+  startPrice: number;
   currentPrice: number;
   topBidder: string | null;
   topBidderName?: string;
@@ -112,6 +113,7 @@ export function createAuction(
     liveId,
     productName,
     sellerId,
+    startPrice,
     currentPrice: startPrice,
     topBidder: null,
     timeLeft: durationSec,

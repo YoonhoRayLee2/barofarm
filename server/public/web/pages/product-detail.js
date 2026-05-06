@@ -248,8 +248,60 @@ export default async function load(params = {}) {
     bottomBar.innerHTML = `
       <button class="pd-btn pd-btn--cta" id="pd-buy-btn">구매하기</button>
     `;
-    page.querySelector('#pd-buy-btn').addEventListener('click', () => {
-      showToast('구매 기능은 준비 중입니다', { duration: 2000 });
+    page.querySelector('#pd-buy-btn').addEventListener('click', async () => {
+      if (!currentUser.deliveryAddress) {
+        showToast('배송지를 먼저 등록해주세요');
+        navigate('/app/profile');
+        return;
+      }
+
+      // 구매 확인 바텀시트
+      const overlay = document.createElement('div');
+      overlay.className = 'pd-confirm-overlay';
+      overlay.innerHTML = `
+        <div class="pd-confirm-sheet">
+          <div class="pd-confirm-sheet__title">구매 확인</div>
+          <div class="pd-confirm-sheet__row">
+            <span class="pd-confirm-sheet__label">상품</span>
+            <span class="pd-confirm-sheet__value">${escapeHtml(product.name)}</span>
+          </div>
+          <div class="pd-confirm-sheet__row">
+            <span class="pd-confirm-sheet__label">가격</span>
+            <span class="pd-confirm-sheet__value">${Number(product.price).toLocaleString()}원</span>
+          </div>
+          <div class="pd-confirm-sheet__row">
+            <span class="pd-confirm-sheet__label">배송지</span>
+            <span class="pd-confirm-sheet__value pd-confirm-sheet__value--addr">${escapeHtml(currentUser.deliveryAddress)}</span>
+          </div>
+          <div class="pd-confirm-sheet__actions">
+            <button class="pd-confirm-sheet__cancel">취소</button>
+            <button class="pd-confirm-sheet__ok">구매 확정</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+
+      overlay.querySelector('.pd-confirm-sheet__cancel').addEventListener('click', () => {
+        overlay.remove();
+      });
+      overlay.querySelector('.pd-confirm-sheet__ok').addEventListener('click', async () => {
+        overlay.querySelector('.pd-confirm-sheet__ok').disabled = true;
+        try {
+          const res = await fetch(`/api/products/${product.id}/purchase`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ buyerId: currentUser.id }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || '구매 실패');
+          overlay.remove();
+          navigate('/app/order-detail/' + data.orderId);
+        } catch (err) {
+          showToast(err.message || '구매 중 오류가 발생했습니다');
+          const okBtn = overlay.querySelector('.pd-confirm-sheet__ok');
+          if (okBtn) okBtn.disabled = false;
+        }
+      });
     });
   }
 

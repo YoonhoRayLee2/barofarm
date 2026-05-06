@@ -91,7 +91,7 @@ export default async function load() {
       const li = document.createElement('li');
       li.className = 'sales-item';
       const dateStr = item.soldAt ? formatDate(item.soldAt) : '—';
-      const modeLabel = item.mode === 'blind' ? '블라인드' : item.mode === 'fcfs' ? '선착순' : '경매';
+      const modeLabel = { blind: '블라인드', fcfs: '선착순', giveaway: '나눔', direct: '직접구매' }[item.mode] ?? '경매';
       const imgSrc = item.imageUrl || null;
       const statusKey = item.deliveryStatus || 'payment_complete';
       const statusLabel = DELIVERY_LABELS[statusKey] || statusKey;

@@ -260,6 +260,57 @@ router.delete('/:id', async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/products/:id/purchase — 즉시 구매
+router.post('/:id/purchase', async (req: Request, res: Response) => {
+  const productId = Number(req.params.id);
+  const buyerId   = Number(req.body.buyerId);
+  if (!productId || !buyerId) {
+    res.status(400).json({ error: 'invalid params' });
+    return;
+  }
+
+  try {
+    // 1. 상품 조회
+    const [productRows] = await pool.execute(
+      'SELECT id, seller_id, name, price, image_url, status FROM products WHERE id = ?',
+      [productId],
+    ) as [unknown[], unknown];
+    const product = (productRows as Array<{
+      id: number; seller_id: number; name: string; price: number;
+      image_url: string | null; status: string;
+    }>)[0];
+    if (!product) { res.status(404).json({ error: 'product not found' }); return; }
+    if (product.status !== 'active') { res.status(409).json({ error: 'not available' }); return; }
+    if (product.seller_id === buyerId) { res.status(400).json({ error: 'cannot buy own product' }); return; }
+
+    // 2. 구매자 배송지 확인
+    const [buyerRows] = await pool.execute(
+      'SELECT delivery_address FROM users WHERE id = ?',
+      [buyerId],
+    ) as [unknown[], unknown];
+    const buyer = (buyerRows as Array<{ delivery_address: string | null }>)[0];
+    if (!buyer || !buyer.delivery_address) {
+      res.status(400).json({ error: 'delivery address required' });
+      return;
+    }
+
+    // 3. 구매 처리 — auctions row 생성 + product sold 처리
+    const orderId = crypto.randomUUID();
+    await pool.query(
+      `INSERT INTO auctions
+         (id, seller_id, product_name, start_price, current_price, mode, image_url, status, top_bidder_id, ends_at)
+       VALUES (?, ?, ?, ?, ?, 'direct', ?, 'ended', ?, NOW())`,
+      [orderId, product.seller_id, product.name, product.price, product.price, product.image_url ?? null, buyerId],
+    );
+    await pool.query('UPDATE products SET status = ? WHERE id = ?', ['sold', productId]);
+
+    res.json({ orderId });
+  } catch (err) {
+    console.error('[products] POST /:id/purchase error:', err);
+    res.status(500).json({ error: 'database error' });
+  }
+});
+
 function toResponse(p: any, extraImages: string[] = []) {
   return {
     id:          p.id,

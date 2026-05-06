@@ -29,8 +29,26 @@ export async function endAuction(state: AuctionState): Promise<void> {
     const isVoid = !state.topBidder;
     const finalPrice = isVoid ? 0 : state.currentPrice;
     await db.query(
-      'UPDATE auctions SET current_price = ?, top_bidder_id = ?, status = "ended", image_url = ?, ends_at = NOW() WHERE id = ?',
-      [finalPrice, state.topBidder ?? null, state.imageUrl ?? null, state.id],
+      `INSERT INTO auctions
+         (id, seller_id, live_id, product_name, start_price, current_price, mode, image_url, status, top_bidder_id, ends_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ended', ?, NOW())
+       ON DUPLICATE KEY UPDATE
+         current_price = VALUES(current_price),
+         top_bidder_id = VALUES(top_bidder_id),
+         status        = 'ended',
+         image_url     = VALUES(image_url),
+         ends_at       = NOW()`,
+      [
+        state.id,
+        Number(state.sellerId),
+        state.liveId,
+        state.productName,
+        state.startPrice,
+        finalPrice,
+        state.mode,
+        state.imageUrl ?? null,
+        state.topBidder ?? null,
+      ],
     );
     // 낙찰자가 있으면 bids 테이블에도 기록
     if (state.topBidder) {
