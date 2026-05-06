@@ -134,7 +134,8 @@ router.get('/:id', async (req: Request, res: Response) => {
     const [rows] = await pool.execute(
       `SELECT id, name, nickname, avatar_url, role,
               nickname_changed_at,
-              delivery_name, delivery_phone, delivery_address, delivery_detail, delivery_zipcode
+              delivery_name, delivery_phone, delivery_address, delivery_detail, delivery_zipcode,
+              interests
        FROM users WHERE id = ?`,
       [userId],
     ) as [unknown[], unknown];
@@ -151,6 +152,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       delivery_address: string | null;
       delivery_detail: string | null;
       delivery_zipcode: string | null;
+      interests: string | null;
     }>)[0];
 
     if (!user) {
@@ -173,6 +175,7 @@ router.get('/:id', async (req: Request, res: Response) => {
         detail:  user.delivery_detail,
         zipcode: user.delivery_zipcode,
       } : null,
+      interests: user.interests ? user.interests.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
     });
   } catch (err) {
     console.error('[users] GET /:id error:', err);
@@ -188,8 +191,9 @@ router.patch('/:id', uploadAvatar.single('avatar'), async (req: Request, res: Re
     return;
   }
 
-  const { nickname } = req.body as {
+  const { nickname, interests } = req.body as {
     nickname?: string;
+    interests?: string | string[];
   };
 
   try {
@@ -226,11 +230,20 @@ router.patch('/:id', uploadAvatar.single('avatar'), async (req: Request, res: Re
       );
     }
 
+    // 3. 관심카테고리
+    if (interests !== undefined) {
+      const val = Array.isArray(interests)
+        ? interests.join(',')
+        : String(interests ?? '');
+      await pool.execute('UPDATE users SET interests = ? WHERE id = ?', [val || null, userId]);
+    }
+
     // 최신 row 조회 후 GET과 동일한 형태로 응답
     const [rows] = await pool.execute(
       `SELECT id, name, nickname, avatar_url, role,
               nickname_changed_at,
-              delivery_name, delivery_phone, delivery_address, delivery_detail, delivery_zipcode
+              delivery_name, delivery_phone, delivery_address, delivery_detail, delivery_zipcode,
+              interests
        FROM users WHERE id = ?`,
       [userId],
     ) as [unknown[], unknown];
@@ -247,6 +260,7 @@ router.patch('/:id', uploadAvatar.single('avatar'), async (req: Request, res: Re
       delivery_address: string | null;
       delivery_detail: string | null;
       delivery_zipcode: string | null;
+      interests: string | null;
     }>)[0];
 
     if (!user) {
@@ -269,6 +283,7 @@ router.patch('/:id', uploadAvatar.single('avatar'), async (req: Request, res: Re
         detail:  user.delivery_detail,
         zipcode: user.delivery_zipcode,
       } : null,
+      interests: user.interests ? user.interests.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
     });
   } catch (err) {
     console.error('[users] PATCH /:id error:', err);

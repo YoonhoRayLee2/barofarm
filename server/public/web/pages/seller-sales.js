@@ -32,6 +32,7 @@ export default async function load() {
 
   const page = document.createElement('div');
   page.className = 'sales-page';
+  page.dataset.theme = 'light';
 
   page.innerHTML = `
     <header class="sales-header">

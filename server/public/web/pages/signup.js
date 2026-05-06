@@ -56,6 +56,7 @@ export default async function load() {
 
   const page = document.createElement('div');
   page.className = 'signup-page';
+  page.dataset.theme = 'light';
 
   page.innerHTML = `
     <div class="signup-card">

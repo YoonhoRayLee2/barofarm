@@ -22,6 +22,7 @@ export default async function load() {
 
   const page = document.createElement('div');
   page.className = 'dm-page';
+  page.dataset.theme = 'light';
   page.innerHTML = `
     <header class="dm-header">
       <button class="dm-header__back" aria-label="뒤로 가기">‹</button>

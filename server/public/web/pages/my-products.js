@@ -56,6 +56,7 @@ export default async function load() {
   // ---- Page shell ----
   const page = document.createElement('section');
   page.className = 'my-products';
+  page.dataset.theme = 'light';
   page.innerHTML = `
     <header class="mp-header">
       <button class="mp-header__back" id="mp-back" aria-label="뒤로">‹</button>

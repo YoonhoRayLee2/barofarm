@@ -32,6 +32,7 @@ export default async function load() {
 
   const page = document.createElement('div');
   page.className = 'settings-page';
+  page.dataset.theme = 'light';
 
   // Header with back button
   const header = document.createElement('header');

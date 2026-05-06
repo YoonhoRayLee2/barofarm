@@ -22,6 +22,7 @@ export default async function load() {
 
   const page = document.createElement('div');
   page.className = 'cf-page';
+  page.dataset.theme = 'light';
   page.innerHTML = `
     <header class="cf-header">
       <button class="cf-header__back" aria-label="뒤로 가기">‹</button>

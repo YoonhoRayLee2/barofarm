@@ -44,6 +44,7 @@ export default async function load(params) {
 
   const page = document.createElement('div');
   page.className = 'auction-detail-page';
+  page.dataset.theme = 'light';
 
   // Header
   const header = document.createElement('header');

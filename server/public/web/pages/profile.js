@@ -33,7 +33,7 @@ if (!document.getElementById(_cssId)) {
 /* ── Mock data ─────────────────────────────────────────────── */
 const MOCK_STATS = { sales: 0, followers: 11, following: 111 };
 
-const MOCK_INTERESTS = ['피규어', '아트토이', '패션 · 빈티지', '굿즈'];
+const BAROFARM_CATEGORIES = ['과일', '채소', '수산', '축산', '곡물', '기타'];
 
 const MOCK_BADGES = [
   { code: 'top_dealer',      label: '탑 딜러',    icon: '🔒', earned: false },
@@ -243,26 +243,89 @@ function buildHeroBtns(profileUser, refs) {
 }
 
 /* ── Build: PROF-3 interest pills ─────────────────────────── */
-function buildInterests() {
+function buildInterests(interests) {
   const wrap = document.createElement('div');
   wrap.className = 'profile-interests';
 
   const row = document.createElement('div');
   row.className = 'profile-interests__row';
 
-  MOCK_INTERESTS.forEach((label, i) => {
-    const pill = document.createElement('span');
-    pill.className = 'profile-interest-pill' + (i === 0 ? ' is-active' : '');
-    pill.textContent = label;
-    pill.addEventListener('click', () => {
-      row.querySelectorAll('.profile-interest-pill').forEach(p => p.classList.remove('is-active'));
-      pill.classList.add('is-active');
+  const list = Array.isArray(interests) ? interests
+    : (interests ? String(interests).split(',').map(s => s.trim()).filter(Boolean) : []);
+
+  if (list.length === 0) {
+    const empty = document.createElement('span');
+    empty.className = 'profile-interest-empty';
+    empty.textContent = '관심 카테고리를 설정해보세요';
+    row.appendChild(empty);
+  } else {
+    list.forEach((label) => {
+      const pill = document.createElement('span');
+      pill.className = 'profile-interest-pill';
+      pill.textContent = label;
+      row.appendChild(pill);
     });
-    row.appendChild(pill);
-  });
+  }
 
   wrap.appendChild(row);
   return wrap;
+}
+
+/* ── 관심카테고리 설정 시트 ───────────────────────────────── */
+function openInterestSheet(currentInterests, onSave) {
+  const overlay = document.createElement('div');
+  overlay.className = 'pi-overlay';
+
+  const sheet = document.createElement('div');
+  sheet.className = 'pi-sheet';
+
+  const selected = new Set(Array.isArray(currentInterests) ? currentInterests : []);
+
+  sheet.innerHTML = `
+    <div class="pi-sheet__header">
+      <span class="pi-sheet__title">관심 카테고리</span>
+      <button class="pi-sheet__close" aria-label="닫기">✕</button>
+    </div>
+    <p class="pi-sheet__desc">1개 이상 선택해주세요</p>
+    <div class="pi-sheet__grid" id="pi-grid"></div>
+    <button class="pi-sheet__save" id="pi-save">저장하기</button>
+  `;
+  overlay.appendChild(sheet);
+  document.body.appendChild(overlay);
+
+  const grid = sheet.querySelector('#pi-grid');
+  const saveBtn = sheet.querySelector('#pi-save');
+
+  BAROFARM_CATEGORIES.forEach((cat) => {
+    const btn = document.createElement('button');
+    btn.className = 'pi-cat-btn' + (selected.has(cat) ? ' is-selected' : '');
+    btn.textContent = cat;
+    btn.addEventListener('click', () => {
+      if (selected.has(cat)) { selected.delete(cat); btn.classList.remove('is-selected'); }
+      else { selected.add(cat); btn.classList.add('is-selected'); }
+      saveBtn.disabled = selected.size === 0;
+    });
+    grid.appendChild(btn);
+  });
+
+  saveBtn.disabled = selected.size === 0;
+
+  const close = () => {
+    overlay.classList.remove('is-visible');
+    overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+  };
+
+  sheet.querySelector('.pi-sheet__close').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  saveBtn.addEventListener('click', async () => {
+    if (selected.size === 0) { showToast('1개 이상 선택해주세요'); return; }
+    saveBtn.disabled = true;
+    await onSave([...selected]);
+    close();
+  });
+
+  requestAnimationFrame(() => requestAnimationFrame(() => overlay.classList.add('is-visible')));
 }
 
 /* ── Build: PROF-4 badges ──────────────────────────────────── */
@@ -330,7 +393,7 @@ function buildDelivery() {
 }
 
 /* ── Build: PROF-6 collector panel ────────────────────────── */
-function buildCollectorPanel() {
+function buildCollectorPanel(profileUser, scrollEl) {
   const panel = document.createElement('div');
   panel.className = 'profile-panel';
   panel.id = 'panel-buyer';
@@ -359,6 +422,7 @@ function buildCollectorPanel() {
   menuGroup.className = 'profile-menu-group';
 
   [
+    { icon: '⭐', label: '관심카테고리 설정', path: '__interests__' },
     { icon: '📋', label: '딜러 위탁 신청하기', path: '/app/consignment/apply' },
     { icon: '🛍️', label: '주문 목록',       path: '/app/profile/orders' },
     { icon: '💳', label: '결제 수단 관리',   path: null },
@@ -371,7 +435,23 @@ function buildCollectorPanel() {
       <span class="profile-menu-item__icon">${icon}</span>
       <span class="profile-menu-item__label">${esc(label)}</span>
     `;
-    btn.addEventListener('click', () => go(path, label));
+    btn.addEventListener('click', () => {
+      if (path === '__interests__') {
+        openInterestSheet(profileUser.interests || [], async (newInterests) => {
+          try {
+            await api.updateProfile(profileUser.id, { interests: newInterests.join(',') });
+            profileUser.interests = newInterests;
+            const interestsEl = scrollEl.querySelector('.profile-interests');
+            if (interestsEl) interestsEl.replaceWith(buildInterests(newInterests));
+            showToast('관심 카테고리가 저장됐습니다', { variant: 'success', duration: 2000 });
+          } catch {
+            showToast('저장에 실패했습니다');
+          }
+        });
+      } else {
+        go(path, label);
+      }
+    });
     menuGroup.appendChild(btn);
   });
 
@@ -529,7 +609,10 @@ export default async function load() {
   }));
 
   /* 3. PROF-3 Interest pills */
-  scrollEl.appendChild(buildInterests());
+  const interests = Array.isArray(profileUser.interests)
+    ? profileUser.interests
+    : (profileUser.interests ? String(profileUser.interests).split(',').filter(Boolean) : []);
+  scrollEl.appendChild(buildInterests(interests));
 
   /* 4. PROF-4 Badges */
   scrollEl.appendChild(buildBadges());
@@ -538,7 +621,7 @@ export default async function load() {
   scrollEl.appendChild(buildDelivery());
 
   /* 6+7. PROF-2 Tab toggle + PROF-6/7 panels */
-  const collectorPanel = buildCollectorPanel();
+  const collectorPanel = buildCollectorPanel(profileUser, scrollEl);
   const dealerPanel    = buildDealerPanel();
   const tabBar         = buildTabs(collectorPanel, dealerPanel);
 

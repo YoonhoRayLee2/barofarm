@@ -30,6 +30,7 @@ export default async function load() {
 
   const page = document.createElement('div');
   page.className = 'da-page';
+  page.dataset.theme = 'light';
   page.innerHTML = `
     <header class="da-header">
       <button class="da-header__back" type="button" aria-label="뒤로 가기">‹</button>

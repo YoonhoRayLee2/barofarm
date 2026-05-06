@@ -21,6 +21,7 @@ if (!document.getElementById(_cssId)) {
 export default async function load() {
   const page = document.createElement('div');
   page.className = 'terms-page';
+  page.dataset.theme = 'light';
 
   const header = document.createElement('header');
   header.className = 'terms-header';

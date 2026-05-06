@@ -75,6 +75,7 @@ export default async function load(params = {}) {
   // ---- Build page DOM ----
   const page = document.createElement('section');
   page.className = 'product-detail';
+  page.dataset.theme = 'light';
 
   page.innerHTML = `
     <header class="pd-header">

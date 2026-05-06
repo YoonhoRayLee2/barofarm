@@ -24,6 +24,7 @@ export default async function load() {
 
   const page = document.createElement('div');
   page.className = 'ca-page';
+  page.dataset.theme = 'light';
 
   page.innerHTML = `
     <header class="ca-header">

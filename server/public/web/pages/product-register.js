@@ -93,6 +93,7 @@ export default async function load(params = {}) {
   // ---- Page shell ----
   const page = document.createElement('section');
   page.className = 'product-register';
+  page.dataset.theme = 'light';
 
   const titleText  = isEdit ? '상품 수정' : '상품 등록';
   const submitText = isEdit ? '수정하기' : '등록하기';

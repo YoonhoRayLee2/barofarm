@@ -27,6 +27,7 @@ export default async function load(params) {
 
   const page = document.createElement('div');
   page.className = 'up-page';
+  page.dataset.theme = 'light';
   page.innerHTML = `
     <header class="up-header">
       <button class="up-back" aria-label="뒤로 가기">‹</button>

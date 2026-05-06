@@ -44,6 +44,7 @@ export default async function load(params) {
   /* ---------------- DOM scaffold ---------------- */
   const page = document.createElement('div');
   page.className = 'cr-page';
+  page.dataset.theme = 'light';
   page.innerHTML = `
     <header class="cr-header">
       <button class="cr-icon-btn cr-back" aria-label="뒤로 가기">

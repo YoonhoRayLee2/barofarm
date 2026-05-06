@@ -40,6 +40,7 @@ export default async function load() {
 
   const page = document.createElement('div');
   page.className = 'orders-page';
+  page.dataset.theme = 'light';
 
   page.innerHTML = `
     <header class="orders-header">
@@ -149,7 +150,9 @@ export default async function load() {
       const groupEl = document.createElement('div');
       groupEl.className = 'orders-group';
 
-      const dateLabel = group.liveCreatedAt ? formatLiveDate(group.liveCreatedAt) : null;
+      const firstItem = group.items[0];
+      const modeLabel = firstItem && firstItem.mode !== 'direct' ? '라이브 경매' : '직접 구매';
+      const dateLabel = group.liveCreatedAt ? formatLiveDate(group.liveCreatedAt) : modeLabel;
 
       const header = document.createElement('div');
       header.className = 'orders-group__header';

@@ -2,7 +2,7 @@
 
 .terms-page {
   background: var(--color-bg);
-  min-height: 100dvh;
+  height: 100dvh; overflow-y: auto;
   display: flex;
   flex-direction: column;
   max-width: 480px;

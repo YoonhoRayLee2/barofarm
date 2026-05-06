@@ -306,8 +306,9 @@ router.post('/:id/purchase', async (req: Request, res: Response) => {
 
     res.json({ orderId });
   } catch (err) {
-    console.error('[products] POST /:id/purchase error:', err);
-    res.status(500).json({ error: 'database error' });
+    const msg = (err as any)?.sqlMessage || (err as any)?.message || 'unknown';
+    console.error('[products] POST /:id/purchase error:', msg);
+    res.status(500).json({ error: `database error: ${msg}` });
   }
 });
 
