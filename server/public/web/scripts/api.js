@@ -264,6 +264,10 @@ export async function getUser(userId) {
   return request(`/api/users/${encodeURIComponent(userId)}`);
 }
 
+export async function getPublicProfile(userId, viewerId) {
+  return request(`/api/users/${encodeURIComponent(userId)}/public-profile?viewerId=${encodeURIComponent(viewerId)}`);
+}
+
 /**
  * Create a live session.
  * thumbnail이 있으면 multipart/form-data, 없으면 JSON으로 전송한다.

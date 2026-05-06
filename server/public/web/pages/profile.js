@@ -31,7 +31,6 @@ if (!document.getElementById(_cssId)) {
 }
 
 /* ── Mock data ─────────────────────────────────────────────── */
-const MOCK_STATS = { sales: 0, followers: 11, following: 111 };
 
 const BAROFARM_CATEGORIES = ['과일', '채소', '수산', '축산', '곡물', '기타'];
 
@@ -162,7 +161,7 @@ function buildTopbar(nickname) {
 }
 
 /* ── Build: PROF-1 hero ────────────────────────────────────── */
-function buildHero(user) {
+function buildHero(user, stats) {
   const hero = document.createElement('div');
   hero.className = 'profile-hero';
 
@@ -181,9 +180,9 @@ function buildHero(user) {
   statsWrap.className = 'profile-stats';
 
   [
-    { num: MOCK_STATS.sales,     label: '판매' },
-    { num: MOCK_STATS.followers, label: '팔로워' },
-    { num: MOCK_STATS.following, label: '팔로잉' },
+    { num: stats.sales,     label: '판매' },
+    { num: stats.followers, label: '팔로워' },
+    { num: stats.following, label: '팔로잉' },
   ].forEach(({ num, label }) => {
     const stat = document.createElement('div');
     stat.className = 'profile-stat';
@@ -585,6 +584,13 @@ export default async function load() {
   }
   const profileUser = { ...user, ...(freshProfile || {}) };
 
+  // 판매/팔로워/팔로잉 실수치 조회
+  let profileStats = { sales: 0, followers: 0, following: 0 };
+  try {
+    const s = await api.getPublicProfile(profileUser.id, profileUser.id);
+    profileStats = { sales: s.salesCount ?? 0, followers: s.followerCount ?? 0, following: s.followingCount ?? 0 };
+  } catch { /* 실패 시 0으로 유지 */ }
+
   const nickname = profileUser.nickname || profileUser.displayName || profileUser.name || '사용자';
 
   /* Root page element */
@@ -601,7 +607,7 @@ export default async function load() {
   scrollEl.className = 'profile-scroll';
 
   /* 2. PROF-1 Hero */
-  const hero = buildHero(profileUser);
+  const hero = buildHero(profileUser, profileStats);
   scrollEl.appendChild(hero.el);
   scrollEl.appendChild(buildHeroBtns(profileUser, {
     topbarNameEl: topbar.nameEl,
