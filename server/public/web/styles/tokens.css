@@ -125,33 +125,34 @@
 }
 
 /* ─── Light theme placeholder (same values, ready for future use) ── */
-:root[data-theme="light"] {
+:root[data-theme="light"],
+[data-theme="light"] {
   /* Background Layers */
-  --color-bg:          #0E1A12;
-  --color-bg-alt:      #142220;
-  --color-surface:     #1A2A22;
-  --color-surface-alt: #22372D;
+  --color-bg:          #FAFAF5;
+  --color-bg-alt:      #F0F2EA;
+  --color-surface:     #FFFFFF;
+  --color-surface-alt: #F0F2EA;
 
   /* Ink (Text) */
-  --color-ink:         #EDF1E2;
-  --color-ink-soft:    #B7C4A6;
-  --color-ink-mute:    #7E8675;
+  --color-ink:         #1A1F14;
+  --color-ink-soft:    #3D4533;
+  --color-ink-mute:    #6B7560;
 
   /* Lines / Dividers */
-  --color-line:        #28392F;
+  --color-line:        #E2E5D6;
 
   /* Brand Accents */
-  --color-accent:      #7AA53F;
-  --color-accent-soft: #5B7A35;
+  --color-accent:      #2D8A3E;
+  --color-accent-soft: #1F6A2A;
 
   /* Call To Action */
-  --color-cta:         #D6473A;
+  --color-cta:         #E5564A;
 
   /* Semantic */
-  --color-success:     #7AA53F;
-  --color-warn:        #D4A017;
-  --color-danger:      #D6473A;
-  --color-info:        #5C8BAE;
+  --color-success:     #2D8A3E;
+  --color-warn:        #B58A2B;
+  --color-danger:      #D63031;
+  --color-info:        #3D6C9E;
 
   /* Typography Families */
   --font-display: 'Gowun Dodum', 'Pretendard', sans-serif;
@@ -165,21 +166,21 @@
   --radius-pill: 999px;
 
   /* Shadows */
-  --color-shadow: rgba(0, 0, 0, 0.45);
+  --color-shadow: rgba(20, 30, 15, 0.08);
 
   /* Overlays / Tints */
-  --color-overlay-dim:    rgba(0, 0, 0, 0.55);
-  --color-overlay-dark:   rgba(0, 0, 0, 0.25);
-  --color-accent-tint:    rgba(122, 165, 63, 0.12);
-  --color-warn-tint:      rgba(212, 160, 23, 0.12);
-  --color-bg-overlay:     rgba(14, 26, 18, 0.82);
-  --color-surface-tint:   rgba(26, 42, 34, 0.4);
+  --color-overlay-dim:    rgba(0, 0, 0, 0.45);
+  --color-overlay-dark:   rgba(0, 0, 0, 0.15);
+  --color-accent-tint:    rgba(45, 138, 62, 0.10);
+  --color-warn-tint:      rgba(181, 138, 43, 0.10);
+  --color-bg-overlay:     rgba(250, 250, 245, 0.90);
+  --color-surface-tint:   rgba(255, 255, 255, 0.6);
   --color-white-tint-20:  rgba(255, 255, 255, 0.2);
   --color-white-tint-30:  rgba(255, 255, 255, 0.3);
 
   /* Skeleton shimmer gradient stops */
-  --color-skeleton-base:  #1A2A22;
-  --color-skeleton-shine: #22372D;
+  --color-skeleton-base:  #F0F2EA;
+  --color-skeleton-shine: #FAFAF5;
 
   /* Spacing scale */
   --space-0: 0;

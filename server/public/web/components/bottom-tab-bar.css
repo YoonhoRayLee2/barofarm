@@ -116,3 +116,23 @@
 .bottom-tab-spacer {
   height: calc(60px + env(safe-area-inset-bottom));
 }
+
+/* ── Light theme override (home page) ── */
+[data-theme="light"] .bottom-tab-bar {
+  background: #FFFFFF;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-top-color: #E2E5D6;
+  box-shadow: 0 -2px 12px rgba(20,30,15,.05);
+}
+[data-theme="light"] .tab-item { color: #6B7560; }
+[data-theme="light"] .tab-item.is-active { color: #2D8A3E; }
+[data-theme="light"] .tab-item.is-active::before { background: #2D8A3E; }
+[data-theme="light"] .tab-item--fab .tab-fab-btn {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #E5564A, #C8453A);
+  box-shadow: 0 8px 22px rgba(229,86,74,.35);
+  margin-top: -10px;
+}

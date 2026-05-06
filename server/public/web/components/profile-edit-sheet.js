@@ -1,17 +1,12 @@
 /**
  * Profile Edit Bottom Sheet — Barofarm
- * Full-screen modal for editing avatar, nickname (90-day lock), and delivery address.
- *
- * Usage:
- *   import { openProfileEditSheet } from '/app/components/profile-edit-sheet.js';
- *   openProfileEditSheet(user, (updatedUser) => { ... });
+ * Full-screen modal for editing avatar and nickname (90-day lock).
  *
  * @module components/profile-edit-sheet
  */
 
 import { updateProfile } from '/app/scripts/api.js';
 import { showToast } from '/app/components/toast.js';
-import { openKakaoPostcode } from '/app/scripts/kakao-postcode.js';
 
 /* ── CSS injection ─────────────────────────────────────────── */
 const _cssId = 'comp-css-profile-edit-sheet';
@@ -53,8 +48,6 @@ function initialOf(name) {
  *   nickname?: string|null,
  *   avatarUrl?: string|null,
  *   nicknameChangedAt?: string|null,
- *   hasDeliveryAddress?: boolean,
- *   delivery?: { name?: string, phone?: string, address?: string, detail?: string, zipcode?: string }|null
  * }} user
  * @param {(updatedUser: object) => void} [onSaved]
  */
@@ -70,8 +63,6 @@ export function openProfileEditSheet(user, onSaved) {
       nextChangeText = `다음 변경 가능: ${formatDate(new Date(next))}`;
     }
   }
-
-  const delivery = user.delivery || {};
 
   // ── Build backdrop + sheet ──
   const backdrop = document.createElement('div');
@@ -129,39 +120,6 @@ export function openProfileEditSheet(user, onSaved) {
         <p class="pes-hint ${nicknameLocked ? 'is-locked' : ''}">${esc(nextChangeText)}</p>
       </section>
 
-      <!-- 섹션 3: 배송 주소 -->
-      <section class="pes-section">
-        <p class="pes-section-title">배송 주소</p>
-
-        <label class="pes-field-label">수령인</label>
-        <input type="text" class="pes-input" name="deliveryName"
-          value="${esc(delivery.name || '')}"
-          placeholder="수령인 이름"/>
-
-        <label class="pes-field-label">연락처</label>
-        <input type="tel" class="pes-input" name="deliveryPhone"
-          value="${esc(delivery.phone || '')}"
-          placeholder="010-0000-0000"/>
-
-        <label class="pes-field-label">우편번호</label>
-        <div class="pes-zip-row">
-          <input type="text" class="pes-input pes-input--zip" name="deliveryZipcode"
-            value="${esc(delivery.zipcode || '')}"
-            placeholder="우편번호"
-            inputmode="numeric"/>
-          <button type="button" class="pes-zip-btn">우편번호 검색</button>
-        </div>
-
-        <label class="pes-field-label">도로명 주소</label>
-        <input type="text" class="pes-input" name="deliveryAddress"
-          value="${esc(delivery.address || '')}"
-          placeholder="도로명 주소"/>
-
-        <label class="pes-field-label">상세주소</label>
-        <input type="text" class="pes-input" name="deliveryDetail"
-          value="${esc(delivery.detail || '')}"
-          placeholder="동 · 호수 · 건물명 등"/>
-      </section>
     </main>
 
     <footer class="pes-footer">
@@ -180,7 +138,6 @@ export function openProfileEditSheet(user, onSaved) {
   const avatarBtn  = sheet.querySelector('.pes-avatar-btn');
   const avatarIn   = sheet.querySelector('.pes-avatar-input');
   const avatarWrap = sheet.querySelector('.pes-avatar-img-wrap');
-  const zipBtn     = sheet.querySelector('.pes-zip-btn');
   const saveBtn    = sheet.querySelector('.pes-save-btn');
 
   function getInput(name) {
@@ -218,23 +175,6 @@ export function openProfileEditSheet(user, onSaved) {
     avatarWrap.innerHTML = `<img src="${url}" alt="" class="pes-avatar-img"/>`;
   });
 
-  // ── Zipcode search via Kakao Postcode ──
-  zipBtn.addEventListener('click', async () => {
-    try {
-      await openKakaoPostcode(({ zipcode, address, buildingName }) => {
-        getInput('deliveryZipcode').value = zipcode;
-        getInput('deliveryAddress').value = address;
-        if (buildingName) {
-          const detailEl = getInput('deliveryDetail');
-          if (!detailEl.value) detailEl.value = buildingName;
-        }
-        getInput('deliveryDetail').focus();
-      });
-    } catch {
-      showToast('주소 검색을 불러오지 못했습니다. 직접 입력해주세요.', { duration: 2200 });
-    }
-  });
-
   // ── Save ──
   saveBtn.addEventListener('click', async () => {
     const fields = {};
@@ -243,21 +183,6 @@ export function openProfileEditSheet(user, onSaved) {
       fields.nickname = newNick;
     }
     if (pickedAvatar) fields.avatar = pickedAvatar;
-
-    const dName = (getInput('deliveryName').value || '').trim();
-    const dPhone = (getInput('deliveryPhone').value || '').trim();
-    const dAddr = (getInput('deliveryAddress').value || '').trim();
-    const dDetail = (getInput('deliveryDetail').value || '').trim();
-    const dZip = (getInput('deliveryZipcode').value || '').trim();
-
-    // 배송지는 주소가 있으면 함께 보낸다 (서버가 deliveryAddress 기준으로 일괄 갱신)
-    if (dAddr) {
-      fields.deliveryName = dName;
-      fields.deliveryPhone = dPhone;
-      fields.deliveryAddress = dAddr;
-      fields.deliveryDetail = dDetail;
-      fields.deliveryZipcode = dZip;
-    }
 
     if (Object.keys(fields).length === 0) {
       showToast('변경된 내용이 없습니다.', { duration: 1800 });

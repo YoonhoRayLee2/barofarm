@@ -265,6 +265,7 @@ register('/app/live-seller/:liveId', async (p) => import('/app/pages/live-seller
 register('/app/live-buyer/:liveId',  async (p) => import('/app/pages/live-buyer.js').then(m => m.default(p)));
 register('/app/profile/history',     async ()  => import('/app/pages/profile-history.js').then(m => m.default()));
 register('/app/profile/orders',      async ()  => import('/app/pages/profile-orders.js').then(m => m.default()));
+register('/app/delivery-addresses',  async ()  => import('/app/pages/delivery-addresses.js').then(m => m.default()));
 register('/app/seller/sales',        async ()  => import('/app/pages/seller-sales.js').then(m => m.default()));
 register('/app/seller/unshipped',    async ()  => import('/app/pages/seller-unshipped.js').then(m => m.default()));
 register('/app/order-detail/:id',    async (p) => import('/app/pages/order-detail.js').then(m => m.default(p)));

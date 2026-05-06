@@ -24,14 +24,26 @@ if (!document.getElementById(_cssId)) {
 }
 
 const CATEGORIES = [
-  { id: '전체', label: '전체', icon: '🛒' },
-  { id: '과일', label: '과일', icon: '🍎' },
-  { id: '채소', label: '채소', icon: '🥦' },
-  { id: '축산', label: '축산', icon: '🥩' },
-  { id: '수산', label: '수산', icon: '🐟' },
-  { id: '곡물', label: '곡물', icon: '🌾' },
+  { id: '전체', label: '전체', glyph: 'cart',  hue: '#7BC470' },
+  { id: '과일', label: '과일', glyph: 'apple', hue: '#E5564A' },
+  { id: '채소', label: '채소', glyph: 'leaf',  hue: '#4FA84F' },
+  { id: '축산', label: '축산', glyph: 'meat',  hue: '#C84B5C' },
+  { id: '수산', label: '수산', glyph: 'fish',  hue: '#4A8FBF' },
+  { id: '곡물', label: '곡물', glyph: 'grain', hue: '#D6A84A' },
 ];
 const SUBTABS = ['지금경매', '예고'];
+
+function getCatGlyphSVG(kind, color, size = 32) {
+  const g = {
+    cart:  `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M5 8h4l3 13h13l3-9H10" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="13" cy="26" r="2" fill="${color}"/><circle cx="23" cy="26" r="2" fill="${color}"/></svg>`,
+    apple: `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M16 9c0-2 1.5-3.5 3.5-3.5M16 9c-3-2-7-1-8.5 1.5-2 3-1 8 2 11 1.5 1.5 3 2 4.5 2 1 0 1.5-.5 2-.5s1 .5 2 .5c1.5 0 3-.5 4.5-2 3-3 4-8 2-11C21 7 19 6 16 9z" fill="${color}"/></svg>`,
+    leaf:  `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M6 22c0-9 7-16 20-16-1 13-9 20-16 20-1.5 0-3-.5-4-1.5z" fill="${color}"/></svg>`,
+    meat:  `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M9 8c4-3 11-3 14 0 3 3 3 9 0 12-2 2-5 2.5-7 4-2 1.5-5 1-6.5-1-1.5-2-1-4 .5-5C8 16 6 11 9 8z" fill="${color}"/></svg>`,
+    fish:  `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M4 16c4-6 10-8 16-6 3 1 5 3 6 4l4-4v12l-4-4c-1 1-3 3-6 4-6 2-12 0-16-6z" fill="${color}"/></svg>`,
+    grain: `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M16 4v24" stroke="${color}" stroke-width="2" stroke-linecap="round"/><path d="M16 8c-3-1-6 0-7 3 3 1 6 0 7-3zM16 8c3-1 6 0 7 3-3 1-6 0-7-3zM16 14c-3-1-6 0-7 3 3 1 6 0 7-3zM16 14c3-1 6 0 7 3-3 1-6 0-7-3zM16 20c-3-1-6 0-7 3 3 1 6 0 7-3zM16 20c3-1 6 0 7 3-3 1-6 0-7-3z" fill="${color}"/></svg>`,
+  };
+  return g[kind] ?? g.cart;
+}
 
 /**
  * @returns {Promise<HTMLElement>}
@@ -54,25 +66,36 @@ export default async function load() {
 
   const page = document.createElement('div');
   page.className = 'home-page';
+  page.dataset.theme = 'light';
 
   // ---- Header ----
   const header = document.createElement('header');
   header.className = 'home-header';
   header.innerHTML = `
-    <div class="home-header__logo">
-      <img src="/app/assets/home-logo.png" alt="NH바로팜" class="home-header__logo-img" />
+    <div class="home-header__brand">
+      <div class="home-header__icon">
+        <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
+          <path d="M5 8h4l3 13h13l3-9H10" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="13" cy="26" r="2" fill="#fff"/>
+          <circle cx="23" cy="26" r="2" fill="#fff"/>
+        </svg>
+      </div>
+      <div class="home-header__texts">
+        <div class="home-header__title">NH바로팜</div>
+        <div class="home-header__sub">산지직송 라이브경매</div>
+      </div>
     </div>
     <div class="home-header__actions">
       <button class="home-header__icon-btn" aria-label="알림">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M6 16V11a6 6 0 1112 0v5l1.5 2H4.5L6 16z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M10 20a2 2 0 004 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
       </button>
       <button class="home-header__icon-btn" aria-label="설정" onclick="window.location.href='/app/settings'">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
       </button>
     </div>
@@ -86,23 +109,25 @@ export default async function load() {
 
   CATEGORIES.forEach((cat) => {
     const btn = document.createElement('button');
-    btn.className = 'cat-bubble' + (cat.id === activeCategory ? ' is-active' : '');
+    const isActive = cat.id === activeCategory;
+    btn.className = 'cat-circle-btn' + (isActive ? ' is-active' : '');
     btn.dataset.cat = cat.id;
     btn.setAttribute('aria-label', cat.label);
     btn.innerHTML = `
-      <div class="cat-bubble__ring">
-        <span class="cat-bubble__icon" aria-hidden="true">${cat.icon}</span>
-        <span class="cat-bubble__live-badge" style="display:none">
-          <span class="cat-live-dot"></span>LIVE
-        </span>
+      <div class="cat-circle" style="--cat-hue: ${cat.hue}">
+        <div class="cat-circle__inner">${getCatGlyphSVG(cat.glyph, isActive ? '#fff' : cat.hue, 32)}</div>
+        <span class="cat-circle__live-badge">LIVE</span>
       </div>
-      <span class="cat-bubble__label">${cat.label}</span>
+      <span class="cat-circle__label">${cat.label}</span>
     `;
     btn.addEventListener('click', () => {
       if (activeCategory === cat.id) return;
       activeCategory = cat.id;
-      catRow.querySelectorAll('.cat-bubble').forEach((b) => {
-        b.classList.toggle('is-active', b.dataset.cat === cat.id);
+      catRow.querySelectorAll('.cat-circle-btn').forEach((b) => {
+        const isAct = b.dataset.cat === cat.id;
+        b.classList.toggle('is-active', isAct);
+        const c = CATEGORIES.find((c) => c.id === b.dataset.cat);
+        if (c) b.querySelector('.cat-circle__inner').innerHTML = getCatGlyphSVG(c.glyph, isAct ? '#fff' : c.hue, 32);
       });
       if (activeSubtab === '일반판매') {
         renderProducts();
@@ -113,7 +138,7 @@ export default async function load() {
     catRow.appendChild(btn);
   });
   page.appendChild(catRow);
-  const catBubbles = catRow.querySelectorAll('.cat-bubble');
+  const catCircles = catRow.querySelectorAll('.cat-circle-btn');
 
   // ---- Sub-tabs ----
   const _initTabParam = new URLSearchParams(window.location.search).get('tab');
@@ -128,22 +153,27 @@ export default async function load() {
   SUBTABS.forEach((tab) => {
     const btn = document.createElement('button');
     btn.className = 'subtab' + (tab === activeSubtab ? ' is-active' : '');
-    btn.textContent = tab;
+    btn.dataset.tab = tab;
+    if (tab === '지금경매') {
+      btn.innerHTML = `<span>지금 경매</span><span class="subtab__count" id="subtab-live-count">0</span>`;
+    } else {
+      btn.textContent = tab;
+    }
     btn.addEventListener('click', () => {
-      if (activeSubtab === tab) return;
-      activeSubtab = tab;
+      if (activeSubtab === btn.dataset.tab) return;
+      activeSubtab = btn.dataset.tab;
       subtabRow.querySelectorAll('.subtab').forEach((b) => {
-        b.classList.toggle('is-active', b.textContent === tab);
+        b.classList.toggle('is-active', b.dataset.tab === activeSubtab);
       });
-      renderLivesByTab(tab);
+      renderLivesByTab(activeSubtab);
     });
     subtabRow.appendChild(btn);
   });
   page.appendChild(subtabRow);
 
-  // ---- Live list container ----
+  // ---- Content grid ----
   const listContainer = document.createElement('div');
-  listContainer.className = 'home-live-list';
+  listContainer.className = 'home-grid';
   page.appendChild(listContainer);
 
   // ---- Bottom tab bar ----
@@ -292,66 +322,53 @@ export default async function load() {
     });
   }
 
+  const CAT_GRADIENTS = {
+    '과일': ['#FFC4A8', '#FF8A65'],
+    '축산': ['#FFB0BA', '#D17085'],
+    '채소': ['#C3E8A8', '#7BB85A'],
+    '수산': ['#A8D4E8', '#5B9BC4'],
+    '곡물': ['#F0DBA0', '#C49C4F'],
+    '기타': ['#D0D4C0', '#9EA88A'],
+  };
+  const CAT_GLYPHS = { '과일': 'apple', '채소': 'leaf', '축산': 'meat', '수산': 'fish', '곡물': 'grain' };
+
   function buildProductCard(product) {
     const card = document.createElement('article');
     card.className = 'home-product-card';
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
-
-    const thumbStyle = product.imageUrl
-      ? `background-image:url('${escapeAttr(product.imageUrl)}'); background-size:cover; background-position:center;`
-      : '';
-    const thumbFallback = product.imageUrl
-      ? ''
-      : `<span class="home-product-card__fallback">🛒</span>`;
-
-    const priceStr = Number(product.price).toLocaleString('ko-KR');
-    const catLabel = product.category || '';
-
-    const sellerLabel = product.sellerName ? escapeHtml(product.sellerName) : '';
-
+    const [bg1, bg2] = CAT_GRADIENTS[product.category] ?? CAT_GRADIENTS['기타'];
+    const glyph = CAT_GLYPHS[product.category] ?? 'cart';
     card.innerHTML = `
-      <div class="home-product-card__thumb" style="${thumbStyle}">
-        ${thumbFallback}
-        ${catLabel ? `<span class="home-product-card__cat">${escapeHtml(catLabel)}</span>` : ''}
+      <div class="home-product-card__thumb" style="background:linear-gradient(135deg,${bg1},${bg2})">
+        <div class="home-product-card__glyph">${getCatGlyphSVG(glyph, 'rgba(255,255,255,0.45)', 100)}</div>
+        ${product.imageUrl ? `<img src="${escapeAttr(product.imageUrl)}" alt="" class="home-product-card__img" loading="lazy"/>` : ''}
+        <span class="home-product-card__cat">${escapeHtml(product.category || '')}</span>
       </div>
       <div class="home-product-card__info">
-        ${sellerLabel ? `<p class="home-product-card__seller">${sellerLabel}</p>` : ''}
+        <p class="home-product-card__seller">${escapeHtml(product.sellerName || '')}</p>
         <p class="home-product-card__name">${escapeHtml(product.name || '')}</p>
-        <p class="home-product-card__price">${priceStr}<span class="home-product-card__won">원</span></p>
+        <p class="home-product-card__price">${Number(product.price).toLocaleString()}<span>원</span></p>
       </div>
     `;
-
-    card.addEventListener('click', () => {
-      navigate(`/app/product-detail/${encodeURIComponent(product.id)}`);
-    });
-    card.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        card.click();
-      }
-    });
-
+    card.addEventListener('click', () => navigate(`/app/product-detail/${encodeURIComponent(product.id)}`));
+    card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); } });
     return card;
   }
 
   function updateCategoryLiveState(lives) {
     const safeLives = Array.isArray(lives) ? lives : [];
-    // 예고(upcoming) 라이브는 카테고리 불에서 제외 — 실제 방송 중인 것만
     const liveLives = safeLives.filter((l) => l.status === 'live');
     const hasAnyLive = liveLives.length > 0;
-    catBubbles.forEach((btn) => {
+    catCircles.forEach((btn) => {
       const cat = btn.dataset.cat;
-      let hasLive = false;
-      if (cat === '전체') {
-        hasLive = hasAnyLive;
-      } else {
-        hasLive = liveLives.some((l) => l.category === cat);
-      }
+      const hasLive = cat === '전체' ? hasAnyLive : liveLives.some((l) => l.category === cat);
       btn.classList.toggle('has-live', hasLive);
-      const badge = btn.querySelector('.cat-bubble__live-badge');
-      if (badge) badge.style.display = hasLive ? '' : 'none';
+      const badge = btn.querySelector('.cat-circle__live-badge');
+      if (badge) badge.style.display = hasLive ? 'flex' : 'none';
     });
+    const countEl = document.getElementById('subtab-live-count');
+    if (countEl) countEl.textContent = liveLives.length;
   }
 
   // ---- Socket subscription ----

@@ -180,7 +180,7 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// PATCH /api/users/:id — 프로필 수정 (아바타·닉네임·배송지)
+// PATCH /api/users/:id — 프로필 수정 (아바타·닉네임)
 router.patch('/:id', uploadAvatar.single('avatar'), async (req: Request, res: Response) => {
   const userId = req.params.id;
   if (!userId) {
@@ -188,13 +188,8 @@ router.patch('/:id', uploadAvatar.single('avatar'), async (req: Request, res: Re
     return;
   }
 
-  const { nickname, deliveryName, deliveryPhone, deliveryAddress, deliveryDetail, deliveryZipcode } = req.body as {
+  const { nickname } = req.body as {
     nickname?: string;
-    deliveryName?: string;
-    deliveryPhone?: string;
-    deliveryAddress?: string;
-    deliveryDetail?: string;
-    deliveryZipcode?: string;
   };
 
   try {
@@ -228,24 +223,6 @@ router.patch('/:id', uploadAvatar.single('avatar'), async (req: Request, res: Re
       await pool.execute(
         'UPDATE users SET nickname = ?, nickname_changed_at = NOW() WHERE id = ?',
         [nickname, userId],
-      );
-    }
-
-    // 3. 배송지
-    if (deliveryAddress !== undefined) {
-      if (!deliveryAddress) {
-        res.status(400).json({ error: 'deliveryAddress is required' });
-        return;
-      }
-      await pool.execute(
-        `UPDATE users SET
-           delivery_name    = ?,
-           delivery_phone   = ?,
-           delivery_address = ?,
-           delivery_detail  = ?,
-           delivery_zipcode = ?
-         WHERE id = ?`,
-        [deliveryName ?? null, deliveryPhone ?? null, deliveryAddress, deliveryDetail ?? null, deliveryZipcode ?? null, userId],
       );
     }
 

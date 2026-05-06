@@ -362,7 +362,7 @@ function buildCollectorPanel() {
     { icon: '📋', label: '딜러 위탁 신청하기', path: '/app/consignment/apply' },
     { icon: '🛍️', label: '주문 목록',       path: '/app/profile/orders' },
     { icon: '💳', label: '결제 수단 관리',   path: null },
-    { icon: '🏠', label: '배송지 관리',      path: null },
+    { icon: '🏠', label: '배송지 관리',      path: '/app/delivery-addresses' },
     { icon: '📦', label: '박스 공구 현황',   path: null },
   ].forEach(({ icon, label, path }) => {
     const btn = document.createElement('button');
