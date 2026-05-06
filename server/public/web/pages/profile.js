@@ -511,41 +511,49 @@ export default async function load() {
   const page = document.createElement('div');
   page.className = 'profile-page';
 
-  /* 1. Top nickname bar */
+  /* 1. Top nickname bar (sticky) */
   const topbar = buildTopbar(nickname);
   page.appendChild(topbar.el);
 
+  /* Scroll wrapper — contains all content between topbar and tab bar */
+  const scrollEl = document.createElement('div');
+  scrollEl.className = 'profile-scroll';
+
   /* 2. PROF-1 Hero */
   const hero = buildHero(profileUser);
-  page.appendChild(hero.el);
-  page.appendChild(buildHeroBtns(profileUser, {
+  scrollEl.appendChild(hero.el);
+  scrollEl.appendChild(buildHeroBtns(profileUser, {
     topbarNameEl: topbar.nameEl,
     avatarWrap: hero.avatarWrap,
   }));
 
   /* 3. PROF-3 Interest pills */
-  page.appendChild(buildInterests());
+  scrollEl.appendChild(buildInterests());
 
   /* 4. PROF-4 Badges */
-  page.appendChild(buildBadges());
+  scrollEl.appendChild(buildBadges());
 
   /* 5. PROF-5 Delivery widget */
-  page.appendChild(buildDelivery());
+  scrollEl.appendChild(buildDelivery());
 
   /* 6+7. PROF-2 Tab toggle + PROF-6/7 panels */
   const collectorPanel = buildCollectorPanel();
   const dealerPanel    = buildDealerPanel();
   const tabBar         = buildTabs(collectorPanel, dealerPanel);
 
-  page.appendChild(tabBar);
-  page.appendChild(collectorPanel);
-  page.appendChild(dealerPanel);
+  scrollEl.appendChild(tabBar);
+  scrollEl.appendChild(collectorPanel);
+  scrollEl.appendChild(dealerPanel);
 
   /* 8. LIVE floating bubble */
-  page.appendChild(buildLiveBubble());
+  scrollEl.appendChild(buildLiveBubble());
+
+  /* Tab spacer inside scroll area so content isn't hidden behind tab bar */
+  scrollEl.appendChild(createTabSpacer());
+
+  page.appendChild(scrollEl);
 
   /* 9. Bottom tab bar */
-  page.appendChild(createTabSpacer());
   page.appendChild(createBottomTabBar({ activeTab: 'profile' }));
 
   return page;

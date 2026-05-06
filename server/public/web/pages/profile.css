@@ -3,14 +3,21 @@
 /* ── Page shell ──────────────────────────────────────────── */
 .profile-page {
   background: var(--color-bg);
-  min-height: 100dvh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   max-width: 480px;
   margin: 0 auto;
   font-family: var(--font-body);
   position: relative;
+}
+
+.profile-scroll {
+  flex: 1;
+  overflow-y: auto;
   overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ── Top nickname bar ─────────────────────────────────────── */
