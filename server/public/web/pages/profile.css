@@ -595,3 +595,41 @@
   -webkit-tap-highlight-color: transparent;
 }
 .pi-sheet__save:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── 팔로워/팔로잉/판매 유저 목록 시트 ── */
+.ul-sheet { max-height: 70dvh; }
+.ul-list {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  max-height: calc(70dvh - 80px);
+  display: flex;
+  flex-direction: column;
+}
+.ul-loading, .ul-empty {
+  text-align: center;
+  padding: var(--space-6) var(--space-4);
+  color: var(--color-ink-mute);
+  font-size: 14px;
+}
+.ul-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-line);
+}
+.ul-row:last-child { border-bottom: none; }
+.ul-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--color-surface-alt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.ul-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.ul-avatar__initial { font-size: 18px; font-weight: 700; color: var(--color-ink-soft); }
+.ul-name { font-size: 15px; font-weight: 600; color: var(--color-ink); }

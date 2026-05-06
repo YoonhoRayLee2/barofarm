@@ -180,10 +180,10 @@ function buildHero(user, stats) {
   statsWrap.className = 'profile-stats';
 
   [
-    { num: stats.sales,     label: '판매' },
-    { num: stats.followers, label: '팔로워' },
-    { num: stats.following, label: '팔로잉' },
-  ].forEach(({ num, label }) => {
+    { num: stats.sales,     label: '판매',   action: () => navigate('/app/seller/sales') },
+    { num: stats.followers, label: '팔로워', action: () => openUserListSheet('팔로워', user, 'followers') },
+    { num: stats.following, label: '팔로잉', action: () => openUserListSheet('팔로잉', user, 'following') },
+  ].forEach(({ num, label, action }) => {
     const stat = document.createElement('div');
     stat.className = 'profile-stat';
     stat.setAttribute('role', 'button');
@@ -192,9 +192,7 @@ function buildHero(user, stats) {
       <span class="profile-stat__num">${num}</span>
       <span class="profile-stat__label">${label}</span>
     `;
-    stat.addEventListener('click', () => {
-      showToast(label + ' 목록 — 준비 중', { duration: 1800 });
-    });
+    stat.addEventListener('click', action);
     statsWrap.appendChild(stat);
   });
 
@@ -325,6 +323,63 @@ function openInterestSheet(currentInterests, onSave) {
   });
 
   requestAnimationFrame(() => requestAnimationFrame(() => overlay.classList.add('is-visible')));
+}
+
+/* ── 팔로워/팔로잉 목록 시트 ─────────────────────────────── */
+async function openUserListSheet(title, user, type) {
+  const overlay = document.createElement('div');
+  overlay.className = 'pi-overlay';
+
+  const sheet = document.createElement('div');
+  sheet.className = 'pi-sheet ul-sheet';
+  sheet.innerHTML = `
+    <div class="pi-sheet__header">
+      <span class="pi-sheet__title">${esc(title)}</span>
+      <button class="pi-sheet__close" aria-label="닫기">✕</button>
+    </div>
+    <div class="ul-list" id="ul-list">
+      <div class="ul-loading">불러오는 중…</div>
+    </div>
+  `;
+  overlay.appendChild(sheet);
+  document.body.appendChild(overlay);
+
+  const close = () => {
+    overlay.classList.remove('is-visible');
+    overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+  };
+  sheet.querySelector('.pi-sheet__close').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  requestAnimationFrame(() => requestAnimationFrame(() => overlay.classList.add('is-visible')));
+
+  const listEl = sheet.querySelector('#ul-list');
+  try {
+    const items = await fetch(`/api/users/${encodeURIComponent(user.id)}/${type}`)
+      .then(r => r.json());
+
+    if (!items.length) {
+      listEl.innerHTML = `<div class="ul-empty">${title === '팔로워' ? '아직 팔로워가 없습니다' : '팔로우한 사용자가 없습니다'}</div>`;
+      return;
+    }
+
+    listEl.innerHTML = '';
+    items.forEach((u) => {
+      const row = document.createElement('div');
+      row.className = 'ul-row';
+      const initial = (u.nickname || '?').charAt(0);
+      row.innerHTML = `
+        <div class="ul-avatar">${u.avatarUrl
+          ? `<img src="${esc(u.avatarUrl)}" alt="" />`
+          : `<span class="ul-avatar__initial">${esc(initial)}</span>`}
+        </div>
+        <span class="ul-name">${esc(u.nickname || '사용자')}</span>
+      `;
+      listEl.appendChild(row);
+    });
+  } catch {
+    listEl.innerHTML = '<div class="ul-empty">목록을 불러오지 못했습니다</div>';
+  }
 }
 
 /* ── Build: PROF-4 badges ──────────────────────────────────── */

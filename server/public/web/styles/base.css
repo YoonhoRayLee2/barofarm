@@ -194,3 +194,25 @@ ol {
   background: var(--color-line);
   border-radius: var(--radius-pill);
 }
+
+/* ── 바텀시트 데스크탑/태블릿 너비 제한 ────────────────────
+   모바일(< 600px): 전체 너비(100%)
+   데스크탑/태블릿(≥ 600px): phone frame 너비로 제한 */
+@media (min-width: 600px) {
+  .pi-overlay,
+  .pd-confirm-overlay,
+  .da-form-overlay,
+  .pes-backdrop,
+  .fab-overlay {
+    justify-content: center;
+  }
+
+  .pi-sheet,
+  .pd-confirm-sheet,
+  .da-form-sheet,
+  .pes-sheet,
+  .fab-sheet {
+    width: calc(100dvh * 390 / 844);
+    max-width: 480px;
+  }
+}

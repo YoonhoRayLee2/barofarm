@@ -84,6 +84,46 @@ router.get('/:id/public-profile', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/users/:id/followers — 나를 팔로우하는 사람 목록
+router.get('/:id/followers', async (req: Request, res: Response) => {
+  const userId = Number(req.params.id);
+  try {
+    const [rows] = await pool.execute(
+      `SELECT u.id, u.nickname, u.avatar_url
+       FROM follows f
+       JOIN users u ON u.id = f.follower_id
+       WHERE f.following_id = ?
+       ORDER BY f.created_at DESC`,
+      [userId],
+    ) as [unknown[], unknown];
+    res.json((rows as Array<{ id: number; nickname: string | null; avatar_url: string | null }>)
+      .map(r => ({ id: r.id, nickname: r.nickname ?? '사용자', avatarUrl: r.avatar_url ?? null })));
+  } catch (err) {
+    console.error('[users] GET /:id/followers error:', err);
+    res.status(500).json({ error: 'database error' });
+  }
+});
+
+// GET /api/users/:id/following — 내가 팔로우하는 사람 목록
+router.get('/:id/following', async (req: Request, res: Response) => {
+  const userId = Number(req.params.id);
+  try {
+    const [rows] = await pool.execute(
+      `SELECT u.id, u.nickname, u.avatar_url
+       FROM follows f
+       JOIN users u ON u.id = f.following_id
+       WHERE f.follower_id = ?
+       ORDER BY f.created_at DESC`,
+      [userId],
+    ) as [unknown[], unknown];
+    res.json((rows as Array<{ id: number; nickname: string | null; avatar_url: string | null }>)
+      .map(r => ({ id: r.id, nickname: r.nickname ?? '사용자', avatarUrl: r.avatar_url ?? null })));
+  } catch (err) {
+    console.error('[users] GET /:id/following error:', err);
+    res.status(500).json({ error: 'database error' });
+  }
+});
+
 // POST /api/users/:id/follow
 router.post('/:id/follow', async (req: Request, res: Response) => {
   const followingId = Number(req.params.id);
