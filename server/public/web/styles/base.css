@@ -150,11 +150,12 @@ img {
 
 /* ── 모바일 전용: iOS Safari input zoom 방지 ────────────────── */
 /* iOS는 font-size < 16px 인 input에 포커스 시 자동 줌 발생 → 화면 잘림의 원인 */
+/* !important: 클래스 선택자(예: .cr-input)가 font-size를 재선언해도 반드시 16px 이상 보장 */
 @supports (-webkit-touch-callout: none) {
   input,
   textarea,
   select {
-    font-size: max(16px, 1em);
+    font-size: max(16px, 1em) !important;
   }
 }
 

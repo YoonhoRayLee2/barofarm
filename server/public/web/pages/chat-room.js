@@ -302,8 +302,11 @@ export default async function load(params) {
   // visualViewport resize 시 page를 위로 올려 입력바가 키보드 위에 놓이도록 함.
   const vv = window.visualViewport;
   const onVVResize = () => {
-    if (!vv) return;
-    const kbH = Math.max(0, window.innerHeight - vv.height - (vv.offsetTop || 0));
+    // Android(WebView 리사이즈): _appLockedH - innerHeight = 키보드 높이
+    // iOS / resizes-visual: innerHeight - vv.height = 키보드 높이
+    const byResize = Math.max(0, (window._appLockedH || window.innerHeight) - window.innerHeight);
+    const byVV     = vv ? Math.max(0, window.innerHeight - vv.height - (vv.offsetTop || 0)) : 0;
+    const kbH = Math.max(byResize, byVV);
     page.style.transform = kbH > 50 ? `translateY(-${kbH}px)` : '';
     if (kbH > 50) {
       messagesEl.scrollTop = messagesEl.scrollHeight;

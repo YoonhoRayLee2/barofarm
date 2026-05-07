@@ -32,6 +32,36 @@
 <body>
   <main id="app-root"></main>
 
+  <!-- Frame lock: 키보드 등 height-only 변화에 frame 크기 고정 -->
+  <script>
+    (function () {
+      var root = document.getElementById('app-root');
+      if (!root) return;
+
+      function lockFrame() {
+        var h = window.innerHeight;
+        var w = window.innerWidth;
+        window._appLockedH = h;
+        document.documentElement.style.height = h + 'px';
+        document.body.style.height = h + 'px';
+        root.style.height = h + 'px';
+        root.style.width  = Math.min(w, Math.round(h * 16 / 9)) + 'px';
+      }
+
+      lockFrame();
+
+      // width가 바뀔 때만(방향 전환·데스크탑 윈도우 조절) 재계산
+      // 키보드는 height만 변경하고 width는 그대로 → 무시
+      var _prevW = window.innerWidth;
+      window.addEventListener('resize', function () {
+        if (window.innerWidth !== _prevW) {
+          _prevW = window.innerWidth;
+          lockFrame();
+        }
+      });
+    })();
+  </script>
+
   <!-- socket.io-client (CDN) -->
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
