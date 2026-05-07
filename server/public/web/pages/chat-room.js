@@ -298,14 +298,16 @@ export default async function load(params) {
   }
 
   /* ---------------- Keyboard / visualViewport ---------------- */
-  // 페이지 전체는 고정, 입력바(formEl)만 키보드 높이만큼 위로 올림.
+  // app-root 하단이 시각 뷰포트 아래로 얼마나 가려졌는지 직접 측정해 입력바만 올림.
+  // 좌표계 문제(브라우저 크롬, WebView 리사이즈 등)를 getBoundingClientRect로 우회.
   const vv = window.visualViewport;
+  const _appRoot = document.getElementById('app-root');
   const onVVResize = () => {
-    const byResize = Math.max(0, (window._appLockedH || window.innerHeight) - window.innerHeight);
-    const byVV     = vv ? Math.max(0, window.innerHeight - vv.height - (vv.offsetTop || 0)) : 0;
-    const kbH = Math.max(byResize, byVV);
-    formEl.style.transform = kbH > 50 ? `translateY(-${kbH}px)` : '';
-    if (kbH > 50) {
+    const visibleH  = vv ? vv.height : window.innerHeight;
+    const rootBottom = _appRoot ? _appRoot.getBoundingClientRect().bottom : visibleH;
+    const coveredH  = Math.max(0, rootBottom - visibleH);
+    formEl.style.transform = coveredH > 10 ? `translateY(-${coveredH}px)` : '';
+    if (coveredH > 10) {
       requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; });
     }
   };
