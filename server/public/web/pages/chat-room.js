@@ -298,18 +298,15 @@ export default async function load(params) {
   }
 
   /* ---------------- Keyboard / visualViewport ---------------- */
-  // interactive-widget=resizes-visual 덕에 레이아웃은 고정, 키보드가 오버레이됨.
-  // visualViewport resize 시 page를 위로 올려 입력바가 키보드 위에 놓이도록 함.
+  // 페이지 전체는 고정, 입력바(formEl)만 키보드 높이만큼 위로 올림.
   const vv = window.visualViewport;
   const onVVResize = () => {
-    // Android(WebView 리사이즈): _appLockedH - innerHeight = 키보드 높이
-    // iOS / resizes-visual: innerHeight - vv.height = 키보드 높이
     const byResize = Math.max(0, (window._appLockedH || window.innerHeight) - window.innerHeight);
     const byVV     = vv ? Math.max(0, window.innerHeight - vv.height - (vv.offsetTop || 0)) : 0;
     const kbH = Math.max(byResize, byVV);
-    page.style.transform = kbH > 50 ? `translateY(-${kbH}px)` : '';
+    formEl.style.transform = kbH > 50 ? `translateY(-${kbH}px)` : '';
     if (kbH > 50) {
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+      requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; });
     }
   };
   if (vv) {
@@ -323,7 +320,7 @@ export default async function load(params) {
       vv.removeEventListener('resize', onVVResize);
       vv.removeEventListener('scroll', onVVResize);
     }
-    page.style.transform = '';
+    formEl.style.transform = '';
     if (socket) {
       try { socket.emit('cr:leave', { roomId }); } catch {}
       try { socket.disconnect(); } catch {}

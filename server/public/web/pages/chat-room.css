@@ -255,6 +255,8 @@
   padding: var(--space-2) var(--space-3) max(var(--space-2), env(safe-area-inset-bottom));
   background: var(--color-bg);
   border-top: 1px solid var(--color-line);
+  transition: transform 0.22s ease-out;
+  will-change: transform;
 }
 
 .cr-input {
