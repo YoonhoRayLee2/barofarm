@@ -21,12 +21,11 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* ---- 앱 루트: 세로 꽉 채우고 390:844 비율 유지 (모든 기기 동일) ---- */
+/* ---- 앱 루트: 세로 꽉 채우고, 가로는 기기 너비 그대로 채우되 16:9 초과 시 캡 ---- */
 #app-root {
-  /* 화면 높이를 꽉 채우되 390:844 비율 유지 */
   height: 100dvh;
-  width: calc(100dvh * 390 / 844);
-  max-width: 480px;
+  /* 기기 너비가 16:9 비율 이하이면 가로 꽉 채움, 초과하면 16:9에서 고정 */
+  width: min(100vw, calc(100dvh * 16 / 9));
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
@@ -189,6 +188,5 @@ ol {
 .da-form-sheet,
 .pes-sheet,
 .fab-sheet {
-  width: calc(100dvh * 390 / 844);
-  max-width: 480px;
+  width: min(100vw, calc(100dvh * 16 / 9));
 }
