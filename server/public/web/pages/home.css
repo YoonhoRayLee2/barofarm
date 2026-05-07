@@ -15,7 +15,7 @@
 .home-header {
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-line);
-  padding: max(52px, env(safe-area-inset-top)) 18px 14px;
+  padding: max(14px, env(safe-area-inset-top)) 18px 14px;
   display: flex;
   align-items: center;
   gap: 12px;
