@@ -268,6 +268,7 @@ export default async function load(params = {}) {
       // 구매 확인 바텀시트
       const overlay = document.createElement('div');
       overlay.className = 'pd-confirm-overlay';
+      overlay.dataset.theme = 'light';
       overlay.innerHTML = `
         <div class="pd-confirm-sheet">
           <div class="pd-confirm-sheet__title">구매 확인</div>

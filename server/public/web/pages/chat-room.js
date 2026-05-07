@@ -297,8 +297,30 @@ export default async function load(params) {
     });
   }
 
+  /* ---------------- Keyboard / visualViewport ---------------- */
+  // interactive-widget=resizes-visual 덕에 레이아웃은 고정, 키보드가 오버레이됨.
+  // visualViewport resize 시 page를 위로 올려 입력바가 키보드 위에 놓이도록 함.
+  const vv = window.visualViewport;
+  const onVVResize = () => {
+    if (!vv) return;
+    const kbH = Math.max(0, window.innerHeight - vv.height - (vv.offsetTop || 0));
+    page.style.transform = kbH > 50 ? `translateY(-${kbH}px)` : '';
+    if (kbH > 50) {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+  };
+  if (vv) {
+    vv.addEventListener('resize', onVVResize);
+    vv.addEventListener('scroll', onVVResize);
+  }
+
   /* ---------------- Cleanup ---------------- */
   setCleanup(() => {
+    if (vv) {
+      vv.removeEventListener('resize', onVVResize);
+      vv.removeEventListener('scroll', onVVResize);
+    }
+    page.style.transform = '';
     if (socket) {
       try { socket.emit('cr:leave', { roomId }); } catch {}
       try { socket.disconnect(); } catch {}

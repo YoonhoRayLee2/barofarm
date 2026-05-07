@@ -28,6 +28,7 @@ function mount() {
 
   _overlay = document.createElement('div');
   _overlay.className = 'fab-overlay';
+  _overlay.dataset.theme = 'light';
   _overlay.setAttribute('aria-hidden', 'true');
 
   _sheet = document.createElement('div');

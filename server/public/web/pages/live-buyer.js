@@ -80,6 +80,7 @@ export default async function load(params) {
   // ---- Build page shell ----
   const page = document.createElement('div');
   page.className = 'live-buyer';
+  page.dataset.theme = 'light';
 
   // Video element
   const videoEl = document.createElement('video');
@@ -696,6 +697,7 @@ export default async function load(params) {
   function openProductSheet() {
     const backdrop = document.createElement('div');
     backdrop.className = 'product-sheet-backdrop';
+    backdrop.dataset.theme = 'light';
     backdrop.setAttribute('role', 'dialog');
     backdrop.setAttribute('aria-modal', 'true');
 

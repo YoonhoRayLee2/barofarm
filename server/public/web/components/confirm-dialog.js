@@ -41,6 +41,7 @@ export function showConfirmDialog({
     // Build backdrop
     const backdrop = document.createElement('div');
     backdrop.className = 'confirm-dialog-backdrop';
+    backdrop.dataset.theme = 'light';
 
     // Build dialog box
     const dialog = document.createElement('div');

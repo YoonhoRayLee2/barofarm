@@ -28,6 +28,7 @@ export function showWelcomeModal(nickname) {
   return new Promise((resolve) => {
     const backdrop = document.createElement('div');
     backdrop.className = 'wnm-backdrop';
+    backdrop.dataset.theme = 'light';
 
     const dialog = document.createElement('div');
     dialog.className = 'wnm-dialog';

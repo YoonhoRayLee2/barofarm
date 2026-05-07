@@ -163,6 +163,7 @@ export default async function load() {
 
     const overlay = document.createElement('div');
     overlay.className = 'da-form-overlay';
+    overlay.dataset.theme = 'light';
     overlay.innerHTML = `
       <div class="da-form-sheet" role="dialog" aria-modal="true" aria-labelledby="da-form-title">
         <div class="da-form-header">

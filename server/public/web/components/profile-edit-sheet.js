@@ -67,6 +67,7 @@ export function openProfileEditSheet(user, onSaved) {
   // ── Build backdrop + sheet ──
   const backdrop = document.createElement('div');
   backdrop.className = 'pes-backdrop';
+  backdrop.dataset.theme = 'light';
 
   const sheet = document.createElement('div');
   sheet.className = 'pes-sheet';

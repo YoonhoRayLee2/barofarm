@@ -4,7 +4,7 @@
  */
 
 .live-create {
-  min-height: 100dvh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   background: var(--color-bg);
@@ -107,6 +107,8 @@
 /* Step content */
 .live-create__content {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   align-items: center;

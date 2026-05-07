@@ -108,6 +108,7 @@ export function createBlindBid({ onSubmit }) {
 
     const modal = document.createElement('div');
     modal.className = 'blind-bid-result';
+    modal.dataset.theme = 'light';
     const winnerDisplay = escapeHtml(auction.winnerName || auction.winner || auction.winnerId || '-');
     const priceDisplay  = (auction.price || auction.finalPrice || auction.currentPrice || 0).toLocaleString();
     const isVoid = auction.void === true || (!auction.winner && !auction.winnerId);

@@ -71,6 +71,7 @@ export default async function load() {
   // ---- Page shell ----
   const page = document.createElement('div');
   page.className = 'live-create';
+  page.dataset.theme = 'light';
 
   // Safe area top
   const safeTop = document.createElement('div');

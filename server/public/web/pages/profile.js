@@ -272,6 +272,7 @@ function buildInterests(interests) {
 function openInterestSheet(currentInterests, onSave) {
   const overlay = document.createElement('div');
   overlay.className = 'pi-overlay';
+  overlay.dataset.theme = 'light';
 
   const sheet = document.createElement('div');
   sheet.className = 'pi-sheet';
@@ -329,6 +330,7 @@ function openInterestSheet(currentInterests, onSave) {
 async function openUserListSheet(title, user, type) {
   const overlay = document.createElement('div');
   overlay.className = 'pi-overlay';
+  overlay.dataset.theme = 'light';
 
   const sheet = document.createElement('div');
   sheet.className = 'pi-sheet ul-sheet';

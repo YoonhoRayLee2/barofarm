@@ -8,8 +8,12 @@
 
 html,
 body {
-  height: 100%;
-  background: var(--color-bg);
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #000;
   color: var(--color-ink);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
@@ -17,34 +21,18 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* ---- 앱 루트: 모바일은 풀스크린, 데스크톱은 폰 프레임 ---- */
+/* ---- 앱 루트: 세로 꽉 채우고 390:844 비율 유지 (모든 기기 동일) ---- */
 #app-root {
-  width: 100%;
+  /* 화면 높이를 꽉 채우되 390:844 비율 유지 */
   height: 100dvh;
+  width: calc(100dvh * 390 / 844);
+  max-width: 480px;
   position: relative;
   overflow: hidden;
+  flex-shrink: 0;
+  background: var(--color-bg);
   /* transform → position:fixed 자식이 이 요소 기준으로 고정 (overflow:hidden에 온전히 포함) */
   transform: translateZ(0);
-}
-
-@media (min-width: 600px) {
-  html, body {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100dvh;
-    overflow: hidden;
-    background: #000;
-  }
-
-  #app-root {
-    /* 화면 높이를 꽉 채우되 390:844 비율 유지 */
-    height: 100dvh;
-    width: calc(100dvh * 390 / 844);
-    max-width: 480px;
-    overflow: hidden;
-    flex-shrink: 0;
-  }
 }
 
 a {
@@ -171,14 +159,6 @@ img {
   }
 }
 
-/* 모바일(< 600px) 가로 스크롤/overflow 차단 */
-@media (max-width: 599px) {
-  html, body {
-    overflow-x: hidden;
-    max-width: 100vw;
-  }
-}
-
 ul,
 ol {
   list-style: none;
@@ -195,24 +175,20 @@ ol {
   border-radius: var(--radius-pill);
 }
 
-/* ── 바텀시트 데스크탑/태블릿 너비 제한 ────────────────────
-   모바일(< 600px): 전체 너비(100%)
-   데스크탑/태블릿(≥ 600px): phone frame 너비로 제한 */
-@media (min-width: 600px) {
-  .pi-overlay,
-  .pd-confirm-overlay,
-  .da-form-overlay,
-  .pes-backdrop,
-  .fab-overlay {
-    justify-content: center;
-  }
+/* ── 바텀시트: phone frame 너비로 제한 (모든 기기 동일) ─── */
+.pi-overlay,
+.pd-confirm-overlay,
+.da-form-overlay,
+.pes-backdrop,
+.fab-overlay {
+  justify-content: center;
+}
 
-  .pi-sheet,
-  .pd-confirm-sheet,
-  .da-form-sheet,
-  .pes-sheet,
-  .fab-sheet {
-    width: calc(100dvh * 390 / 844);
-    max-width: 480px;
-  }
+.pi-sheet,
+.pd-confirm-sheet,
+.da-form-sheet,
+.pes-sheet,
+.fab-sheet {
+  width: calc(100dvh * 390 / 844);
+  max-width: 480px;
 }

@@ -30,6 +30,7 @@ function getContainer() {
   if (!container || !document.body.contains(container)) {
     container = document.createElement('div');
     container.id = 'toast-container';
+    container.dataset.theme = 'light';
     container.setAttribute('aria-live', 'polite');
     container.setAttribute('aria-atomic', 'false');
     document.body.appendChild(container);

@@ -248,8 +248,7 @@
 /* ---------------- Input bar ---------------- */
 
 .cr-input-bar {
-  position: sticky;
-  bottom: 0;
+  flex-shrink: 0;
   display: flex;
   align-items: flex-end;
   gap: var(--space-2);
