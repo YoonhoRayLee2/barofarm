@@ -65,37 +65,22 @@ export default async function load(params) {
 
   // Top bar
   const topBar = document.createElement('div');
-  topBar.className = 'live-seller__top';
+  topBar.className = 'live-seller__topbar';
   topBar.innerHTML = `
     <div class="ls-top-left">
-      <div class="live-badge">
-        <span class="live-badge__dot"></span>
-        LIVE
-      </div>
+      <div class="lb-live-badge"><span class="dot"></span>LIVE</div>
       <button class="ls-viewer-chip" id="ls-viewers" aria-label="시청자 목록">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-          <circle cx="12" cy="12" r="3"/>
-        </svg>
-        <span id="ls-viewer-count">0</span>
+        👁 <span id="ls-viewer-count">0</span> 시청 중
       </button>
     </div>
-    <div class="ls-cam-controls" id="ls-cam-controls" style="display:none">
-      <button class="ls-cam-btn" id="ls-flip-btn" aria-label="카메라 전환">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M1 4v6h6"/><path d="M23 20v-6h-6"/>
-          <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
-        </svg>
-      </button>
-      <button class="ls-cam-btn" id="ls-zoom-out-btn" aria-label="줌 아웃">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-      </button>
-      <span class="ls-zoom-label" id="ls-zoom-label">1×</span>
-      <button class="ls-cam-btn" id="ls-zoom-in-btn" aria-label="줌 인">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-      </button>
+    <div class="ls-top-right" id="ls-cam-controls">
+      <button class="ls-ctrl-btn" id="ls-flip-btn" title="카메라 전환">🔄</button>
+      <button class="ls-ctrl-btn" id="ls-mic-btn" title="마이크">🎙</button>
+      <button class="ls-ctrl-btn ls-ctrl-btn--danger" id="ls-end-btn" title="방송 종료">✕</button>
     </div>
-    <button class="live-seller__end-btn" id="ls-end-btn" aria-label="방송 종료">✕</button>
+    <span id="ls-zoom-out-btn" hidden></span>
+    <span id="ls-zoom-in-btn" hidden></span>
+    <span id="ls-zoom-label" hidden></span>
   `;
   page.appendChild(topBar);
 
@@ -111,36 +96,33 @@ export default async function load(params) {
   const bottomPanel = document.createElement('div');
   bottomPanel.className = 'live-seller__bottom';
   bottomPanel.innerHTML = `
-    <div class="live-seller__auction-info" id="ls-auction-info">
+    <div class="live-seller__auction-card" id="ls-auction-info">
       <div class="live-seller__no-auction" id="ls-no-auction">경매를 등록하세요</div>
       <div class="live-seller__product-block" id="ls-product-block" style="display:none">
-        <div class="live-seller__product-name" id="ls-product-name"></div>
-        <div class="live-seller__current-price" id="ls-current-price"></div>
-        <div class="live-seller__bidder" id="ls-bidder"></div>
+        <img class="ls-product-thumb" id="ls-product-thumb" src="" alt="" style="display:none" />
+        <div class="ls-product-text">
+          <div class="live-seller__product-name" id="ls-product-name"></div>
+          <div class="live-seller__current-price" id="ls-current-price"></div>
+          <div class="live-seller__bidder" id="ls-bidder"></div>
+        </div>
+      </div>
+      <div class="ls-timer-bar-wrap" id="ls-timer-wrap" style="display:none">
+        <span class="ls-timer-label" id="ls-timer-label">30</span>
+        <div class="ls-timer-track">
+          <div class="ls-timer-fill" id="ls-timer-fill"></div>
+        </div>
       </div>
     </div>
     <div class="live-seller__actions">
-      <input class="live-seller__chat-input" id="ls-chat-input" type="text" placeholder="채팅 입력..." maxlength="100" autocomplete="off" />
-      <button class="live-seller__send-btn" id="ls-send-btn">전송</button>
-      <button class="live-seller__auction-btn" id="ls-auction-btn">경매 등록</button>
-      <button class="ls-sold-btn" id="ls-sold-btn">판매내역</button>
+      <button class="live-seller__send-btn" id="ls-sold-btn">판매내역</button>
+      <input class="live-seller__chat-input" id="ls-chat-input" type="text" placeholder="시청자에게 한마디" maxlength="100" autocomplete="off" />
+      <button class="live-seller__auction-btn" id="ls-auction-btn">🔨 경매 추가</button>
     </div>
   `;
   page.appendChild(bottomPanel);
 
-  // Timer bar — replaces plain numeric timer, placed inside auction info row
-  const timerWrap = document.createElement('div');
-  timerWrap.className = 'ls-timer-bar-wrap';
-  timerWrap.id = 'ls-timer-wrap';
-  timerWrap.style.display = 'none';
-  timerWrap.innerHTML = `
-    <span class="ls-timer-label" id="ls-timer-label">30</span>
-    <div class="ls-timer-track">
-      <div class="ls-timer-fill" id="ls-timer-fill"></div>
-    </div>
-  `;
-  const auctionInfoEl = bottomPanel.querySelector('#ls-auction-info');
-  auctionInfoEl.appendChild(timerWrap);
+  // Timer wrap reference (now embedded directly in innerHTML)
+  const timerWrap = bottomPanel.querySelector('#ls-timer-wrap');
 
   // Track auction duration for fill-ratio calculation
   let _auctionDurationSec = 30;
@@ -428,6 +410,7 @@ export default async function load(params) {
     const productName = page.querySelector('#ls-product-name');
     const currentPrice = page.querySelector('#ls-current-price');
     const bidder = page.querySelector('#ls-bidder');
+    const thumb = page.querySelector('#ls-product-thumb');
 
     // Remove fcfs-end button if exists
     if (endFcfsBtn) { endFcfsBtn.remove(); endFcfsBtn = null; }
@@ -442,6 +425,15 @@ export default async function load(params) {
     if (noAuction) noAuction.style.display = 'none';
     if (productBlock) productBlock.style.display = '';
     if (productName) productName.textContent = auction.productName || '';
+    if (thumb) {
+      if (auction.imageUrl) {
+        thumb.src = auction.imageUrl;
+        thumb.style.display = '';
+      } else {
+        thumb.src = '';
+        thumb.style.display = 'none';
+      }
+    }
 
     const mode = auction.mode || 'normal';
     const modeLabel = mode === 'fcfs' ? '[선착순] '
@@ -983,7 +975,7 @@ export default async function load(params) {
     chatInput.value = '';
   }
 
-  sendBtn.addEventListener('click', sendChatMsg);
+  if (sendBtn) sendBtn.addEventListener('click', sendChatMsg);
   chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) sendChatMsg(); });
 
   page.querySelector('#ls-end-btn').addEventListener('click', async () => {

@@ -92,52 +92,40 @@ export default async function load(params) {
 
   // ---- Top bar ----
   const topBar = document.createElement('div');
-  topBar.className = 'live-buyer__top';
+  topBar.className = 'lb-top';
   topBar.innerHTML = `
-    <div class="live-host">
-      <div class="live-avatar" id="lb-seller-avatar"></div>
-      <div class="live-host-meta">
-        <div class="live-host-name">
-          <svg class="leaf-icon" viewBox="0 0 16 16" fill="currentColor" width="13" height="13">
-            <path d="M14 2C9 2 5 4 3 8c-1 2-1 4 0 6 2-2 5-3 8-4-2 2-3 4-3 6 4 0 7-3 7-9V2z"/>
-          </svg>
-          <span id="lb-seller-name">판매자</span>
-        </div>
-        <div class="live-host-sub" id="lb-seller-sub">라이브 방송 중</div>
+    <div class="lb-host">
+      <div class="lb-avatar" id="lb-seller-avatar"></div>
+      <div>
+        <div class="lb-host-name" id="lb-seller-name">판매자</div>
+        <div class="lb-host-sub" id="lb-seller-sub">라이브 방송 중</div>
       </div>
     </div>
-    <div class="live-meta-cluster">
-      <span class="lb-live-badge">
-        <span class="lb-live-dot"></span>
-        LIVE
-      </span>
-      <button class="lb-viewers" id="lb-viewers-btn" aria-label="시청자 목록">
+    <div class="lb-meta">
+      <div class="lb-live-badge"><span class="dot"></span>LIVE</div>
+      <button class="lb-glass-btn" id="lb-viewers-btn" aria-label="시청자 목록" title="시청자">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
           <circle cx="12" cy="12" r="3"/>
         </svg>
-        <span id="lb-viewer-count">0</span>
       </button>
-      <button class="lb-close-btn" id="lb-back-btn" aria-label="나가기">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <line x1="18" y1="6" x2="6" y2="18"/>
-          <line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
+      <span id="lb-viewer-count" style="display:none">0</span>
+      <button class="lb-glass-btn" id="lb-mute-btn" title="음소거">🔇</button>
+      <button class="lb-glass-btn" id="lb-back-btn" title="나가기">✕</button>
     </div>
   `;
   page.appendChild(topBar);
 
-  // ---- Mute pill ----
+  // ---- Mute / HD info row ----
   const muteRow = document.createElement('div');
-  muteRow.className = 'live-actions-row';
+  muteRow.className = 'lb-mute-row';
+  muteRow.id = 'lb-mute-row';
   muteRow.innerHTML = `
-    <button class="mute-pill" id="lb-mute-btn" aria-label="음소거 토글">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M3 9v6h4l5 5V4L7 9H3z"/>
-      </svg>
-      <span id="lb-mute-label">소리 켜기</span>
-    </button>
+    <span>🔇</span>
+    <span id="lb-mute-label">음소거</span>
+    <span class="divider"></span>
+    <span style="font-size:9px;padding:1px 4px;border-radius:3px;border:1px solid rgba(255,255,255,0.4);font-weight:800;">HD</span>
+    <span style="opacity:0.8"> 720p</span>
   `;
   page.appendChild(muteRow);
 
@@ -148,24 +136,23 @@ export default async function load(params) {
 
   // ---- Product panel (bottom overlay) ----
   const productPanel = document.createElement('div');
-  productPanel.className = 'lb-product-panel';
+  productPanel.className = 'lb-bottom';
   productPanel.id = 'lb-product-panel';
   productPanel.innerHTML = `
-    <div class="lb-product-info">
-      <div class="lb-product-thumb" id="lb-product-thumb"></div>
-      <div class="lb-product-texts">
-        <span class="lb-product-no" id="lb-product-no"></span>
-        <span class="lb-product-name" id="lb-product-name">경매 대기 중...</span>
-        <div class="lb-product-price-row">
-          <span class="lb-product-price" id="lb-product-price"></span>
-          <span class="lb-price-step" id="lb-price-step"></span>
+    <div class="lb-mode-chips" id="lb-mode-chips"></div>
+    <div class="lb-product" id="lb-product">
+      <div class="lb-product__thumb" id="lb-product-thumb"></div>
+      <div class="lb-product__info">
+        <div class="lb-product__name" id="lb-product-name">경매 대기 중...</div>
+        <div class="lb-product__price-row">
+          <span class="lb-product__price" id="lb-product-price"></span>
+          <span class="lb-product__step" id="lb-price-step" style="display:none"></span>
         </div>
+        <div class="lb-product__bidder" id="lb-product-bidder" style="display:none"></div>
       </div>
-      <div class="lb-timer-slot" id="lb-timer-slot"></div>
+      <div class="lb-product__timer-slot" id="lb-timer-slot"></div>
     </div>
-    <div class="lb-bid-controls" id="lb-bid-controls" style="display:none">
-      <!-- bid chips + slide bid mount here -->
-    </div>
+    <div class="lb-bid-controls" id="lb-bid-controls" style="display:none"></div>
     <div class="lb-no-auction-cta" id="lb-no-auction-cta">
       <span class="lb-waiting-text">라이브 시청 중 — 경매를 기다려보세요</span>
     </div>
@@ -217,27 +204,14 @@ export default async function load(params) {
 
   // ---- Actions bar (bottom) ----
   const actionsBar = document.createElement('div');
-  actionsBar.className = 'lb-actions-bar';
+  actionsBar.className = 'lb-actions';
   actionsBar.innerHTML = `
-    <button class="lb-mini-preview" id="lb-live-dir-btn" aria-label="진행중인 라이브">
-      <span class="lb-mini-live-badge">LIVE</span>
-    </button>
-    <input class="lb-chat-input" id="lb-chat-input" type="text" placeholder="메시지 보내기…" maxlength="100" autocomplete="off" />
-    <button class="lb-icon-btn" id="lb-share-btn2" aria-label="공유">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-        <polyline points="16 6 12 2 8 6"/>
-        <line x1="12" y1="2" x2="12" y2="15"/>
-      </svg>
-    </button>
-    <button class="lb-icon-btn lb-icon-btn--active" id="lb-products-btn" aria-label="라이브중인 상품">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M3 7l9-4 9 4-9 4-9-4z"/>
-        <path d="M3 17l9 4 9-4M3 12l9 4 9-4"/>
-      </svg>
-    </button>
+    <button class="lb-icon-btn" id="lb-products-btn" aria-label="라이브중인 상품" title="상품">📦</button>
+    <input class="lb-chat-input" id="lb-chat-input" type="text" placeholder="메시지를 입력해 주세요" maxlength="100" autocomplete="off" />
+    <button class="lb-icon-btn" id="lb-heart-btn" title="좋아요">♡</button>
+    <button class="lb-icon-btn" id="lb-share-btn2" aria-label="공유" title="공유">↗</button>
   `;
-  page.appendChild(actionsBar);
+  productPanel.appendChild(actionsBar);
 
   // ---- Loading overlay ----
   const overlay = document.createElement('div');
@@ -444,10 +418,6 @@ export default async function load(params) {
     basePrice = auction.currentPrice || auction.startPrice || 0;
 
     if (productNameEl) productNameEl.textContent = auction.productName || '';
-    const productNoEl = page.querySelector('#lb-product-no');
-    if (productNoEl && currentAuctionId) {
-      productNoEl.textContent = `PRD-${String(currentAuctionId).padStart(2, '0')} · 진행중`;
-    }
     const priceStepEl = page.querySelector('#lb-price-step');
     if (priceStepEl) {
       const tick = getTickAmount(basePrice);
@@ -1144,8 +1114,9 @@ export default async function load(params) {
   if (muteBtn) {
     muteBtn.addEventListener('click', () => {
       videoEl.muted = !videoEl.muted;
-      const muteLabel = muteBtn.querySelector('#lb-mute-label');
-      if (muteLabel) muteLabel.textContent = videoEl.muted ? '소리 켜기' : '소리 끄기';
+      const muteLabel = page.querySelector('#lb-mute-label');
+      if (muteLabel) muteLabel.textContent = videoEl.muted ? '음소거' : '소리 켜짐';
+      muteBtn.textContent = videoEl.muted ? '🔇' : '🔊';
     });
   }
 
