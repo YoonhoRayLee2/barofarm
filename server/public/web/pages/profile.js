@@ -19,6 +19,7 @@ import { navigate, replace } from '/app/scripts/router.js';
 import * as api from '/app/scripts/api.js';
 import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 import { showToast } from '/app/components/toast.js';
+import { createLiveCard } from '/app/components/live-card.js';
 
 /* ── CSS injection ─────────────────────────────────────────── */
 const _cssId = 'page-css-profile';
@@ -34,14 +35,26 @@ if (!document.getElementById(_cssId)) {
 
 const BAROFARM_CATEGORIES = ['과일', '채소', '수산', '축산', '곡물', '기타'];
 
-const MOCK_BADGES = [
-  { code: 'top_dealer',      label: '탑 딜러',    icon: '🔒', earned: false },
-  { code: 'first_purchase',  label: '첫 구매',    icon: '🎁', earned: true  },
-  { code: 'first_live',      label: '첫 라이브',  icon: '🔒', earned: false },
-  { code: 'sniper',          label: '정조준',     icon: '🎯', earned: true  },
-  { code: 'rare_dealer',     label: '레어템 딜러', icon: '🔒', earned: false },
-  { code: 'listing_master',  label: '리스팅 경',  icon: '🔒', earned: false },
-];
+const CAT_META = {
+  '과일': { glyph: 'apple', hue: '#E5564A' },
+  '채소': { glyph: 'leaf',  hue: '#4FA84F' },
+  '축산': { glyph: 'meat',  hue: '#C84B5C' },
+  '수산': { glyph: 'fish',  hue: '#4A8FBF' },
+  '곡물': { glyph: 'grain', hue: '#D6A84A' },
+  '기타': { glyph: 'cart',  hue: '#7BC470' },
+};
+
+function getCatGlyphSVG(kind, color, size = 32) {
+  const g = {
+    cart:  `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M5 8h4l3 13h13l3-9H10" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="13" cy="26" r="2" fill="${color}"/><circle cx="23" cy="26" r="2" fill="${color}"/></svg>`,
+    apple: `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M16 9c0-2 1.5-3.5 3.5-3.5M16 9c-3-2-7-1-8.5 1.5-2 3-1 8 2 11 1.5 1.5 3 2 4.5 2 1 0 1.5-.5 2-.5s1 .5 2 .5c1.5 0 3-.5 4.5-2 3-3 4-8 2-11C21 7 19 6 16 9z" fill="${color}"/></svg>`,
+    leaf:  `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M6 22c0-9 7-16 20-16-1 13-9 20-16 20-1.5 0-3-.5-4-1.5z" fill="${color}"/></svg>`,
+    meat:  `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M9 8c4-3 11-3 14 0 3 3 3 9 0 12-2 2-5 2.5-7 4-2 1.5-5 1-6.5-1-1.5-2-1-4 .5-5C8 16 6 11 9 8z" fill="${color}"/></svg>`,
+    fish:  `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M4 16c4-6 10-8 16-6 3 1 5 3 6 4l4-4v12l-4-4c-1 1-3 3-6 4-6 2-12 0-16-6z" fill="${color}"/></svg>`,
+    grain: `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M16 4v24" stroke="${color}" stroke-width="2" stroke-linecap="round"/><path d="M16 8c-3-1-6 0-7 3 3 1 6 0 7-3zM16 8c3-1 6 0 7 3-3 1-6 0-7-3zM16 14c-3-1-6 0-7 3 3 1 6 0 7-3zM16 14c3-1 6 0 7 3-3 1-6 0-7-3zM16 20c-3-1-6 0-7 3 3 1 6 0 7-3zM16 20c3-1 6 0 7 3-3 1-6 0-7-3z" fill="${color}"/></svg>`,
+  };
+  return g[kind] ?? g.cart;
+}
 
 /* ── SVG helpers ───────────────────────────────────────────── */
 function svgPersonSilhouette(size = 52) {
@@ -227,22 +240,19 @@ function buildHeroBtns(profileUser, refs) {
     });
   });
 
-  const badgeBtn = document.createElement('button');
-  badgeBtn.className = 'profile-hero-btn';
-  badgeBtn.textContent = '힛 · 배지 현황';
-  badgeBtn.addEventListener('click', () => {
-    showToast('힛 · 배지 현황 — 준비 중', { duration: 1800 });
-  });
-
   wrap.appendChild(editBtn);
-  wrap.appendChild(badgeBtn);
   return wrap;
 }
 
-/* ── Build: PROF-3 interest pills ─────────────────────────── */
+/* ── Build: PROF-3 interest category circles ──────────────── */
 function buildInterests(interests) {
   const wrap = document.createElement('div');
   wrap.className = 'profile-interests';
+
+  const heading = document.createElement('div');
+  heading.className = 'profile-interests__heading';
+  heading.textContent = '관심 카테고리';
+  wrap.appendChild(heading);
 
   const row = document.createElement('div');
   row.className = 'profile-interests__row';
@@ -257,10 +267,15 @@ function buildInterests(interests) {
     row.appendChild(empty);
   } else {
     list.forEach((label) => {
-      const pill = document.createElement('span');
-      pill.className = 'profile-interest-pill';
-      pill.textContent = label;
-      row.appendChild(pill);
+      const meta = CAT_META[label] ?? { glyph: 'cart', hue: '#7BC470' };
+      const btn = document.createElement('div');
+      btn.className = 'profile-cat-circle';
+      btn.style.setProperty('--cat-hue', meta.hue);
+      btn.innerHTML = `
+        <div class="profile-cat-circle__inner">${getCatGlyphSVG(meta.glyph, meta.hue, 28)}</div>
+        <span class="profile-cat-circle__label">${label}</span>
+      `;
+      row.appendChild(btn);
     });
   }
 
@@ -295,12 +310,24 @@ function openInterestSheet(currentInterests, onSave) {
   const saveBtn = sheet.querySelector('#pi-save');
 
   BAROFARM_CATEGORIES.forEach((cat) => {
+    const meta = CAT_META[cat] ?? { glyph: 'cart', hue: '#7BC470' };
     const btn = document.createElement('button');
     btn.className = 'pi-cat-btn' + (selected.has(cat) ? ' is-selected' : '');
-    btn.textContent = cat;
+    btn.style.setProperty('--cat-hue', meta.hue);
+    btn.innerHTML = `
+      <div class="pi-cat-btn__circle">${getCatGlyphSVG(meta.glyph, selected.has(cat) ? '#fff' : meta.hue, 32)}</div>
+      <span class="pi-cat-btn__label">${cat}</span>
+    `;
     btn.addEventListener('click', () => {
-      if (selected.has(cat)) { selected.delete(cat); btn.classList.remove('is-selected'); }
-      else { selected.add(cat); btn.classList.add('is-selected'); }
+      if (selected.has(cat)) {
+        selected.delete(cat);
+        btn.classList.remove('is-selected');
+        btn.querySelector('.pi-cat-btn__circle').innerHTML = getCatGlyphSVG(meta.glyph, meta.hue, 32);
+      } else {
+        selected.add(cat);
+        btn.classList.add('is-selected');
+        btn.querySelector('.pi-cat-btn__circle').innerHTML = getCatGlyphSVG(meta.glyph, '#fff', 32);
+      }
       saveBtn.disabled = selected.size === 0;
     });
     grid.appendChild(btn);
@@ -384,42 +411,7 @@ async function openUserListSheet(title, user, type) {
   }
 }
 
-/* ── Build: PROF-4 badges ──────────────────────────────────── */
-function buildBadges() {
-  const wrap = document.createElement('div');
-  wrap.className = 'profile-badges';
 
-  const row = document.createElement('div');
-  row.className = 'profile-badges__row';
-
-  MOCK_BADGES.forEach(({ label, icon, earned }) => {
-    const card = document.createElement('div');
-    card.className = 'badge-card ' + (earned ? 'is-earned' : 'is-locked');
-
-    const circle = document.createElement('div');
-    circle.className = 'badge-card__circle';
-    circle.textContent = earned ? icon : '🔒';
-
-    const lbl = document.createElement('span');
-    lbl.className = 'badge-card__label';
-    lbl.textContent = label;
-
-    card.appendChild(circle);
-    card.appendChild(lbl);
-    card.addEventListener('click', () => {
-      if (earned) {
-        showToast(label + ' 배지 획득!', { variant: 'success', duration: 1800 });
-      } else {
-        showToast(label + ' — 아직 잠금 상태입니다', { duration: 1800 });
-      }
-    });
-
-    row.appendChild(card);
-  });
-
-  wrap.appendChild(row);
-  return wrap;
-}
 
 /* ── Build: PROF-5 delivery widget ────────────────────────── */
 function buildDelivery() {
@@ -597,11 +589,11 @@ function buildTabs(collectorPanel, dealerPanel) {
 }
 
 /* ── Build: LIVE floating bubble ──────────────────────────── */
-function buildLiveBubble() {
+function buildLiveBubble(currentUser) {
   const bubble = document.createElement('div');
   bubble.className = 'profile-live-bubble';
   bubble.setAttribute('role', 'button');
-  bubble.setAttribute('aria-label', '라이브 셀러 보기');
+  bubble.setAttribute('aria-label', '지금 경매 보기');
   bubble.setAttribute('tabindex', '0');
 
   const badge = document.createElement('span');
@@ -609,10 +601,90 @@ function buildLiveBubble() {
   badge.textContent = 'LIVE';
   bubble.appendChild(badge);
 
-  bubble.addEventListener('click', () => {
-    showToast('라이브 셀러를 둘러보세요', { duration: 2000 });
-  });
+  bubble.addEventListener('click', () => openLiveListModal(currentUser));
   return bubble;
+}
+
+/* ── 지금 경매 모달 ─────────────────────────────────────────── */
+function openLiveListModal(currentUser) {
+  const overlay = document.createElement('div');
+  overlay.className = 'llm-overlay';
+  overlay.dataset.theme = 'light';
+
+  const sheet = document.createElement('div');
+  sheet.className = 'llm-sheet';
+  sheet.innerHTML = `
+    <div class="llm-header">
+      <span class="llm-title">지금 경매</span>
+      <button class="llm-close" aria-label="닫기">✕</button>
+    </div>
+    <div class="llm-list" id="llm-list"></div>
+  `;
+  overlay.appendChild(sheet);
+  document.body.appendChild(overlay);
+
+  const listEl = sheet.querySelector('#llm-list');
+
+  const close = () => {
+    overlay.classList.remove('is-visible');
+    overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+  };
+
+  sheet.querySelector('.llm-close').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  // 스켈레톤 렌더
+  const skelGrid = document.createElement('div');
+  skelGrid.className = 'llm-grid';
+  for (let i = 0; i < 4; i++) {
+    const card = createLiveCard({ id: `skel-${i}`, title: ' ', sellerId: ' ', viewerCount: 0, currentAuction: null });
+    card.classList.add('is-skeleton');
+    card.removeAttribute('role');
+    card.removeAttribute('tabindex');
+    skelGrid.appendChild(card);
+  }
+  listEl.innerHTML = '';
+  listEl.appendChild(skelGrid);
+
+  requestAnimationFrame(() => requestAnimationFrame(() => overlay.classList.add('is-visible')));
+
+  api.getLives().then((lives) => {
+    const live = (lives || []).filter((l) => !l.status || l.status === 'live');
+    listEl.innerHTML = '';
+
+    if (!live.length) {
+      listEl.innerHTML = `
+        <div class="llm-empty">
+          <svg viewBox="0 0 80 80" fill="none" class="llm-empty__svg">
+            <rect x="12" y="22" width="56" height="36" rx="6" stroke="currentColor" stroke-width="2.5" fill="none" opacity="0.3"/>
+            <circle cx="40" cy="40" r="10" stroke="currentColor" stroke-width="2" fill="none" opacity="0.5"/>
+            <circle cx="40" cy="40" r="5" fill="currentColor" opacity="0.4"/>
+          </svg>
+          <span>진행 중인 라이브가 없습니다</span>
+        </div>`;
+      return;
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'llm-grid';
+    live.forEach((l) => {
+      const card = createLiveCard(l, {
+        currentUserId: currentUser ? String(currentUser.id) : null,
+        onClick: (live) => {
+          close();
+          if (currentUser && live.sellerId === String(currentUser.id)) {
+            navigate(`/app/live-seller/${live.id}`);
+          } else {
+            navigate(`/app/live-buyer/${live.id}`);
+          }
+        },
+      });
+      grid.appendChild(card);
+    });
+    listEl.appendChild(grid);
+  }).catch(() => {
+    listEl.innerHTML = `<div class="llm-empty"><span>목록을 불러오지 못했습니다</span></div>`;
+  });
 }
 
 /* ── Main export ───────────────────────────────────────────── */
@@ -677,10 +749,7 @@ export default async function load() {
     : (profileUser.interests ? String(profileUser.interests).split(',').filter(Boolean) : []);
   scrollEl.appendChild(buildInterests(interests));
 
-  /* 4. PROF-4 Badges */
-  scrollEl.appendChild(buildBadges());
-
-  /* 5. PROF-5 Delivery widget */
+  /* 4. PROF-5 Delivery widget */
   scrollEl.appendChild(buildDelivery());
 
   /* 6+7. PROF-2 Tab toggle + PROF-6/7 panels */
@@ -693,7 +762,7 @@ export default async function load() {
   scrollEl.appendChild(dealerPanel);
 
   /* 8. LIVE floating bubble */
-  scrollEl.appendChild(buildLiveBubble());
+  scrollEl.appendChild(buildLiveBubble(user));
 
   /* Tab spacer inside scroll area so content isn't hidden behind tab bar */
   scrollEl.appendChild(createTabSpacer());
