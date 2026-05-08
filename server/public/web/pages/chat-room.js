@@ -284,6 +284,14 @@ export default async function load(params) {
       messages.push(msg);
       appendMessage(msg);
       scrollToBottom();
+      // 상대방 메시지가 오면 즉시 읽음 처리
+      if (Number(msg.userId) !== Number(user.id)) {
+        fetch(`/api/chat-rooms/${roomId}/read`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id }),
+        }).catch(() => {});
+      }
     });
 
     socket.on('cr:member_count', ({ roomId: rid, memberCount: mc }) => {
