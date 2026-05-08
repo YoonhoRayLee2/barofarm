@@ -189,5 +189,6 @@ ol {
 .da-form-sheet,
 .pes-sheet,
 .fab-sheet {
-  width: min(100vw, calc(100dvh * 16 / 9));
+  width: min(100vw, calc(100dvh * 390 / 844));
+  max-width: 480px;
 }

@@ -155,15 +155,15 @@ export default async function load(params) {
     panel.className = 'cr-menu-panel';
     panel.style.cssText = 'position:fixed;top:0;right:0;height:100%;width:80%;max-width:360px;z-index:200;background:var(--color-surface);transform:translateX(100%);transition:transform 0.25s;display:flex;flex-direction:column;';
     panel.innerHTML = `
-      <div class="cr-menu-panel__header" style="display:flex;align-items:center;gap:12px;padding:16px;border-bottom:1px solid var(--color-border);">
-        <button class="cr-menu-panel__close" aria-label="닫기" style="background:none;border:none;cursor:pointer;color:var(--color-text-secondary);font-size:20px;line-height:1;padding:4px;">✕</button>
-        <span style="font-weight:600;font-size:15px;color:var(--color-text-primary);">${escapeHtml(room.name || '채팅방')}</span>
+      <div class="cr-menu-panel__header" style="display:flex;align-items:center;gap:12px;padding:16px;border-bottom:1px solid var(--color-line);">
+        <button class="cr-menu-panel__close" aria-label="닫기" style="background:none;border:none;cursor:pointer;color:var(--color-ink-mute);font-size:20px;line-height:1;padding:4px;">✕</button>
+        <span style="font-weight:600;font-size:15px;color:var(--color-ink);">${escapeHtml(room.name || '채팅방')}</span>
       </div>
-      <div class="cr-menu-panel__sub" id="cr-menu-sub" style="padding:10px 16px;font-size:12px;color:var(--color-text-secondary);border-bottom:1px solid var(--color-border);"></div>
+      <div class="cr-menu-panel__sub" id="cr-menu-sub" style="padding:10px 16px;font-size:12px;color:var(--color-ink-mute);border-bottom:1px solid var(--color-line);"></div>
       <div class="cr-menu-panel__list" id="cr-menu-list" style="flex:1;overflow-y:auto;padding:8px 0;">
-        <div style="padding:20px;text-align:center;color:var(--color-text-secondary);">불러오는 중...</div>
+        <div style="padding:20px;text-align:center;color:var(--color-ink-mute);">불러오는 중...</div>
       </div>
-      <div style="padding:12px 16px;border-top:1px solid var(--color-border);">
+      <div style="padding:12px 16px;border-top:1px solid var(--color-line);">
         <button id="cr-share-btn" style="width:100%;padding:13px;background:var(--color-accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">오픈 채팅방 공유하기</button>
       </div>
     `;
@@ -195,10 +195,10 @@ export default async function load(params) {
           item.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 16px;';
           const avatarHtml = m.avatarUrl
             ? `<img src="${escapeAttr(m.avatarUrl)}" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">`
-            : `<div style="width:40px;height:40px;border-radius:50%;background:var(--color-accent-soft);display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--color-accent);">${escapeHtml((m.displayName || '?').charAt(0).toUpperCase())}</div>`;
+            : `<div style="width:40px;height:40px;border-radius:50%;background:var(--color-accent-tint);display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--color-accent);">${escapeHtml((m.displayName || '?').charAt(0).toUpperCase())}</div>`;
           const isMe = Number(m.userId) === Number(user.id);
           const followBtn = isMe ? '' : `<button data-uid="${m.userId}" style="margin-left:auto;padding:5px 12px;border:1.5px solid var(--color-accent);border-radius:20px;background:none;color:var(--color-accent);font-size:12px;font-weight:600;cursor:pointer;">팔로우</button>`;
-          item.innerHTML = `${avatarHtml}<span style="font-size:14px;color:var(--color-text-primary);font-weight:${m.isCreator ? '700' : '400'};">${escapeHtml(m.displayName)}</span>${followBtn}`;
+          item.innerHTML = `${avatarHtml}<span style="font-size:14px;color:var(--color-ink);font-weight:${m.isCreator ? '700' : '400'};">${escapeHtml(m.displayName)}</span>${followBtn}`;
           // 팔로우 버튼 클릭 → 상대방 프로필 페이지
           const btn = item.querySelector('button[data-uid]');
           if (btn) {
@@ -210,7 +210,7 @@ export default async function load(params) {
           listEl.appendChild(item);
         });
       } catch {
-        if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--color-text-secondary);">멤버 목록을 불러오지 못했습니다</div>';
+        if (listEl) listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--color-ink-mute);">멤버 목록을 불러오지 못했습니다</div>';
       }
     };
 
