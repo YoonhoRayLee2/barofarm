@@ -26,8 +26,8 @@ if (!document.getElementById(_cssId)) {
   document.head.appendChild(link);
 }
 
-const FEATURES_OPTIONS   = ['풀박스', '보증서', '미개봉', '한정판', '커스텀', '콜라보'];
-const ATTRIBUTES_OPTIONS = ['친환경', 'GAP인증', '유기농', '산지직송', '당일수확', '특A등급'];
+const FEATURES_OPTIONS   = ['당일수확', '무농약', '박스포장', '선물포장', '냉장보관', '소분가능'];
+const ATTRIBUTES_OPTIONS = ['GAP인증', '유기농인증', '무농약인증', '친환경인증', '특A등급', '산지직송'];
 const CATEGORY_OPTIONS   = [
   { value: '',    label: '전체' },
   { value: '과일', label: '과일' },
@@ -114,7 +114,7 @@ export default async function load(params = {}) {
       <div class="pr-section">
         <h2 class="pr-section__title">상품 정보</h2>
         <div class="pr-field">
-          <input class="pr-input" id="pr-name" type="text" placeholder="상품명을 입력하세요" maxlength="100" autocomplete="off" />
+          <input class="pr-input" id="pr-name" type="text" placeholder="예: 제주 감귤 10kg, 국내산 쌀 20kg" maxlength="100" autocomplete="off" />
         </div>
         <div class="pr-field">
           <select class="pr-select" id="pr-category">
@@ -128,7 +128,7 @@ export default async function load(params = {}) {
 
       <!-- 구성품 및 특징 -->
       <div class="pr-section">
-        <h2 class="pr-section__title">구성품 및 특징</h2>
+        <h2 class="pr-section__title">상품 특징</h2>
         <div class="pr-chip-grid" id="pr-features">
           ${FEATURES_OPTIONS.map((label) => `<button type="button" class="pr-chip" data-value="${escapeAttr(label)}">${escapeHtml(label)}</button>`).join('')}
         </div>

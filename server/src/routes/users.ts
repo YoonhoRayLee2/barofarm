@@ -580,19 +580,24 @@ router.get('/:id/sales', async (req: Request, res: Response) => {
   try {
     const [rows] = await pool.execute(
       `SELECT
-         a.id AS auction_id,
+         a.id              AS auction_id,
          a.product_name,
-         a.current_price AS final_price,
+         a.current_price   AS final_price,
          a.mode,
          a.delivery_status,
          a.image_url,
-         a.ends_at AS sold_at,
-         b.nickname AS buyer_name,
-         a.top_bidder_id AS buyer_id
+         a.ends_at         AS sold_at,
+         a.live_id,
+         l.title           AS live_title,
+         l.created_at      AS live_started_at,
+         b.nickname        AS buyer_name,
+         a.top_bidder_id   AS buyer_id
        FROM auctions a
        LEFT JOIN users b ON b.id = a.top_bidder_id
+       LEFT JOIN lives l ON l.id = a.live_id
        WHERE a.seller_id = ?
          AND a.status = 'ended'
+         AND a.current_price > 0
        ORDER BY a.ends_at DESC`,
       [sellerId],
     ) as [unknown[], unknown];
@@ -605,6 +610,9 @@ router.get('/:id/sales', async (req: Request, res: Response) => {
       delivery_status: string;
       image_url: string | null;
       sold_at: string;
+      live_id: string | null;
+      live_title: string | null;
+      live_started_at: string | null;
       buyer_name: string | null;
       buyer_id: string | null;
     }>).map(r => ({
@@ -615,6 +623,9 @@ router.get('/:id/sales', async (req: Request, res: Response) => {
       deliveryStatus: r.delivery_status,
       imageUrl:       r.image_url ?? null,
       soldAt:         r.sold_at,
+      liveId:         r.live_id ?? null,
+      liveTitle:      r.live_title ?? null,
+      liveStartedAt:  r.live_started_at ?? null,
       buyerName:      r.buyer_name ?? null,
       buyerId:        r.buyer_id ?? null,
     }));

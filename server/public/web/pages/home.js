@@ -5,8 +5,8 @@
  * @module pages/home
  */
 
-import { getLives, getProducts } from '/app/scripts/api.js';
-import { getSecureItem } from '/app/scripts/native-bridge.js';
+import { getLives, getProducts, getUser } from '/app/scripts/api.js';
+import { getSecureItem, setSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace, setCleanup } from '/app/scripts/router.js';
 import * as Sock from '/app/scripts/socket.js';
 import { createLiveCard } from '/app/components/live-card.js';
@@ -107,7 +107,18 @@ export default async function load() {
   const catRow = document.createElement('div');
   catRow.className = 'home-categories';
 
-  CATEGORIES.forEach((cat) => {
+  const userInterests = currentUser?.interests
+    ? String(currentUser.interests).split(',').map(s => s.trim()).filter(Boolean)
+    : [];
+  const orderedCategories = userInterests.length
+    ? [
+        ...CATEGORIES.filter(c => c.id === '전체'),
+        ...CATEGORIES.filter(c => userInterests.includes(c.id)),
+        ...CATEGORIES.filter(c => c.id !== '전체' && !userInterests.includes(c.id)),
+      ]
+    : CATEGORIES;
+
+  orderedCategories.forEach((cat) => {
     const btn = document.createElement('button');
     const isActive = cat.id === activeCategory;
     btn.className = 'cat-circle-btn' + (isActive ? ' is-active' : '');
@@ -395,6 +406,59 @@ export default async function load() {
   });
 
   // ---- Initial fetch ----
+  // 유저 정보 갱신 (백그라운드, 카테고리 순서 반영)
+  getUser(currentUser.id).then((fresh) => {
+    if (!fresh) return;
+    Object.assign(currentUser, fresh);
+    setSecureItem('user', JSON.stringify(currentUser)).catch(() => {});
+
+    // interests가 바뀌었으면 카테고리 버튼 순서 재정렬
+    const freshInterests = Array.isArray(fresh.interests)
+      ? fresh.interests
+      : (fresh.interests ? String(fresh.interests).split(',').map(s => s.trim()).filter(Boolean) : []);
+    const reordered = freshInterests.length
+      ? [
+          ...CATEGORIES.filter(c => c.id === '전체'),
+          ...CATEGORIES.filter(c => freshInterests.includes(c.id)),
+          ...CATEGORIES.filter(c => c.id !== '전체' && !freshInterests.includes(c.id)),
+        ]
+      : CATEGORIES;
+
+    // 기존 버튼 순서와 다를 때만 DOM 갱신
+    const currentOrder = [...catRow.querySelectorAll('.cat-circle-btn')].map(b => b.dataset.cat);
+    const newOrder = reordered.map(c => c.id);
+    if (currentOrder.join() !== newOrder.join()) {
+      catRow.innerHTML = '';
+      reordered.forEach((cat) => {
+        const isAct = cat.id === activeCategory;
+        const btn = document.createElement('button');
+        btn.className = 'cat-circle-btn' + (isAct ? ' is-active' : '');
+        btn.dataset.cat = cat.id;
+        btn.setAttribute('aria-label', cat.label);
+        btn.innerHTML = `
+          <div class="cat-circle" style="--cat-hue: ${cat.hue}">
+            <div class="cat-circle__inner">${getCatGlyphSVG(cat.glyph, isAct ? '#fff' : cat.hue, 32)}</div>
+            <span class="cat-circle__live-badge">LIVE</span>
+          </div>
+          <span class="cat-circle__label">${cat.label}</span>
+        `;
+        btn.addEventListener('click', () => {
+          if (activeCategory === cat.id) return;
+          activeCategory = cat.id;
+          catRow.querySelectorAll('.cat-circle-btn').forEach((b) => {
+            const isAct2 = b.dataset.cat === cat.id;
+            b.classList.toggle('is-active', isAct2);
+            const c = CATEGORIES.find(c => c.id === b.dataset.cat);
+            if (c) b.querySelector('.cat-circle__inner').innerHTML = getCatGlyphSVG(c.glyph, isAct2 ? '#fff' : c.hue, 32);
+          });
+          if (activeSubtab === '일반판매') renderProducts();
+          else renderLivesByTab(activeSubtab);
+        });
+        catRow.appendChild(btn);
+      });
+    }
+  }).catch(() => {});
+
   if (activeSubtab === '일반판매') {
     renderProducts();
   } else {

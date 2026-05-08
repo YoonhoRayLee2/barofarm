@@ -77,7 +77,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
 
   try {
     const [rows] = await pool.execute(
-      'SELECT id, username, password_hash, nickname, phone FROM users WHERE username = ?',
+      'SELECT id, username, password_hash, nickname, phone, interests FROM users WHERE username = ?',
       [username],
     ) as [unknown[], unknown];
 
@@ -87,6 +87,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       password_hash: string;
       nickname: string;
       phone: string;
+      interests: string | null;
     }>)[0];
 
     if (!user) {
@@ -104,8 +105,11 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     const token = signToken(tokenPayload);
     const refreshToken = signRefreshToken(tokenPayload);
 
+    const interests = user.interests
+      ? user.interests.split(',').map((s: string) => s.trim()).filter(Boolean)
+      : [];
     res.json({
-      user: { id: user.id, username: user.username, nickname: user.nickname, phone: user.phone },
+      user: { id: user.id, username: user.username, nickname: user.nickname, phone: user.phone, interests },
       token,
       refreshToken,
     });

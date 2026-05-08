@@ -489,6 +489,7 @@ function buildCollectorPanel(profileUser, scrollEl) {
           try {
             await api.updateProfile(profileUser.id, { interests: newInterests.join(',') });
             profileUser.interests = newInterests;
+            try { await setSecureItem('user', JSON.stringify(profileUser)); } catch (_e) { /* ignore */ }
             const interestsEl = scrollEl.querySelector('.profile-interests');
             if (interestsEl) interestsEl.replaceWith(buildInterests(newInterests));
             showToast('관심 카테고리가 저장됐습니다', { variant: 'success', duration: 2000 });

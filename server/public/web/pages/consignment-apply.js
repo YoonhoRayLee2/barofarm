@@ -65,7 +65,7 @@ export default async function load() {
       <section class="ca-section ca-row-section">
         <div class="ca-field">
           <label class="ca-label">위탁 물량 <span class="ca-required">*</span></label>
-          <input class="ca-input" type="number" name="quantity" placeholder="최소 50점" min="1" required>
+          <input class="ca-input" type="number" name="quantity" placeholder="예: 100 (최소 50개)" min="1" required>
         </div>
         <div class="ca-field">
           <label class="ca-label">예상 총 금액 <span class="ca-required">*</span></label>
@@ -75,7 +75,7 @@ export default async function load() {
 
       <section class="ca-section">
         <h2 class="ca-section__title">상세 내용(대표 상품 포함 구성) <span class="ca-required">*</span></h2>
-        <textarea class="ca-textarea" name="description" rows="4" placeholder="예: 리자몽 VMAX PSA 10 / 기타 50장" required></textarea>
+        <textarea class="ca-textarea" name="description" rows="4" placeholder="예: 제주 감귤 5kg 50박스 / 친환경 청양고추 1kg" required></textarea>
       </section>
 
       <section class="ca-section">

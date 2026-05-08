@@ -201,8 +201,8 @@
 }
 
 .cr-msg--me .cr-msg__bubble {
-  background: var(--color-accent-soft);
-  color: var(--color-ink);
+  background: var(--color-accent);
+  color: #fff;
   max-width: 70%;
 }
 
@@ -292,7 +292,7 @@
   align-items: center;
   justify-content: center;
   background: var(--color-cta);
-  color: var(--color-ink);
+  color: #fff;
   border: 0;
   border-radius: 50%;
   cursor: pointer;
