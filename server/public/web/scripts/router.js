@@ -277,6 +277,7 @@ register('/app/user/:id',            async (p) => import('/app/pages/user-profil
 register('/app/consignment/apply',   async ()  => import('/app/pages/consignment-apply.js').then(m => m.default()));
 register('/app/consignment/find',    async ()  => import('/app/pages/consignment-find.js').then(m => m.default()));
 register('/app/consignment/:id',     async (p) => import('/app/pages/consignment-detail.js').then(m => m.default(p)));
+register('/app/market-prices/:itemCode', async (p) => import('/app/pages/market-prices.js').then(m => m.default(p)));
 
 /* ----------------------------- Global handlers ----------------------------- */
 

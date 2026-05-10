@@ -7,6 +7,7 @@
 
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
+import { personIconSVG } from '/app/scripts/person-icon.js';
 
 const _cssId = 'page-css-seller-sales';
 if (!document.getElementById(_cssId)) {
@@ -139,11 +140,10 @@ export default async function load() {
         const buyerEl = document.createElement('div');
         buyerEl.className = 'sg-buyer';
 
-        const initial = (buyerGroup.buyerName || '?').charAt(0).toUpperCase();
         const buyerHeader = document.createElement('div');
         buyerHeader.className = 'sg-buyer__header';
         buyerHeader.innerHTML = `
-          <div class="sg-buyer__avatar">${initial}</div>
+          <div class="sg-buyer__avatar">${personIconSVG(24)}</div>
           <span class="sg-buyer__name">${escapeHtml(buyerGroup.buyerName || '알 수 없음')}</span>
           <span class="sg-buyer__count">${buyerGroup.items.length}건</span>
         `;

@@ -378,3 +378,63 @@
   from { background-position: 200% 0; }
   to   { background-position: -200% 0; }
 }
+
+/* ── Market price ticker ── */
+.home-ticker {
+  overflow: hidden;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-line);
+  height: 38px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.home-ticker__track {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  white-space: nowrap;
+  animation: ticker-scroll 40s linear infinite;
+  will-change: transform;
+}
+.home-ticker:hover .home-ticker__track { animation-play-state: paused; }
+@keyframes ticker-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.home-ticker__loading {
+  font-size: 11px;
+  color: var(--color-ink-mute);
+  padding: 0 16px;
+}
+.home-ticker__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 16px 0 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--color-line);
+  height: 38px;
+  color: var(--color-ink);
+}
+.home-ticker__item:active { background: var(--color-accent-tint); }
+.home-ticker__cat {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: #fff;
+}
+.home-ticker__cat--과일  { background: #E5564A; }
+.home-ticker__cat--채소  { background: #4CAF50; }
+.home-ticker__cat--곡물  { background: #FF9800; }
+.home-ticker__cat--축산  { background: #9C27B0; }
+.home-ticker__cat--수산  { background: #2196F3; }
+.home-ticker__cat--기타  { background: #607D8B; }
+.home-ticker__name { font-weight: 600; }
+.home-ticker__price { color: var(--color-accent); font-weight: 700; }
+.home-ticker__unit { color: var(--color-ink-mute); font-size: 11px; }

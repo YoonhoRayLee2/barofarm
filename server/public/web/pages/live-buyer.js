@@ -18,6 +18,7 @@ import { createBuyButton } from '/app/components/buy-button.js';
 import { createBlindBid } from '/app/components/blind-bid.js';
 import { createSlideBid } from '/app/components/slide-bid.js';
 import { showToast } from '/app/components/toast.js';
+import { personIconSVG } from '/app/scripts/person-icon.js';
 
 // ---- Swipe navigation state (module-level) ----
 let _liveList = [];
@@ -608,7 +609,7 @@ export default async function load(params) {
         if (sellerUser.avatarUrl) {
           avatarEl.innerHTML = `<img src="${escapeHtml(sellerUser.avatarUrl)}" alt="${escapeHtml(displayName)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
         } else {
-          avatarEl.textContent = displayName.charAt(0).toUpperCase();
+          avatarEl.innerHTML = personIconSVG(36);
         }
       }
     } catch (_e) {

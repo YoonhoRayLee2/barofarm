@@ -11,6 +11,7 @@ import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
 import { showConfirmDialog } from '/app/components/confirm-dialog.js';
+import { personIconSVG } from '/app/scripts/person-icon.js';
 
 /* ── CSS injection ─────────────────────────────────────────── */
 const _cssId = 'page-css-product-detail';
@@ -203,6 +204,8 @@ export default async function load(params = {}) {
           avatarEl.innerHTML = `<img src="${escapeAttr(
             seller.avatarUrl
           )}" alt="" />`;
+        } else {
+          avatarEl.innerHTML = personIconSVG(32);
         }
       } catch {
         // 판매자 조회 실패 시 영역은 숨겨진 상태로 둔다.

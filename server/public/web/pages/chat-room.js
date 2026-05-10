@@ -9,6 +9,7 @@ import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { replace, setCleanup } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
 import { connect } from '/app/scripts/socket.js';
+import { personIconSVG } from '/app/scripts/person-icon.js';
 
 // Inject CSS once
 const _cssId = 'page-css-chat-room';
@@ -123,9 +124,10 @@ export default async function load(params) {
     const displayAvatar = room.isDm ? room.dmPartnerAvatarUrl : room.avatarUrl;
 
     headerNameEl.textContent = displayName;
-    headerAvatarEl.textContent = displayName.trim().charAt(0).toUpperCase();
     if (displayAvatar) {
       headerAvatarEl.innerHTML = `<img class="cr-header__avatar-img" src="${escapeAttr(displayAvatar)}" alt="">`;
+    } else {
+      headerAvatarEl.innerHTML = personIconSVG(28);
     }
     memberCount = Number(room.memberCount) || 0;
     headerMembersEl.textContent = memberCount > 0 ? `${memberCount}명` : '';
@@ -195,7 +197,7 @@ export default async function load(params) {
           item.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 16px;';
           const avatarHtml = m.avatarUrl
             ? `<img src="${escapeAttr(m.avatarUrl)}" alt="" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">`
-            : `<div style="width:40px;height:40px;border-radius:50%;background:var(--color-accent-tint);display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--color-accent);">${escapeHtml((m.displayName || '?').charAt(0).toUpperCase())}</div>`;
+            : `<div style="width:40px;height:40px;border-radius:50%;background:var(--color-accent-tint);display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--color-accent);">${personIconSVG(24)}</div>`;
           const isMe = Number(m.userId) === Number(user.id);
           const followBtn = isMe ? '' : `<button data-uid="${m.userId}" style="margin-left:auto;padding:5px 12px;border:1.5px solid var(--color-accent);border-radius:20px;background:none;color:var(--color-accent);font-size:12px;font-weight:600;cursor:pointer;">팔로우</button>`;
           item.innerHTML = `${avatarHtml}<span style="font-size:14px;color:var(--color-ink);font-weight:${m.isCreator ? '700' : '400'};">${escapeHtml(m.displayName)}</span>${followBtn}`;
@@ -463,8 +465,7 @@ function renderAvatar(msg) {
   if (msg.avatarUrl) {
     return `<img class="cr-msg__avatar cr-msg__avatar--img" src="${escapeAttr(msg.avatarUrl)}" alt="">`;
   }
-  const initial = (msg.userName || '?').trim().charAt(0).toUpperCase();
-  return `<div class="cr-msg__avatar">${escapeHtml(initial)}</div>`;
+  return `<div class="cr-msg__avatar">${personIconSVG(28)}</div>`;
 }
 
 function autoSize(el) {

@@ -1,0 +1,319 @@
+/* Market Prices Detail Page — Fresh Field · Light Theme */
+
+.mp-page {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+}
+
+/* ── Header ── */
+.mp-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: max(14px, env(safe-area-inset-top)) 16px 14px;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-surface);
+  flex-shrink: 0;
+}
+
+.mp-header__back {
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  font-size: 22px;
+  color: var(--color-ink);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mp-header__back:active {
+  background: var(--color-surface-alt);
+  transform: scale(0.94);
+}
+
+.mp-header__title {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+  margin: 0;
+  flex: 1;
+}
+
+/* ── Scroll area ── */
+.mp-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Loading / empty ── */
+.mp-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 60px 20px;
+  color: var(--color-ink-mute);
+  font-size: 14px;
+}
+.mp-loading__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  animation: mp-pulse 1.2s ease-in-out infinite;
+}
+@keyframes mp-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.85); }
+  50%      { opacity: 1;   transform: scale(1.15); }
+}
+
+.mp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 60px 20px;
+  color: var(--color-ink-mute);
+}
+.mp-empty__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+.mp-empty__desc {
+  font-size: 13px;
+  color: var(--color-ink-soft);
+}
+
+/* ── Summary card ── */
+.mp-summary {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  padding: 18px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  box-shadow: 0 2px 8px rgba(20,30,15,.04);
+}
+
+.mp-summary__cat {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: #fff;
+  margin-bottom: 4px;
+}
+.mp-summary__cat--과일 { background: #E5564A; }
+.mp-summary__cat--채소 { background: #4CAF50; }
+.mp-summary__cat--곡물 { background: #FF9800; }
+.mp-summary__cat--축산 { background: #9C27B0; }
+.mp-summary__cat--수산 { background: #2196F3; }
+.mp-summary__cat--기타 { background: #607D8B; }
+
+.mp-summary__name {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--color-ink);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+.mp-summary__kind {
+  font-size: 13px;
+  color: var(--color-ink-soft);
+  margin: 0;
+}
+.mp-summary__price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 6px;
+}
+.mp-summary__price {
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--color-ink);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.mp-summary__won {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-ink);
+  margin-left: 2px;
+}
+.mp-summary__unit {
+  font-size: 14px;
+  color: var(--color-ink-mute);
+  font-weight: 600;
+}
+.mp-summary__date {
+  font-size: 12px;
+  color: var(--color-ink-mute);
+  margin-top: 2px;
+}
+
+/* ── Trend badge ── */
+.mp-trend {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-top: 4px;
+}
+.mp-trend--up {
+  color: var(--color-cta);
+  background: color-mix(in srgb, var(--color-cta) 12%, transparent);
+}
+.mp-trend--down {
+  color: var(--color-info);
+  background: color-mix(in srgb, var(--color-info) 12%, transparent);
+}
+.mp-trend--flat {
+  color: var(--color-ink-mute);
+  background: var(--color-surface-alt);
+}
+
+/* ── Chart card ── */
+.mp-chart-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(20,30,15,.04);
+}
+.mp-chart-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.mp-chart-card__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-ink-soft);
+}
+
+.mp-chart {
+  width: 100%;
+  height: 120px;
+  display: block;
+}
+.mp-chart__line {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.mp-chart__area {
+  fill: var(--color-accent-tint);
+  stroke: none;
+}
+.mp-chart__marker {
+  stroke: var(--color-surface);
+  stroke-width: 1.5;
+}
+.mp-chart__marker--max { fill: var(--color-cta); }
+.mp-chart__marker--min { fill: var(--color-info); }
+
+.mp-chart__legend {
+  display: flex;
+  gap: 14px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--color-ink-soft);
+}
+.mp-chart__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.mp-chart__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.mp-chart__dot--max { background: var(--color-cta); }
+.mp-chart__dot--min { background: var(--color-info); }
+
+/* ── Price history list ── */
+.mp-history {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+  padding: 16px 0 4px;
+  box-shadow: 0 2px 8px rgba(20,30,15,.04);
+}
+.mp-history__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-ink);
+  margin: 0 0 8px;
+  padding: 0 16px;
+}
+.mp-history__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.mp-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-line);
+  font-size: 13px;
+}
+.mp-row:first-child { border-top: none; }
+.mp-row--today {
+  background: var(--color-accent-tint);
+}
+.mp-row--today .mp-row__date,
+.mp-row--today .mp-row__price {
+  font-weight: 800;
+  color: var(--color-ink);
+}
+.mp-row__date {
+  color: var(--color-ink-soft);
+  font-weight: 600;
+}
+.mp-row__price {
+  color: var(--color-ink);
+  font-weight: 700;
+  text-align: right;
+}
+.mp-row__trend {
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 80px;
+  text-align: right;
+}
+.mp-row__trend--up    { color: var(--color-cta); }
+.mp-row__trend--down  { color: var(--color-info); }
+.mp-row__trend--flat  { color: var(--color-ink-mute); }

@@ -5,6 +5,7 @@
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
+import { personIconSVG } from '/app/scripts/person-icon.js';
 
 const _cssId = 'page-css-user-profile';
 if (!document.getElementById(_cssId)) {
@@ -95,7 +96,7 @@ export default async function load(params) {
       if (profile.avatarUrl) {
         avatarEl.innerHTML = `<img class="up-avatar__img" src="${escapeAttr(profile.avatarUrl)}" alt="">`;
       } else {
-        avatarEl.textContent = (profile.displayName || '?').charAt(0).toUpperCase();
+        avatarEl.innerHTML = personIconSVG(36);
       }
 
       isFollowing = !!profile.isFollowing;

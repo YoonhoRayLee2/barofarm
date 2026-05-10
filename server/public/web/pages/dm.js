@@ -5,6 +5,7 @@
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
+import { personIconSVG } from '/app/scripts/person-icon.js';
 
 const _cssId = 'page-css-dm';
 if (!document.getElementById(_cssId)) {
@@ -60,7 +61,7 @@ export default async function load() {
       li.className = 'dm-item';
       const avatarHtml = room.avatarUrl
         ? `<img class="dm-item__avatar-img" src="${escapeAttr(room.avatarUrl)}" alt="">`
-        : `<div class="dm-item__avatar-initial">${escapeHtml((room.name || '?').charAt(0).toUpperCase())}</div>`;
+        : `<div class="dm-item__avatar-initial">${personIconSVG(28)}</div>`;
       const unread = room.unreadCount > 0 ? `<span class="dm-item__unread">${room.unreadCount > 99 ? '99+' : room.unreadCount}</span>` : '';
       const timeStr = room.lastMessageAt ? formatTime(room.lastMessageAt) : '';
       li.innerHTML = `

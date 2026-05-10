@@ -151,6 +151,49 @@ export default async function load() {
   page.appendChild(catRow);
   const catCircles = catRow.querySelectorAll('.cat-circle-btn');
 
+  // ---- Market price ticker ----
+  const tickerWrap = document.createElement('div');
+  tickerWrap.className = 'home-ticker';
+  tickerWrap.innerHTML = `<div class="home-ticker__track" id="home-ticker-track">
+    <span class="home-ticker__loading">시세 불러오는 중...</span>
+  </div>`;
+  page.appendChild(tickerWrap);
+
+  // 비동기로 시세 로드
+  (async () => {
+    try {
+      const res = await fetch('/api/market-prices');
+      if (!res.ok) throw new Error('failed');
+      const items = await res.json();
+      const track = page.querySelector('#home-ticker-track');
+      if (!track || !items.length) return;
+
+      // 아이템을 두 번 복제 → 무한 루프 효과
+      const html = items.map(it => `
+        <button class="home-ticker__item" data-code="${escapeAttr(it.itemCode)}" data-kind="${escapeAttr(it.kindName)}"
+                aria-label="${escapeAttr(it.itemName)} 시세 상세보기">
+          <span class="home-ticker__cat home-ticker__cat--${escapeAttr(it.category)}">${escapeHtml(it.category)}</span>
+          <span class="home-ticker__name">${escapeHtml(it.itemName)}</span>
+          <span class="home-ticker__price">${Number(it.price).toLocaleString('ko-KR')}원</span>
+          <span class="home-ticker__unit">/${escapeHtml(it.unit)}</span>
+        </button>
+      `).join('');
+      track.innerHTML = html + html;  // duplicate for seamless loop
+
+      // 클릭 → 상세 페이지 이동
+      track.querySelectorAll('.home-ticker__item').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const code = btn.dataset.code;
+          const kind = encodeURIComponent(btn.dataset.kind || '');
+          navigate(`/app/market-prices/${code}?kindName=${kind}`);
+        });
+      });
+    } catch {
+      const track = page.querySelector('#home-ticker-track');
+      if (track) track.innerHTML = '';
+    }
+  })();
+
   // ---- Sub-tabs ----
   const _initTabParam = new URLSearchParams(window.location.search).get('tab');
   let activeSubtab =

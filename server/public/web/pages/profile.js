@@ -17,6 +17,7 @@
 import { getSecureItem, setSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import * as api from '/app/scripts/api.js';
+import { personIconSVG } from '/app/scripts/person-icon.js';
 import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 import { showToast } from '/app/components/toast.js';
 import { createLiveCard } from '/app/components/live-card.js';
@@ -396,11 +397,10 @@ async function openUserListSheet(title, user, type) {
     items.forEach((u) => {
       const row = document.createElement('div');
       row.className = 'ul-row';
-      const initial = (u.nickname || '?').charAt(0);
       row.innerHTML = `
         <div class="ul-avatar">${u.avatarUrl
           ? `<img src="${esc(u.avatarUrl)}" alt="" />`
-          : `<span class="ul-avatar__initial">${esc(initial)}</span>`}
+          : personIconSVG(22)}
         </div>
         <span class="ul-name">${esc(u.nickname || '사용자')}</span>
       `;

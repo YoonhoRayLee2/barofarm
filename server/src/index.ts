@@ -15,6 +15,7 @@ import trackingRouter from './routes/tracking';
 import chatRoomsRouter from './routes/chat-rooms';
 import consignmentsRouter from './routes/consignments';
 import deliveryAddressesRouter from './routes/delivery-addresses';
+import marketPricesRouter from './routes/market-prices';
 import registerAuctionSocket from './socket/auction';
 import registerChatSocket from './socket/chat';
 import pool from './db/mysql';
@@ -74,6 +75,7 @@ app.use('/api/tracking', trackingRouter);
 app.use('/api/chat-rooms', chatRoomsRouter);
 app.use('/api/consignments', consignmentsRouter);
 app.use('/api/delivery-addresses', deliveryAddressesRouter);
+app.use('/api/market-prices', marketPricesRouter);
 
 registerAuctionSocket(io);
 registerChatSocket(io);

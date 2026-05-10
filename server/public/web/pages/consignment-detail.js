@@ -5,6 +5,7 @@
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
+import { personIconSVG } from '/app/scripts/person-icon.js';
 
 const _cssId = 'page-css-consignment-detail';
 if (!document.getElementById(_cssId)) {
@@ -73,7 +74,7 @@ function renderDetail(page, data, user) {
 
   const buyerAvatarHtml = data.buyerAvatar
     ? `<img class="cd-buyer__avatar-img" src="${escapeAttr(data.buyerAvatar)}" alt="">`
-    : `<span class="cd-buyer__avatar-initial">${escapeHtml((data.buyerName || '?').charAt(0).toUpperCase())}</span>`;
+    : `<span class="cd-buyer__avatar-initial">${personIconSVG(28)}</span>`;
 
   contentEl.innerHTML = `
     ${carouselHtml}

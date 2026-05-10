@@ -4,6 +4,7 @@
  */
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
+import { personIconSVG } from '/app/scripts/person-icon.js';
 
 const _cssId = 'page-css-seller-unshipped';
 if (!document.getElementById(_cssId)) {
@@ -67,7 +68,7 @@ export default async function load() {
       li.className = 'unshipped-item' + (isUrgent ? ' unshipped-item--urgent' : '');
       const avatarHtml = item.buyerAvatar
         ? `<img class="unshipped-item__avatar-img" src="${escapeAttr(item.buyerAvatar)}" alt="">`
-        : `<div class="unshipped-item__avatar-initial">${escapeHtml((item.buyerName || '?').charAt(0).toUpperCase())}</div>`;
+        : `<div class="unshipped-item__avatar-initial">${personIconSVG(28)}</div>`;
       li.innerHTML = `
         <div class="unshipped-item__avatar">${avatarHtml}</div>
         <div class="unshipped-item__body">
