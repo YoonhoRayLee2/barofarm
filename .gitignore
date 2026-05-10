@@ -6,6 +6,7 @@ server/.env
 server/node_modules/
 server/*.png
 server/*.jpg
+server/db/migrate.sh
 
 # Flutter
 app/.dart_tool/

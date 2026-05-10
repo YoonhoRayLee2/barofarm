@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<title>NH바로팜 — 모바일 디자인 (9 Screens)</title>
+<meta name="viewport" content="width=1600"/>
+
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+
+<link rel="stylesheet" href="screens/tokens-light.css"/>
+<link rel="stylesheet" href="screens/screens.css"/>
+
+<style>
+  @font-face {
+    font-family: 'GraceSerif';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2604-1@1.0/GraceSerif-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+  html, body { margin: 0; background: #1c1c1c; font-family: 'Pretendard','Inter',-apple-system,sans-serif; }
+  body { color: #eee; }
+  .canvas-section-title { font-family: 'GraceSerif','Pretendard',serif; letter-spacing: 0.01em; }
+
+  /* GraceSerif accent on display headings (Latin/numeric content) */
+  .home-header__title,
+  .login-wordmark,
+  .ad-bid-value,
+  .ad-timer__num,
+  .lb-product__price,
+  .ls-current-price,
+  .live-card__current-price,
+  .pf-stat .num {
+    font-family: 'GraceSerif','Pretendard',serif;
+    letter-spacing: 0.01em;
+  }
+</style>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="screens/components.jsx"></script>
+<script type="text/babel" src="screens/screen-home.jsx"></script>
+<script type="text/babel" src="screens/screen-live.jsx"></script>
+<script type="text/babel" src="screens/screen-rest.jsx"></script>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script type="text/babel">
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "auctionMode": "blind",
+  "homeTab": "예고",
+  "showOverlay": true
+}/*EDITMODE-END*/;
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const { MobileFrame, HomeScreen, LiveBuyerAuction, LiveBuyerFCFS, LiveBuyerBlind,
+          LiveSeller, AuctionDetail, CreateLive, LoginScreen, ProfileScreen,
+          ChatList, ChatRoom } = window.NH;
+
+  // Pick which buyer-live screen to render in the focus artboard
+  const buyerLive =
+    t.auctionMode === 'fcfs'  ? <LiveBuyerFCFS/> :
+    t.auctionMode === 'blind' ? <LiveBuyerBlind/> :
+                                 <LiveBuyerAuction/>;
+
+  return (
+    <React.Fragment>
+      <DesignCanvas title="NH바로팜 — 모바일 9 화면" subtitle="산지직송 라이브경매 · 모바일 풀앱 흐름 · v1">
+        <DCSection id="entry" title="① 진입 & 홈" subtitle="앱 첫 진입에서 라이브 목록까지">
+          <DCArtboard id="login" label="로그인" width={390} height={844}>
+            <MobileFrame label="01 Login" dark statusbarDark>
+              <LoginScreen/>
+            </MobileFrame>
+          </DCArtboard>
+          <DCArtboard id="home-now" label="홈 — 지금 경매" width={390} height={844}>
+            <MobileFrame label="02 Home — Live now">
+              <HomeScreen activeTab={t.homeTab}/>
+            </MobileFrame>
+          </DCArtboard>
+          <DCArtboard id="home-upcoming" label="홈 — 예고" width={390} height={844}>
+            <MobileFrame label="03 Home — Upcoming">
+              <HomeScreen activeTab="예고"/>
+            </MobileFrame>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="live-buyer" title="② 라이브 시청 (바이어)" subtitle="3가지 경매 방식 — 일반 / 선착순 / 블라인드">
+          <DCArtboard id="live-auction" label="일반경매 — 카운트다운 + 슬라이드 입찰" width={390} height={844}>
+            <MobileFrame label="04 Live — Auction" dark statusbarDark={false}>
+              <LiveBuyerAuction/>
+            </MobileFrame>
+          </DCArtboard>
+          <DCArtboard id="live-fcfs" label="선착순 — 고정가 한정수량" width={390} height={844}>
+            <MobileFrame label="05 Live — FCFS" dark statusbarDark={false}>
+              <LiveBuyerFCFS/>
+            </MobileFrame>
+          </DCArtboard>
+          <DCArtboard id="live-blind" label="블라인드 — 비공개 단일 입찰" width={390} height={844}>
+            <MobileFrame label="06 Live — Blind" dark statusbarDark={false}>
+              <LiveBuyerBlind/>
+            </MobileFrame>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="live-seller" title="③ 라이브 송출 (셀러)" subtitle="농가 셀러가 직접 라이브를 열고 경매를 운영">
+          <DCArtboard id="seller-live" label="셀러 — 송출 중" width={390} height={844}>
+            <MobileFrame label="07 Live — Seller" dark statusbarDark={false}>
+              <LiveSeller/>
+            </MobileFrame>
+          </DCArtboard>
+          <DCArtboard id="create-live" label="라이브 만들기 (상품 + 경매방식)" width={390} height={844}>
+            <MobileFrame label="08 Create Live">
+              <CreateLive/>
+            </MobileFrame>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="purchase" title="④ 상세 & 거래" subtitle="경매 상세, 채팅, 마이페이지">
+          <DCArtboard id="auction-detail" label="경매 상세" width={390} height={844}>
+            <MobileFrame label="09 Auction Detail">
+              <AuctionDetail/>
+            </MobileFrame>
+          </DCArtboard>
+          <DCArtboard id="chat-list" label="채팅 목록" width={390} height={844}>
+            <MobileFrame label="10 Chat List">
+              <ChatList/>
+            </MobileFrame>
+          </DCArtboard>
+          <DCArtboard id="chat-room" label="채팅방 (셀러 ↔ 바이어)" width={390} height={844}>
+            <MobileFrame label="11 Chat Room">
+              <ChatRoom/>
+            </MobileFrame>
+          </DCArtboard>
+          <DCArtboard id="profile" label="내 정보" width={390} height={844}>
+            <MobileFrame label="12 Profile">
+              <ProfileScreen/>
+            </MobileFrame>
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="라이브 경매 방식">
+          <TweakRadio
+            label="② 라이브 시청 화면"
+            value={t.auctionMode}
+            onChange={(v) => setTweak('auctionMode', v)}
+            options={[
+              { value:'auction', label:'일반' },
+              { value:'fcfs',    label:'선착순' },
+              { value:'blind',   label:'블라인드' },
+            ]}
+          />
+        </TweakSection>
+        <TweakSection label="홈 탭">
+          <TweakRadio
+            label="① 홈 화면 탭"
+            value={t.homeTab}
+            onChange={(v) => setTweak('homeTab', v)}
+            options={[
+              { value:'지금경매', label:'지금경매' },
+              { value:'예고',     label:'예고' },
+            ]}
+          />
+        </TweakSection>
+      </TweaksPanel>
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+
+</body>
+</html>
