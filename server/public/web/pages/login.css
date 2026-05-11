@@ -65,7 +65,7 @@
 }
 
 .login-logo-img {
-  width: 120px;
+  width: min(140px, 45vw);
   height: auto;
   object-fit: contain;
 }

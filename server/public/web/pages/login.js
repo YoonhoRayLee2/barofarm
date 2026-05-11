@@ -42,7 +42,6 @@ export default async function load() {
         <div class="login-logo-icon">
           <img src="/app/assets/app-logo.png" alt="NH바로팜" class="login-logo-img" />
         </div>
-        <h1 class="login-title">바로팜</h1>
         <p class="login-subtitle">산지직송 라이브 경매</p>
       </div>
 

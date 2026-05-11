@@ -28,34 +28,12 @@
   flex: 1;
   min-width: 0;
 }
-.home-header__icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #2D8A3E, #1F6A2A);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.home-header__texts {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-.home-header__title {
-  font-size: 20px;
-  font-weight: 900;
-  color: var(--color-ink);
-  letter-spacing: -0.02em;
-  line-height: 1;
-}
-.home-header__sub {
-  font-size: 11px;
-  font-weight: 700;
-  color: #2D8A3E;
-  white-space: nowrap;
+.home-header__logo {
+  height: 30px;
+  max-width: 100%;
+  width: auto;
+  object-fit: contain;
+  object-position: left center;
 }
 .home-header__actions {
   display: flex;
