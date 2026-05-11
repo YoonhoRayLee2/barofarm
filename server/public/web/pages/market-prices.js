@@ -139,10 +139,7 @@ function renderDetail(root, { itemCode, kindName, history, meta }) {
         ${unit ? `<span class="mp-summary__unit">/${escapeHtml(unit)}</span>` : ''}
       </div>
       <span class="mp-trend ${trendClass}">${trendLabel}</span>
-      <div class="mp-summary__footer">
-        <span class="mp-summary__date">${formatDate(latest.priceDate)} 기준</span>
-        <span class="mp-summary__source">출처: 농산물유통정보(KAMIS)</span>
-      </div>
+      <span class="mp-summary__date">${formatDate(latest.priceDate)} 기준</span>
     </section>
 
     <section class="mp-chart-card">

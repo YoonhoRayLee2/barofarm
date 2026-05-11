@@ -156,8 +156,8 @@ export default async function load() {
   tickerWrap.className = 'home-ticker';
   tickerWrap.innerHTML = `
     <div class="home-ticker__source" id="home-ticker-source">
-      <span class="home-ticker__source-label">농산물 시세</span>
-      <span class="home-ticker__source-meta" id="home-ticker-meta">불러오는 중</span>
+      <span class="home-ticker__source-label" id="home-ticker-date">–</span>
+      <span class="home-ticker__source-meta">농산물 시세</span>
     </div>
     <div class="home-ticker__scroll-area">
       <div class="home-ticker__track" id="home-ticker-track">
@@ -175,12 +175,11 @@ export default async function load() {
       const track = page.querySelector('#home-ticker-track');
       if (!track || !items.length) return;
 
-      // 날짜·출처 뱃지 업데이트
-      const metaEl = page.querySelector('#home-ticker-meta');
-      if (metaEl && items[0]?.priceDate) {
+      // 날짜 업데이트
+      const dateEl = page.querySelector('#home-ticker-date');
+      if (dateEl && items[0]?.priceDate) {
         const d = new Date(items[0].priceDate);
-        const label = `${d.getMonth() + 1}/${d.getDate()} · KAMIS`;
-        metaEl.textContent = label;
+        dateEl.textContent = `${d.getMonth() + 1}월 ${d.getDate()}일`;
       }
 
       // 아이템을 두 번 복제 → 무한 루프 효과
