@@ -154,9 +154,16 @@ export default async function load() {
   // ---- Market price ticker ----
   const tickerWrap = document.createElement('div');
   tickerWrap.className = 'home-ticker';
-  tickerWrap.innerHTML = `<div class="home-ticker__track" id="home-ticker-track">
-    <span class="home-ticker__loading">시세 불러오는 중...</span>
-  </div>`;
+  tickerWrap.innerHTML = `
+    <div class="home-ticker__source" id="home-ticker-source">
+      <span class="home-ticker__source-label">농산물 시세</span>
+      <span class="home-ticker__source-meta" id="home-ticker-meta">불러오는 중</span>
+    </div>
+    <div class="home-ticker__scroll-area">
+      <div class="home-ticker__track" id="home-ticker-track">
+        <span class="home-ticker__loading">잠시만요...</span>
+      </div>
+    </div>`;
   page.appendChild(tickerWrap);
 
   // 비동기로 시세 로드
@@ -168,10 +175,18 @@ export default async function load() {
       const track = page.querySelector('#home-ticker-track');
       if (!track || !items.length) return;
 
+      // 날짜·출처 뱃지 업데이트
+      const metaEl = page.querySelector('#home-ticker-meta');
+      if (metaEl && items[0]?.priceDate) {
+        const d = new Date(items[0].priceDate);
+        const label = `${d.getMonth() + 1}/${d.getDate()} · KAMIS`;
+        metaEl.textContent = label;
+      }
+
       // 아이템을 두 번 복제 → 무한 루프 효과
       const html = items.map(it => `
         <button class="home-ticker__item" data-code="${escapeAttr(it.itemCode)}" data-kind="${escapeAttr(it.kindName)}"
-                aria-label="${escapeAttr(it.itemName)} 시세 상세보기">
+                aria-label="${escapeHtml(it.itemName)} 시세 상세보기">
           <span class="home-ticker__cat home-ticker__cat--${escapeAttr(it.category)}">${escapeHtml(it.category)}</span>
           <span class="home-ticker__name">${escapeHtml(it.itemName)}</span>
           <span class="home-ticker__price">${Number(it.price).toLocaleString('ko-KR')}원</span>

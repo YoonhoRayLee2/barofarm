@@ -168,10 +168,22 @@
   color: var(--color-ink-mute);
   font-weight: 600;
 }
+.mp-summary__footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
 .mp-summary__date {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--color-ink-mute);
-  margin-top: 2px;
+}
+.mp-summary__source {
+  font-size: 10px;
+  color: var(--color-ink-mute);
+  opacity: 0.7;
+  border-left: 1px solid var(--color-line);
+  padding-left: 8px;
 }
 
 /* ── Trend badge ── */
