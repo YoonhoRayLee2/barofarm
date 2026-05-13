@@ -318,6 +318,281 @@
   opacity: 1;
 }
 
+/* ── Membership tier card (PROF-6 top) ────────────────────── */
+.profile-tier {
+  margin: var(--space-3) var(--space-4) var(--space-3);
+  padding: 18px;
+  background: #f5f5f5;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-tier[data-tier="sprout"] { background: #f5f5f5; }
+.profile-tier[data-tier="farmer"] { background: #f0faf2; }
+.profile-tier[data-tier="elite"]  { background: #e8f5e9; }
+.profile-tier[data-tier="master"] { background: linear-gradient(135deg, #e8f5e9, #fff9c4); }
+
+.profile-tier__top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-tier__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.profile-tier__emoji {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.profile-tier__label {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-ink);
+  letter-spacing: -0.3px;
+}
+
+.profile-tier__progress {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.profile-tier__progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--color-ink-soft);
+  font-weight: 600;
+}
+
+.profile-tier__bar {
+  width: 100%;
+  height: 6px;
+  background: var(--color-line);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.profile-tier__bar-fill {
+  height: 100%;
+  width: 0%;
+  background: #2D8A3E;
+  border-radius: var(--radius-pill);
+  transition: width var(--dur-slow) var(--ease-out);
+}
+
+.profile-tier__master {
+  flex: 1;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 700;
+  color: #2D8A3E;
+}
+
+.profile-tier__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.profile-tier__row-label {
+  color: var(--color-ink-mute);
+}
+
+.profile-tier__row-value {
+  color: var(--color-ink);
+  font-weight: 700;
+}
+.profile-tier__row-value--green {
+  color: #2D8A3E;
+  font-weight: 700;
+}
+
+.profile-tier__help {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: auto;
+  font-size: 15px;
+  color: var(--color-ink-mute);
+  cursor: pointer;
+  line-height: 1;
+  -webkit-tap-highlight-color: transparent;
+  align-self: flex-start;
+}
+.profile-tier__help:active { opacity: 0.6; }
+
+/* ── Tier help bottom sheet ──────────────────────────────────── */
+.tier-help-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  transition: background 200ms;
+  pointer-events: none;
+}
+.tier-help-overlay.is-open {
+  background: rgba(0,0,0,.4);
+  pointer-events: auto;
+}
+.tier-help-sheet {
+  width: min(100vw, calc(100dvh * 390 / 844));
+  max-width: 480px;
+  background: var(--color-surface);
+  border-radius: 20px 20px 0 0;
+  padding: 12px 20px 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transform: translateY(100%);
+  transition: transform 260ms cubic-bezier(.32,.72,0,1);
+}
+.tier-help-overlay.is-open .tier-help-sheet {
+  transform: translateY(0);
+}
+.tier-help-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-line);
+  margin: 0 auto 4px;
+}
+.tier-help-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-ink);
+  margin: 0;
+}
+.tier-help-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.tier-help-table th {
+  text-align: left;
+  color: var(--color-ink-mute);
+  font-weight: 600;
+  padding: 0 0 8px;
+  border-bottom: 1px solid var(--color-line);
+}
+.tier-help-table td {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-ink-soft);
+  vertical-align: middle;
+}
+.tier-help-table tr:last-child td { border-bottom: none; }
+.tier-help-badge {
+  font-weight: 700;
+  color: var(--color-ink);
+  white-space: nowrap;
+}
+.tier-help-benefit {
+  font-weight: 700;
+  color: #2D8A3E;
+  text-align: right;
+}
+.tier-help-note {
+  font-size: 12px;
+  color: var(--color-ink-mute);
+  margin: 0;
+}
+
+/* ── Seller tier card variant ─────────────────────────────── */
+.profile-tier--seller .profile-tier__progress {
+  align-items: flex-end;
+}
+
+.profile-tier--seller .profile-tier__progress-label {
+  width: 100%;
+}
+
+/* ── Carbon stats card (PROF-6 top) ───────────────────────── */
+.profile-carbon {
+  margin: var(--space-3) var(--space-4) var(--space-3);
+  padding: 18px;
+  background: #f0faf2;
+  border: 1px solid #c8e6c9;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-carbon__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.profile-carbon__icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.profile-carbon__title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: #2D8A3E;
+  letter-spacing: -0.2px;
+  flex: 1;
+}
+
+.profile-carbon__row {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.profile-carbon__metric {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.profile-carbon__metric-label {
+  font-size: 12px;
+  color: var(--color-ink-mute);
+}
+
+.profile-carbon__metric-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: #2D8A3E;
+  letter-spacing: -0.3px;
+}
+
+.profile-carbon__sub {
+  font-size: 13px;
+  color: #2D8A3E;
+  margin: 4px 0 0;
+  font-weight: 600;
+}
+
+.profile-carbon__caption {
+  font-size: 12px;
+  color: var(--color-ink-mute);
+  margin: 4px 0 0;
+}
+
 /* ── Icon action row (PROF-6 top) ─────────────────────────── */
 .profile-icon-row {
   display: flex;
@@ -674,3 +949,150 @@
   height: 64px;
   color: var(--color-ink-mute);
 }
+
+/* ── NH 조합원 인증 뱃지 ─────────────────────────────────── */
+.nh-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #004A96;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 99px;
+  letter-spacing: -0.2px;
+  flex-shrink: 0;
+}
+
+/* ── 정산계좌 인증 카드 ──────────────────────────────────── */
+.profile-bank-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  margin: 0 16px 12px;
+  gap: 8px;
+}
+.profile-bank-card--unverified {
+  border: 1.5px dashed var(--color-line);
+}
+.profile-bank-card--verified {
+  border: 1.5px solid var(--color-accent);
+}
+.profile-bank-card__label {
+  font-size: 13px;
+  color: var(--color-ink-soft);
+}
+.profile-bank-card__account {
+  font-size: 12px;
+  color: var(--color-ink-mute);
+}
+.profile-bank-card__cta {
+  background: var(--color-accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.profile-bank-card__cta:active { opacity: 0.8; }
+
+/* ── 계좌 인증 바텀시트 ──────────────────────────────────── */
+.bank-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--color-bg-overlay, rgba(0,0,0,0.55));
+  z-index: 300;
+  display: flex;
+  align-items: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+.bank-sheet-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.bank-sheet {
+  width: 100%;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  border-radius: 20px 20px 0 0;
+  padding: 12px 20px 32px;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.bank-sheet-overlay.is-open .bank-sheet {
+  transform: translateY(0);
+}
+.bank-sheet__handle {
+  width: 36px;
+  height: 4px;
+  background: var(--color-line);
+  border-radius: 99px;
+  margin: 0 auto 4px;
+}
+.bank-sheet__title {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  text-align: center;
+  color: var(--color-ink);
+}
+.bank-sheet__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink-soft);
+  margin-bottom: 4px;
+}
+.bank-sheet select,
+.bank-sheet input[type="text"],
+.bank-sheet input[type="number"] {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid var(--color-line);
+  border-radius: 10px;
+  font-size: 15px;
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  background: var(--color-bg-alt);
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.bank-sheet input:focus,
+.bank-sheet select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+.bank-sheet__desc {
+  font-size: 13px;
+  color: var(--color-ink-soft);
+  text-align: center;
+  line-height: 1.5;
+}
+.bank-sheet__btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--color-accent);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  font-family: var(--font-body);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  letter-spacing: -0.3px;
+}
+.bank-sheet__btn:disabled { opacity: 0.5; cursor: default; }
+.bank-sheet__btn:not(:disabled):active { opacity: 0.85; }

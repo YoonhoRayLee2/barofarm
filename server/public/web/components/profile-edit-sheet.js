@@ -121,6 +121,17 @@ export function openProfileEditSheet(user, onSaved) {
         <p class="pes-hint ${nicknameLocked ? 'is-locked' : ''}">${esc(nextChangeText)}</p>
       </section>
 
+      <!-- 섹션 3: 농장 우편번호 (판매자용) -->
+      <section class="pes-section">
+        <p class="pes-section-title">농장 우편번호</p>
+        <input type="text" class="pes-input" name="farmZipcode"
+          value="${esc(user.farmZipcode || '')}"
+          maxlength="10"
+          inputmode="numeric"
+          placeholder="예: 55365"/>
+        <p class="pes-hint">산지 위치 기반 탄소발자국 계산에 사용됩니다</p>
+      </section>
+
     </main>
 
     <footer class="pes-footer">
@@ -182,6 +193,10 @@ export function openProfileEditSheet(user, onSaved) {
     const newNick = (getInput('nickname').value || '').trim();
     if (!nicknameLocked && newNick && newNick !== (user.nickname || '')) {
       fields.nickname = newNick;
+    }
+    const newFarmZip = (getInput('farmZipcode').value || '').trim();
+    if (newFarmZip !== (user.farmZipcode || '')) {
+      fields.farmZipcode = newFarmZip;
     }
     if (pickedAvatar) fields.avatar = pickedAvatar;
 

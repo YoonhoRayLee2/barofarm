@@ -3,6 +3,7 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import pool from '../db/mysql';
+import { getBuyerTier, getSellerTier, calcBuyerDiscount, calcSellerFee } from '../services/tier';
 
 const UPLOADS_DIR = path.join(__dirname, '..', '..', 'public', 'uploads', 'products');
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -295,12 +296,23 @@ router.post('/:id/purchase', async (req: Request, res: Response) => {
     }
 
     // 3. 구매 처리 — auctions row 생성 + product sold 처리
+    const [buyerTier, sellerTier] = await Promise.all([
+      getBuyerTier(buyerId),
+      getSellerTier(product.seller_id),
+    ]);
+    const { discountAmt, buyerDiscountRate } = calcBuyerDiscount(product.price, buyerTier);
+    const { feeAmt, sellerFeeRate }           = calcSellerFee(product.price, sellerTier);
     const orderId = crypto.randomUUID();
     await pool.query(
       `INSERT INTO auctions
-         (id, seller_id, product_name, start_price, current_price, mode, image_url, status, top_bidder_id, ends_at)
-       VALUES (?, ?, ?, ?, ?, 'direct', ?, 'ended', ?, NOW())`,
-      [orderId, product.seller_id, product.name, product.price, product.price, product.image_url ?? null, buyerId],
+         (id, seller_id, product_name, start_price, current_price, mode, image_url, status, top_bidder_id, ends_at,
+          buyer_tier, buyer_discount_rate, buyer_discount_amt, seller_fee_rate, seller_fee_amt)
+       VALUES (?, ?, ?, ?, ?, 'direct', ?, 'ended', ?, NOW(), ?, ?, ?, ?, ?)`,
+      [
+        orderId, product.seller_id, product.name, product.price, product.price,
+        product.image_url ?? null, buyerId,
+        buyerTier, buyerDiscountRate, discountAmt, sellerFeeRate, feeAmt,
+      ],
     );
     await pool.query('UPDATE products SET status = ? WHERE id = ?', ['sold', productId]);
 

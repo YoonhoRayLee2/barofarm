@@ -1,6 +1,7 @@
 import { RoomServiceClient } from 'livekit-server-sdk';
 import db from '../db/mysql';
 import { AuctionState } from '../store/memory';
+import { getBuyerTier, getSellerTier, calcBuyerDiscount, calcSellerFee } from './tier';
 
 let _client: RoomServiceClient | null = null;
 
@@ -28,16 +29,42 @@ export async function endAuction(state: AuctionState): Promise<void> {
     // 유찰(top_bidder_id IS NULL)은 낙찰가 무효 — 시작가가 그대로 저장되지 않도록 0 으로 기록.
     const isVoid = !state.topBidder;
     const finalPrice = isVoid ? 0 : state.currentPrice;
+
+    let buyerTier: string = 'sprout';
+    let discountAmt = 0;
+    let feeAmt = 0;
+    let buyerDiscountRate = 0;
+    let sellerFeeRate = 0.049;
+    if (!isVoid && state.topBidder) {
+      const [bTier, sTier] = await Promise.all([
+        getBuyerTier(Number(state.topBidder)),
+        getSellerTier(Number(state.sellerId)),
+      ]);
+      const discount = calcBuyerDiscount(finalPrice, bTier);
+      const fee      = calcSellerFee(finalPrice, sTier);
+      buyerTier         = bTier;
+      discountAmt       = discount.discountAmt;
+      buyerDiscountRate = discount.buyerDiscountRate;
+      feeAmt            = fee.feeAmt;
+      sellerFeeRate     = fee.sellerFeeRate;
+    }
+
     await db.query(
       `INSERT INTO auctions
-         (id, seller_id, live_id, product_name, start_price, current_price, mode, image_url, status, top_bidder_id, ends_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ended', ?, NOW())
+         (id, seller_id, live_id, product_name, start_price, current_price, mode, image_url, status, top_bidder_id, ends_at,
+          buyer_tier, buyer_discount_rate, buyer_discount_amt, seller_fee_rate, seller_fee_amt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ended', ?, NOW(), ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
-         current_price = VALUES(current_price),
-         top_bidder_id = VALUES(top_bidder_id),
-         status        = 'ended',
-         image_url     = VALUES(image_url),
-         ends_at       = NOW()`,
+         current_price      = VALUES(current_price),
+         top_bidder_id      = VALUES(top_bidder_id),
+         status             = 'ended',
+         image_url          = VALUES(image_url),
+         ends_at            = NOW(),
+         buyer_tier         = VALUES(buyer_tier),
+         buyer_discount_rate = VALUES(buyer_discount_rate),
+         buyer_discount_amt  = VALUES(buyer_discount_amt),
+         seller_fee_rate    = VALUES(seller_fee_rate),
+         seller_fee_amt     = VALUES(seller_fee_amt)`,
       [
         state.id,
         Number(state.sellerId),
@@ -48,6 +75,7 @@ export async function endAuction(state: AuctionState): Promise<void> {
         state.mode,
         state.imageUrl ?? null,
         state.topBidder ?? null,
+        buyerTier, buyerDiscountRate, discountAmt, sellerFeeRate, feeAmt,
       ],
     );
     // 낙찰자가 있으면 bids 테이블에도 기록

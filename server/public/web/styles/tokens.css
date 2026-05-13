@@ -6,8 +6,7 @@
  * hex/rgb 리터럴을 직접 사용하지 말 것.
  */
 
-/* ─── Dark theme (default) ─────────────────────────────────── */
-:root,
+/* ─── Dark theme (opt-in) ──────────────────────────────────── */
 :root[data-theme="dark"] {
   /* Background Layers */
   --color-bg:          #0E1A12;
@@ -124,7 +123,8 @@
   --glass-line: rgba(237, 241, 226, 0.08);
 }
 
-/* ─── Light theme placeholder (same values, ready for future use) ── */
+/* ─── Light theme (default) ────────────────────────────────── */
+:root,
 :root[data-theme="light"],
 [data-theme="light"] {
   /* Background Layers */
@@ -228,4 +228,16 @@
   --z-overlay: 500;
   --z-modal:   1000;
   --z-toast:   2000;
+
+  /* Live screen */
+  --color-live-bg: #000000;
+  --fs-price:      28px;
+  --fw-price:      900;
+  --fs-timer:      32px;
+
+  /* Fresh Field gradients */
+  --grad-accent: linear-gradient(135deg, #2D8A3E 0%, #1F6A2A 100%);
+  --grad-cta:    linear-gradient(135deg, #E85A4E 0%, #E5564A 60%, #C7403A 100%);
+  --grad-bg:     linear-gradient(180deg, #FAFAF5 0%, #F0F2EA 100%);
+  --grad-hero:   radial-gradient(ellipse at top, rgba(45,138,62,0.10) 0%, transparent 60%);
 }

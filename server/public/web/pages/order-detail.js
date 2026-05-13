@@ -25,6 +25,75 @@ const STEPS = [
   { key: 'settlement_complete', label: '정산완료' },
 ];
 
+const BUYER_TIER_INFO = {
+  sprout: { emoji: '🌱', label: '새싹' },
+  farmer: { emoji: '🌿', label: '농부' },
+  elite:  { emoji: '🌾', label: '명예농부' },
+  master: { emoji: '🏆', label: '마스터' },
+};
+const SELLER_TIER_INFO = [
+  { maxRate: 0.021, emoji: '🏆', label: '마스터' },
+  { maxRate: 0.031, emoji: '🌾', label: '명예농부' },
+  { maxRate: 0.040, emoji: '🌿', label: '농부' },
+  { maxRate: 1.000, emoji: '🌱', label: '새싹' },
+];
+function sellerTierFromRate(rate) {
+  return SELLER_TIER_INFO.find(t => rate <= t.maxRate) || SELLER_TIER_INFO[3];
+}
+
+function showFeeHelp(isSeller) {
+  const overlay = document.createElement('div');
+  overlay.className = 'od-help-overlay';
+
+  if (isSeller) {
+    overlay.innerHTML = `
+      <div class="od-help-sheet">
+        <div class="od-help-handle"></div>
+        <h3 class="od-help-title">💸 정산 수수료 안내</h3>
+        <div class="od-help-formula">
+          <span>낙찰가 × 수수료율 = 수수료</span>
+          <span>낙찰가 − 수수료 = <strong>정산금액</strong></span>
+        </div>
+        <table class="od-help-table">
+          <thead><tr><th>등급</th><th>3개월 판매</th><th>수수료율</th></tr></thead>
+          <tbody>
+            <tr><td>🌱 새싹</td><td>0 ~ 49.9만원</td><td class="od-help-benefit">4.9%</td></tr>
+            <tr><td>🌿 농부</td><td>50 ~ 199.9만원</td><td class="od-help-benefit">3.9%</td></tr>
+            <tr><td>🌾 명예농부</td><td>200 ~ 499.9만원</td><td class="od-help-benefit">3.0%</td></tr>
+            <tr><td>🏆 마스터</td><td>500만원 이상</td><td class="od-help-benefit">2.0%</td></tr>
+          </tbody>
+        </table>
+        <p class="od-help-note">정산은 구매자 구매확정 후 3영업일 이내에 등록 계좌로 입금됩니다.</p>
+      </div>
+    `;
+  } else {
+    overlay.innerHTML = `
+      <div class="od-help-sheet">
+        <div class="od-help-handle"></div>
+        <h3 class="od-help-title">🎁 등급 할인 안내</h3>
+        <div class="od-help-formula">
+          <span>낙찰가 × 할인율 = 할인금액</span>
+          <span>낙찰가 − 할인금액 = <strong>실결제액</strong></span>
+        </div>
+        <table class="od-help-table">
+          <thead><tr><th>등급</th><th>3개월 구매</th><th>할인율</th></tr></thead>
+          <tbody>
+            <tr><td>🌱 새싹</td><td>0 ~ 9.9만원</td><td class="od-help-benefit">없음</td></tr>
+            <tr><td>🌿 농부</td><td>10 ~ 49.9만원</td><td class="od-help-benefit">0.5%</td></tr>
+            <tr><td>🌾 명예농부</td><td>50 ~ 199.9만원</td><td class="od-help-benefit">1.0%</td></tr>
+            <tr><td>🏆 마스터</td><td>200만원 이상</td><td class="od-help-benefit">1.5%</td></tr>
+          </tbody>
+        </table>
+        <p class="od-help-note">최근 3개월 구매 합산 기준으로 자동 산정됩니다.</p>
+      </div>
+    `;
+  }
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('is-open'));
+}
+
 function stepIndex(status) {
   const idx = STEPS.findIndex(s => s.key === status);
   return idx < 0 ? 0 : idx;
@@ -136,6 +205,67 @@ export default async function load(params) {
       </section>
     `;
 
+    /* Fee / discount card — buyer or seller view of tier-based amounts */
+    let feeHtml = '';
+    {
+      const buyerKey   = data.buyerTier || 'sprout';
+      const buyerInfo  = BUYER_TIER_INFO[buyerKey] || BUYER_TIER_INFO.sprout;
+      const discountAmt  = Number(data.buyerDiscountAmt || 0);
+      const discountRate = Number(data.buyerDiscountRate || 0);
+      const feeRate      = Number(data.sellerFeeRate || 0);
+      const feeAmt       = Number(data.sellerFeeAmt || 0);
+      const finalPrice   = Number(data.finalPrice || 0);
+      const settleAmt    = Math.max(0, finalPrice - feeAmt);
+
+      if (!isSeller) {
+        const showDiscount = discountAmt > 0;
+        const netPay = Math.max(0, finalPrice - discountAmt);
+        feeHtml = `
+          <section class="od-fee">
+            <div class="od-fee__title-row">
+              <h2 class="od-fee__title">결제 정보</h2>
+              <button class="od-fee__help" aria-label="결제 정보 안내">ⓘ</button>
+            </div>
+            <div class="od-fee__row">
+              <span class="od-fee__label">적용 등급</span>
+              <span class="od-fee__value">${buyerInfo.emoji} ${escapeHtml(buyerInfo.label)}</span>
+            </div>
+            ${showDiscount ? `
+              <div class="od-fee__row">
+                <span class="od-fee__label">할인 금액</span>
+                <span class="od-fee__value od-fee__value--minus">-${discountAmt.toLocaleString('ko-KR')}원 (${(discountRate * 100).toFixed(1)}%)</span>
+              </div>` : ''}
+            <div class="od-fee__row od-fee__row--total">
+              <span class="od-fee__label">실결제액</span>
+              <span class="od-fee__value od-fee__value--strong">${netPay.toLocaleString('ko-KR')}원</span>
+            </div>
+          </section>
+        `;
+      } else {
+        const sellerInfo = sellerTierFromRate(feeRate);
+        feeHtml = `
+          <section class="od-fee">
+            <div class="od-fee__title-row">
+              <h2 class="od-fee__title">정산 정보</h2>
+              <button class="od-fee__help" aria-label="정산 정보 안내">ⓘ</button>
+            </div>
+            <div class="od-fee__row">
+              <span class="od-fee__label">수수료율</span>
+              <span class="od-fee__value">${(feeRate * 100).toFixed(1)}% (${sellerInfo.emoji} ${escapeHtml(sellerInfo.label)} 등급 적용)</span>
+            </div>
+            <div class="od-fee__row">
+              <span class="od-fee__label">수수료</span>
+              <span class="od-fee__value od-fee__value--minus">-${feeAmt.toLocaleString('ko-KR')}원</span>
+            </div>
+            <div class="od-fee__row od-fee__row--total">
+              <span class="od-fee__label">정산 예정액</span>
+              <span class="od-fee__value od-fee__value--strong">${settleAmt.toLocaleString('ko-KR')}원</span>
+            </div>
+          </section>
+        `;
+      }
+    }
+
     /* Tracking info — shown whenever status is shipped or later */
     const hasTracking = !!(data.trackingCompany && data.trackingNumber);
     const isPostShip  = ['shipped', 'purchase_confirmed', 'settlement_complete'].includes(status);
@@ -163,16 +293,56 @@ export default async function load(params) {
     let deliveryHtml = '';
     if (!isSeller && data.buyerDelivery) {
       const d = data.buyerDelivery;
-      deliveryHtml = `
-        <section class="od-delivery-info">
-          <h2 class="od-delivery-info__title">배송지 정보</h2>
-          <dl class="od-delivery-info__list">
-            ${d.name     ? `<div class="od-delivery-info__row"><dt>받는 분</dt><dd>${escapeHtml(d.name)}</dd></div>` : ''}
-            ${d.phone    ? `<div class="od-delivery-info__row"><dt>연락처</dt><dd>${escapeHtml(d.phone)}</dd></div>` : ''}
-            ${d.zipcode  ? `<div class="od-delivery-info__row"><dt>우편번호</dt><dd>${escapeHtml(d.zipcode)}</dd></div>` : ''}
-            ${d.address  ? `<div class="od-delivery-info__row"><dt>주소</dt><dd>${escapeHtml(d.address)}</dd></div>` : ''}
-            ${d.detail   ? `<div class="od-delivery-info__row"><dt>상세주소</dt><dd>${escapeHtml(d.detail)}</dd></div>` : ''}
-          </dl>
+      if (d.option === 'hanaro') {
+        deliveryHtml = `
+          <section class="od-delivery-info">
+            <h2 class="od-delivery-info__title">배송지 정보 <span class="od-hanaro-badge">🏬 하나로마트 반값택배</span></h2>
+            <dl class="od-delivery-info__list">
+              ${d.name           ? `<div class="od-delivery-info__row"><dt>받는 분</dt><dd>${escapeHtml(d.name)}</dd></div>` : ''}
+              ${d.phone          ? `<div class="od-delivery-info__row"><dt>연락처</dt><dd>${escapeHtml(d.phone)}</dd></div>` : ''}
+              ${d.hanaroMartName ? `<div class="od-delivery-info__row"><dt>수령 마트</dt><dd>${escapeHtml(d.hanaroMartName)}</dd></div>` : ''}
+              ${d.hanaroMartAddr ? `<div class="od-delivery-info__row"><dt>마트 주소</dt><dd>${escapeHtml(d.hanaroMartAddr)}</dd></div>` : ''}
+            </dl>
+            <p class="od-hanaro-note">판매자가 인근 하나로마트에 발송하면 위 매장에서 수령하세요.</p>
+          </section>
+        `;
+      } else {
+        deliveryHtml = `
+          <section class="od-delivery-info">
+            <h2 class="od-delivery-info__title">배송지 정보</h2>
+            <dl class="od-delivery-info__list">
+              ${d.name    ? `<div class="od-delivery-info__row"><dt>받는 분</dt><dd>${escapeHtml(d.name)}</dd></div>` : ''}
+              ${d.phone   ? `<div class="od-delivery-info__row"><dt>연락처</dt><dd>${escapeHtml(d.phone)}</dd></div>` : ''}
+              ${d.zipcode ? `<div class="od-delivery-info__row"><dt>우편번호</dt><dd>${escapeHtml(d.zipcode)}</dd></div>` : ''}
+              ${d.address ? `<div class="od-delivery-info__row"><dt>주소</dt><dd>${escapeHtml(d.address)}</dd></div>` : ''}
+              ${d.detail  ? `<div class="od-delivery-info__row"><dt>상세주소</dt><dd>${escapeHtml(d.detail)}</dd></div>` : ''}
+            </dl>
+          </section>
+        `;
+      }
+    }
+
+    /* Carbon footprint card — shown when both farm + buyer zipcode available */
+    let carbonHtml = '';
+    const farmZip  = data.sellerFarmZipcode;
+    const buyerZip = data.buyerDelivery && data.buyerDelivery.zipcode;
+    const carbon = (farmZip && buyerZip) ? calcCarbon(farmZip, buyerZip) : null;
+    if (carbon) {
+      carbonHtml = `
+        <section class="od-carbon">
+          <div class="od-carbon__head">
+            <span class="od-carbon__leaf">🌱</span>
+            <span class="od-carbon__title">이 주문의 탄소발자국</span>
+          </div>
+          <div class="od-carbon__row">
+            <span class="od-carbon__label">마트 대비</span>
+            <span class="od-carbon__value">${carbon.savedKm.toLocaleString('ko-KR')}km 단축</span>
+          </div>
+          <div class="od-carbon__row">
+            <span class="od-carbon__label">CO2 약</span>
+            <span class="od-carbon__value">${carbon.savedCo2g.toLocaleString('ko-KR')}g 절감 (${carbon.savedPct}%)</span>
+          </div>
+          <p class="od-carbon__caption">산지직송으로 지구를 지켰어요</p>
         </section>
       `;
     }
@@ -180,8 +350,12 @@ export default async function load(params) {
     /* Action area */
     let actionHtml = '';
     if (isSeller && status === 'payment_complete') {
+      const hanaroNotice = data.buyerDelivery?.option === 'hanaro'
+        ? `<div class="od-hanaro-seller-notice">🏬 <strong>하나로마트 반값택배</strong> — 인근 하나로마트로 발송해주세요.<br><small>${escapeHtml(data.buyerDelivery.hanaroMartName || '')} · ${escapeHtml(data.buyerDelivery.hanaroMartAddr || '')}</small></div>`
+        : '';
       actionHtml = `
         <section class="od-ship-form" id="od-ship-form">
+          ${hanaroNotice}
           <h2 class="od-ship-form__title">발송 처리</h2>
           <label class="od-ship-form__label">택배사 <span class="od-ship-form__required">*</span></label>
           <select class="od-ship-form__select" id="od-courier">
@@ -205,7 +379,11 @@ export default async function load(params) {
       actionHtml = `<button class="od-action-btn" id="od-action">정산 완료 처리</button>`;
     }
 
-    container.innerHTML = card + stepperHtml + trackingHtml + deliveryHtml + actionHtml;
+    container.innerHTML = card + stepperHtml + feeHtml + trackingHtml + deliveryHtml + carbonHtml + actionHtml;
+
+    /* Bind fee help button */
+    const feeHelpBtn = container.querySelector('.od-fee__help');
+    if (feeHelpBtn) feeHelpBtn.addEventListener('click', () => showFeeHelp(isSeller));
 
     /* Bind tracking button — opens carrier site directly */
     const trackingBtn = container.querySelector('#od-tracking-btn');
@@ -310,4 +488,45 @@ function escapeHtml(s) {
 
 function escapeAttr(s) {
   return String(s).replace(/"/g, '&quot;');
+}
+
+/* ── Carbon footprint helper ──────────────────────────────── */
+const ZIPCODE_COORDS = {
+  '01':[37.60,127.02],'02':[37.56,126.97],'03':[37.57,126.96],
+  '04':[37.50,127.03],'05':[37.50,127.12],'06':[37.48,127.03],
+  '07':[37.52,126.85],'08':[37.49,126.86],'09':[37.64,127.06],
+  '10':[37.73,127.05],'11':[37.66,127.23],'12':[37.68,127.45],
+  '13':[37.44,126.70],'14':[37.39,126.64],'15':[37.35,126.92],
+  '16':[37.27,127.00],'17':[37.28,127.28],'18':[37.21,127.09],
+  '21':[37.48,126.62],'22':[37.52,126.52],'23':[37.55,126.68],
+  '24':[37.88,127.73],'25':[37.34,128.01],'26':[37.15,128.48],
+  '27':[36.99,127.92],'28':[36.64,127.49],'29':[36.36,127.93],
+  '30':[36.35,127.38],'31':[36.81,127.11],'32':[36.47,126.64],
+  '33':[36.79,126.45],'34':[36.02,127.14],'35':[36.34,126.59],
+  '36':[36.57,128.73],'37':[36.11,128.34],'38':[36.21,129.27],
+  '39':[37.11,129.37],'40':[35.87,128.60],'41':[35.93,128.79],
+  '42':[36.11,128.73],'43':[36.57,128.21],'44':[35.54,129.31],
+  '45':[35.18,129.08],'46':[35.15,128.10],'47':[35.22,128.68],
+  '48':[35.13,128.99],'49':[35.34,128.70],
+  '54':[35.82,127.15],'55':[35.57,127.17],'56':[35.69,126.85],
+  '57':[34.77,126.46],'58':[34.81,127.66],'59':[34.95,127.49],
+  '60':[35.16,126.85],'61':[34.74,126.71],'62':[35.02,126.72],
+  '63':[33.50,126.53],
+};
+
+function calcCarbon(farmZip, buyerZip) {
+  const f = ZIPCODE_COORDS[String(farmZip || '').slice(0, 2)];
+  const b = ZIPCODE_COORDS[String(buyerZip || '').slice(0, 2)];
+  if (!f || !b) return null;
+  const R = 6371;
+  const dLat = (b[0] - f[0]) * Math.PI / 180;
+  const dLon = (b[1] - f[1]) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2
+          + Math.cos(f[0] * Math.PI / 180) * Math.cos(b[0] * Math.PI / 180)
+            * Math.sin(dLon / 2) ** 2;
+  const dist = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+  const savedKm = Math.max(0, 800 - dist);
+  const savedCo2g = Math.round(savedKm * 0.000166 * 3 * 1000);
+  const savedPct = Math.round(savedKm / 800 * 100);
+  return { dist, savedKm, savedCo2g, savedPct };
 }

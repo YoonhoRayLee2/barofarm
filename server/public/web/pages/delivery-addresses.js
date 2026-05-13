@@ -299,7 +299,252 @@ export default async function load() {
     });
   }
 
+  // ── Delivery option section (persists across list reloads) ──────────
+  const optionSection = document.createElement('section');
+  optionSection.className = 'delivery-option-section';
+  optionSection.innerHTML = `
+    <h2 class="delivery-option-title">배송 방법</h2>
+    <div class="delivery-option-cards">
+      <button class="delivery-option-card is-active" type="button" data-option="standard">
+        <span class="delivery-option-card__icon">🚚</span>
+        <div class="delivery-option-card__text">
+          <span class="delivery-option-card__name">일반배송</span>
+          <span class="delivery-option-card__desc">택배로 집까지 배송</span>
+        </div>
+        <span class="delivery-option-card__check">✓</span>
+      </button>
+      <button class="delivery-option-card" type="button" data-option="hanaro">
+        <span class="delivery-option-card__icon">🏬</span>
+        <div class="delivery-option-card__text">
+          <span class="delivery-option-card__name">하나로마트 반값택배</span>
+          <span class="delivery-option-card__desc">가까운 하나로마트에서 수령 (배송비 절감)</span>
+        </div>
+        <span class="delivery-option-card__check">✓</span>
+      </button>
+    </div>
+    <div class="hanaro-select-block" hidden>
+      <button class="hanaro-find-btn" type="button">📍 가까운 하나로마트 찾기</button>
+      <div class="hanaro-selected" hidden>
+        <span class="hanaro-selected__icon">🏬</span>
+        <div class="hanaro-selected__info">
+          <span class="hanaro-selected__name"></span>
+          <span class="hanaro-selected__addr"></span>
+        </div>
+        <button class="hanaro-selected__change" type="button">변경</button>
+      </div>
+    </div>
+    <button class="delivery-option-save" type="button">저장</button>
+  `;
+  page.appendChild(optionSection);
+
+  const cardsEl        = optionSection.querySelector('.delivery-option-cards');
+  const hanaroBlock    = optionSection.querySelector('.hanaro-select-block');
+  const findBtn        = optionSection.querySelector('.hanaro-find-btn');
+  const selectedEl     = optionSection.querySelector('.hanaro-selected');
+  const selectedName   = optionSection.querySelector('.hanaro-selected__name');
+  const selectedAddr   = optionSection.querySelector('.hanaro-selected__addr');
+  const changeBtn      = optionSection.querySelector('.hanaro-selected__change');
+  const saveBtn        = optionSection.querySelector('.delivery-option-save');
+
+  let _selectedStore = null; // { name, address }
+
+  function showSelectedStore(store) {
+    _selectedStore = store;
+    selectedName.textContent = store.name;
+    selectedAddr.textContent = store.address;
+    findBtn.hidden = true;
+    selectedEl.hidden = false;
+  }
+
+  function clearSelectedStore() {
+    _selectedStore = null;
+    findBtn.hidden = false;
+    selectedEl.hidden = true;
+  }
+
+  changeBtn.addEventListener('click', () => openStoreSearch());
+
+  cardsEl.addEventListener('click', (e) => {
+    const card = e.target.closest('.delivery-option-card');
+    if (!card) return;
+    cardsEl.querySelectorAll('.delivery-option-card').forEach((c) => c.classList.remove('is-active'));
+    card.classList.add('is-active');
+    hanaroBlock.hidden = card.dataset.option !== 'hanaro';
+  });
+
+  // ── Store search sheet ───────────────────────────────────────────────
+  function openStoreSearch() {
+    const overlay = document.createElement('div');
+    overlay.className = 'hanaro-search-overlay';
+    overlay.innerHTML = `
+      <div class="hanaro-search-sheet">
+        <div class="hanaro-search-handle"></div>
+        <div class="hanaro-search-header">
+          <h3 class="hanaro-search-title">하나로마트 찾기</h3>
+          <button class="hanaro-search-close" type="button" aria-label="닫기">✕</button>
+        </div>
+        <div class="hanaro-search-input-row">
+          <input class="hanaro-search-input" type="text" placeholder="지역명 또는 마트명 검색" autocomplete="off" />
+          <button class="hanaro-search-gps" type="button" title="내 위치로 검색">📍</button>
+        </div>
+        <ul class="hanaro-search-list" id="hanaro-search-list">
+          <li class="hanaro-search-empty">지역명을 입력하거나 📍를 눌러 주변 마트를 찾으세요</li>
+        </ul>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('is-open'));
+
+    const sheet     = overlay.querySelector('.hanaro-search-sheet');
+    const closeBtn  = overlay.querySelector('.hanaro-search-close');
+    const inputEl   = overlay.querySelector('.hanaro-search-input');
+    const gpsBtn    = overlay.querySelector('.hanaro-search-gps');
+    const listEl    = overlay.querySelector('#hanaro-search-list');
+
+    function close() {
+      overlay.classList.remove('is-open');
+      overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+    }
+
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    closeBtn.addEventListener('click', close);
+
+    async function renderStores(stores) {
+      if (!stores.length) {
+        listEl.innerHTML = '<li class="hanaro-search-empty">검색 결과가 없습니다</li>';
+        return;
+      }
+      listEl.innerHTML = stores.map((s) => `
+        <li class="hanaro-search-item" data-name="${esc(s.name)}" data-addr="${esc(s.address)}">
+          <span class="hanaro-search-item__icon">🏬</span>
+          <div class="hanaro-search-item__info">
+            <span class="hanaro-search-item__name">${esc(s.name)}</span>
+            <span class="hanaro-search-item__addr">${esc(s.address)}${s.distance != null ? ` · ${s.distance.toFixed(1)}km` : ''}</span>
+          </div>
+        </li>
+      `).join('');
+    }
+
+    listEl.addEventListener('click', (e) => {
+      const item = e.target.closest('.hanaro-search-item');
+      if (!item) return;
+      showSelectedStore({ name: item.dataset.name, address: item.dataset.addr });
+      close();
+    });
+
+    // GPS search
+    async function searchByLocation(lat, lng) {
+      gpsBtn.textContent = '⏳';
+      gpsBtn.disabled = true;
+      try {
+        const res = await fetch(`/api/hanaro-stores?lat=${lat}&lng=${lng}&radius=10`);
+        const stores = await res.json();
+        renderStores(stores);
+        if (!stores.length) {
+          listEl.innerHTML = '<li class="hanaro-search-empty">10km 이내 하나로마트가 없습니다. 지역명으로 검색해보세요</li>';
+        }
+      } catch (_) {
+        listEl.innerHTML = '<li class="hanaro-search-empty">위치 검색 중 오류가 발생했습니다</li>';
+      } finally {
+        gpsBtn.textContent = '📍';
+        gpsBtn.disabled = false;
+      }
+    }
+
+    gpsBtn.addEventListener('click', () => {
+      if (!navigator.geolocation) {
+        showToast('이 기기에서 위치 서비스를 지원하지 않습니다', { variant: 'error', duration: 2000 });
+        return;
+      }
+      gpsBtn.textContent = '⏳';
+      navigator.geolocation.getCurrentPosition(
+        (pos) => searchByLocation(pos.coords.latitude, pos.coords.longitude),
+        () => {
+          gpsBtn.textContent = '📍';
+          showToast('위치 접근이 거부됐습니다. 지역명으로 검색해주세요', { variant: 'error', duration: 2500 });
+        },
+        { timeout: 8000 },
+      );
+    });
+
+    // Text search (debounced)
+    let _searchTimer = null;
+    inputEl.addEventListener('input', () => {
+      clearTimeout(_searchTimer);
+      const q = inputEl.value.trim();
+      if (!q) {
+        listEl.innerHTML = '<li class="hanaro-search-empty">지역명을 입력하거나 📍를 눌러 주변 마트를 찾으세요</li>';
+        return;
+      }
+      _searchTimer = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/hanaro-stores?q=${encodeURIComponent(q)}`);
+          renderStores(await res.json());
+        } catch (_) {}
+      }, 300);
+    });
+
+    // Auto-search by GPS on open
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => searchByLocation(pos.coords.latitude, pos.coords.longitude),
+        () => {},
+        { timeout: 5000 },
+      );
+    }
+
+    setTimeout(() => inputEl.focus(), 400);
+  }
+
+  findBtn.addEventListener('click', () => openStoreSearch());
+
+  // ── Load saved option ────────────────────────────────────────────────
+  async function loadDeliveryOption() {
+    try {
+      const res = await fetch(`/api/users/${encodeURIComponent(user.id)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const option = data.deliveryOption || 'standard';
+      cardsEl.querySelectorAll('.delivery-option-card').forEach((c) => {
+        c.classList.toggle('is-active', c.dataset.option === option);
+      });
+      if (option === 'hanaro') {
+        hanaroBlock.hidden = false;
+        if (data.hanaroMartName && data.hanaroMartAddr) {
+          showSelectedStore({ name: data.hanaroMartName, address: data.hanaroMartAddr });
+        }
+      }
+    } catch (_) {}
+  }
+
+  saveBtn.addEventListener('click', async () => {
+    const activeCard = cardsEl.querySelector('.delivery-option-card.is-active');
+    const deliveryOption = activeCard?.dataset.option || 'standard';
+
+    if (deliveryOption === 'hanaro' && !_selectedStore) {
+      showToast('수령할 하나로마트를 선택해주세요', { variant: 'error', duration: 2000 });
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/users/${encodeURIComponent(user.id)}/delivery-option`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deliveryOption,
+          hanaroMartName: _selectedStore?.name ?? null,
+          hanaroMartAddr: _selectedStore?.address ?? null,
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      showToast('배송 방법이 저장되었습니다', { variant: 'success', duration: 1600 });
+    } catch {
+      showToast('저장에 실패했습니다', { variant: 'error', duration: 2000 });
+    }
+  });
+
   loadList();
+  loadDeliveryOption();
   return page;
 }
 

@@ -440,8 +440,299 @@ function buildDelivery() {
   return wrap;
 }
 
+/* ── Build: tier card (collector panel top) ───────────────── */
+/* ── Tier help bottom sheet ────────────────────────────────── */
+function showTierHelp(type) {
+  const isBuyer = type === 'buyer';
+  const title   = isBuyer ? '구매자 등급 안내' : '판매자 등급 안내';
+  const rows = isBuyer
+    ? [
+        { emoji: '🌱', label: '새싹',   range: '0 ~ 9.9만원',     benefit: '할인 없음' },
+        { emoji: '🌿', label: '농부',   range: '10만 ~ 49.9만원', benefit: '0.5% 할인' },
+        { emoji: '🌾', label: '명예농부', range: '50만 ~ 199.9만원', benefit: '1.0% 할인' },
+        { emoji: '🏆', label: '마스터',  range: '200만원 이상',    benefit: '1.5% 할인' },
+      ]
+    : [
+        { emoji: '🌱', label: '새싹',   range: '0 ~ 49.9만원',    benefit: '수수료 4.9%' },
+        { emoji: '🌿', label: '농부',   range: '50만 ~ 199.9만원', benefit: '수수료 3.9%' },
+        { emoji: '🌾', label: '명예농부', range: '200만 ~ 499.9만원', benefit: '수수료 3.0%' },
+        { emoji: '🏆', label: '마스터',  range: '500만원 이상',    benefit: '수수료 2.0%' },
+      ];
+
+  const overlay = document.createElement('div');
+  overlay.className = 'tier-help-overlay';
+  overlay.innerHTML = `
+    <div class="tier-help-sheet">
+      <div class="tier-help-handle"></div>
+      <h3 class="tier-help-title">${esc(title)}</h3>
+      <table class="tier-help-table">
+        <thead>
+          <tr>
+            <th>등급</th>
+            <th>${isBuyer ? '3개월 구매' : '3개월 판매'}</th>
+            <th>${isBuyer ? '혜택' : '수수료'}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr>
+              <td><span class="tier-help-badge">${r.emoji} ${esc(r.label)}</span></td>
+              <td>${esc(r.range)}</td>
+              <td class="tier-help-benefit">${esc(r.benefit)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      <p class="tier-help-note">최근 3개월 합산 기준으로 자동 산정됩니다.</p>
+    </div>
+  `;
+
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.remove();
+  });
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('is-open'));
+}
+
+/* ── 정산계좌 1원 인증 시트 ──────────────────────────────── */
+async function _authHeader() {
+  try {
+    const token = await api.getToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+}
+
+function showBankVerifySheet(userId, onVerified) {
+  const BANKS = ['NH농협은행','국민은행','신한은행','하나은행','우리은행','기업은행','카카오뱅크','토스뱅크'];
+
+  const overlay = document.createElement('div');
+  overlay.className = 'bank-sheet-overlay';
+
+  function renderStep1() {
+    overlay.innerHTML = `
+      <div class="bank-sheet">
+        <div class="bank-sheet__handle"></div>
+        <h3 class="bank-sheet__title">정산계좌 인증</h3>
+        <div>
+          <p class="bank-sheet__label">은행</p>
+          <select id="bv-bank">
+            <option value="">은행 선택</option>
+            ${BANKS.map(b => `<option value="${b}">${b}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <p class="bank-sheet__label">예금주명</p>
+          <input type="text" id="bv-holder" placeholder="홍길동" />
+        </div>
+        <div>
+          <p class="bank-sheet__label">계좌번호</p>
+          <input type="text" id="bv-account" placeholder="- 없이 입력" inputmode="numeric" />
+        </div>
+        <button class="bank-sheet__btn" id="bv-req-btn">1원 인증 요청</button>
+      </div>
+    `;
+    overlay.querySelector('#bv-req-btn').addEventListener('click', async () => {
+      const bankName      = overlay.querySelector('#bv-bank').value;
+      const holderName    = overlay.querySelector('#bv-holder').value.trim();
+      const accountNumber = overlay.querySelector('#bv-account').value.replace(/-/g, '').trim();
+      if (!bankName || !holderName || !accountNumber) {
+        showToast('모든 항목을 입력해주세요'); return;
+      }
+      const btn = overlay.querySelector('#bv-req-btn');
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/api/users/${encodeURIComponent(userId)}/bank/request`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(await _authHeader()) },
+          body: JSON.stringify({ bankName, accountNumber, holderName }),
+        });
+        if (!res.ok) {
+          let e = {};
+          try { e = await res.json(); } catch {}
+          showToast(e.error || '요청 실패'); btn.disabled = false; return;
+        }
+        renderStep2(bankName);
+      } catch { showToast('네트워크 오류'); btn.disabled = false; }
+    });
+  }
+
+  function renderStep2(bankName) {
+    overlay.innerHTML = `
+      <div class="bank-sheet">
+        <div class="bank-sheet__handle"></div>
+        <h3 class="bank-sheet__title">인증번호 입력</h3>
+        <p class="bank-sheet__desc">방금 송금된 1원의<br>입금자명 숫자 4자리를 입력해주세요</p>
+        <input type="text" id="bv-code" placeholder="0000" maxlength="4" inputmode="numeric" style="text-align:center;font-size:24px;font-weight:800;letter-spacing:8px" />
+        <button class="bank-sheet__btn" id="bv-confirm-btn">인증 확인</button>
+      </div>
+    `;
+    overlay.querySelector('#bv-confirm-btn').addEventListener('click', async () => {
+      const code = overlay.querySelector('#bv-code').value.trim();
+      if (code.length !== 4) { showToast('4자리 숫자를 입력해주세요'); return; }
+      const btn = overlay.querySelector('#bv-confirm-btn');
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/api/users/${encodeURIComponent(userId)}/bank/confirm`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(await _authHeader()) },
+          body: JSON.stringify({ code }),
+        });
+        let data = {};
+        try { data = await res.json(); } catch {}
+        if (!res.ok) { showToast(data.error || '인증 실패'); btn.disabled = false; return; }
+        overlay.remove();
+        showToast(data.isNhMember ? '🏦 NH농협 조합원 인증 완료!' : '✅ 계좌 인증 완료!', { variant: 'success', duration: 2500 });
+        onVerified?.({ isNhMember: data.isNhMember, bankName });
+      } catch { showToast('네트워크 오류'); btn.disabled = false; }
+    });
+  }
+
+  renderStep1();
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('is-open'));
+}
+
+function buildTierCard() {
+  const wrap = document.createElement('section');
+  wrap.className = 'profile-tier';
+  wrap.hidden = true;
+  wrap.innerHTML = `
+    <div class="profile-tier__top">
+      <div class="profile-tier__name">
+        <span class="profile-tier__emoji" data-field="emoji">🌱</span>
+        <span class="profile-tier__label" data-field="label">—</span>
+      </div>
+      <button class="profile-tier__help" data-tier-help="buyer" aria-label="등급 안내">ⓘ</button>
+      <div class="profile-tier__progress" data-field="progress">
+        <span class="profile-tier__progress-label">
+          <span data-field="next-label">다음 등급까지</span>
+          <span data-field="next-pct">0%</span>
+        </span>
+        <div class="profile-tier__bar">
+          <div class="profile-tier__bar-fill" data-field="bar-fill"></div>
+        </div>
+      </div>
+      <div class="profile-tier__master" data-field="master" hidden>최고 등급 달성 🏆</div>
+    </div>
+    <div class="profile-tier__row">
+      <span class="profile-tier__row-label">최근 3개월 구매</span>
+      <span class="profile-tier__row-value" data-field="spend">—</span>
+    </div>
+    <div class="profile-tier__row">
+      <span class="profile-tier__row-label">내 혜택</span>
+      <span class="profile-tier__row-value" data-field="benefit">—</span>
+    </div>
+  `;
+  return wrap;
+}
+
+async function loadTierCard(userId, wrap) {
+  try {
+    const t = await api.getUserTier(userId);
+    if (!t || !t.tier) return;
+    wrap.dataset.tier = t.tier;
+    wrap.querySelector('[data-field="emoji"]').textContent = t.emoji || '🌱';
+    wrap.querySelector('[data-field="label"]').textContent = t.label || '—';
+
+    const isMaster = t.tier === 'master' || !t.nextTier;
+    const progressWrap = wrap.querySelector('[data-field="progress"]');
+    const masterWrap   = wrap.querySelector('[data-field="master"]');
+    if (isMaster) {
+      progressWrap.hidden = true;
+      masterWrap.hidden = false;
+    } else {
+      progressWrap.hidden = false;
+      masterWrap.hidden = true;
+      const pct = Math.max(0, Math.min(100, Number(t.progressPct || 0)));
+      wrap.querySelector('[data-field="next-pct"]').textContent = `${Math.round(pct)}%`;
+      wrap.querySelector('[data-field="bar-fill"]').style.width = `${pct}%`;
+    }
+
+    wrap.querySelector('[data-field="spend"]').textContent =
+      `${Number(t.totalSpend || 0).toLocaleString('ko-KR')}원`;
+
+    const discount = Number(t.buyerDiscountRate || 0);
+    wrap.querySelector('[data-field="benefit"]').textContent =
+      discount > 0 ? `구매 ${(discount * 100).toFixed(1)}% 자동 할인` : '기본 등급';
+
+    wrap.hidden = false;
+  } catch { /* hide on error */ }
+}
+
+function showCarbonHelp() {
+  const overlay = document.createElement('div');
+  overlay.className = 'tier-help-overlay';
+  overlay.innerHTML = `
+    <div class="tier-help-sheet">
+      <div class="tier-help-handle"></div>
+      <h3 class="tier-help-title">🌍 탄소발자국 절감이란?</h3>
+      <p class="tier-help-note" style="margin-bottom:12px">산지직송은 마트 물류(생산지 → 도매시장 → 마트 → 집)를 생략해 이동거리를 크게 줄입니다. 그 차이만큼 CO₂ 배출이 적어집니다.</p>
+      <table class="tier-help-table">
+        <thead><tr><th>항목</th><th>내용</th></tr></thead>
+        <tbody>
+          <tr><td>거리 계산</td><td>농장 우편번호 → 배송지 직선 거리</td></tr>
+          <tr><td>마트 경로</td><td>동일 경로 + 약 800 km 물류 추가</td></tr>
+          <tr><td>CO₂ 계수</td><td>0.166 g / km · kg × 평균 3 kg</td></tr>
+        </tbody>
+      </table>
+      <p class="tier-help-note" style="margin-top:12px">추정치이며 실제 배출량과 차이가 있을 수 있습니다.</p>
+    </div>
+  `;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('is-open'));
+}
+
+/* ── Build: carbon stats card (collector panel top) ───────── */
+function buildCarbonStats() {
+  const wrap = document.createElement('section');
+  wrap.className = 'profile-carbon';
+  wrap.hidden = true;
+  wrap.innerHTML = `
+    <div class="profile-carbon__head">
+      <span class="profile-carbon__icon">🌍</span>
+      <span class="profile-carbon__title">나의 탄소발자국 절감</span>
+      <button class="profile-tier__help" data-carbon-help aria-label="탄소발자국 안내">ⓘ</button>
+    </div>
+    <div class="profile-carbon__row">
+      <div class="profile-carbon__metric">
+        <span class="profile-carbon__metric-label">총</span>
+        <span class="profile-carbon__metric-value" data-field="km">—</span>
+      </div>
+      <div class="profile-carbon__metric">
+        <span class="profile-carbon__metric-label">CO2</span>
+        <span class="profile-carbon__metric-value" data-field="co2">—</span>
+      </div>
+    </div>
+    <p class="profile-carbon__sub" data-field="avg">마트 대비 평균 — 단축</p>
+    <p class="profile-carbon__caption" data-field="orders">주문 — · 산지직송의 힘</p>
+  `;
+  return wrap;
+}
+
+async function loadCarbonStats(userId, wrap) {
+  try {
+    const res = await fetch(`/api/users/${encodeURIComponent(userId)}/carbon-stats`);
+    if (!res.ok) return;
+    const s = await res.json();
+    if (!s || !s.totalOrders) return;
+    wrap.querySelector('[data-field="km"]').textContent =
+      `${Number(s.totalSavedKm || 0).toLocaleString('ko-KR')} km`;
+    wrap.querySelector('[data-field="co2"]').textContent =
+      `${Number(s.totalSavedCo2g || 0).toLocaleString('ko-KR')} g 절감`;
+    wrap.querySelector('[data-field="avg"]').textContent =
+      `마트 대비 평균 ${s.avgSavedPct || 0}% 단축`;
+    wrap.querySelector('[data-field="orders"]').textContent =
+      `주문 ${s.totalOrders}건 · 산지직송의 힘`;
+    wrap.hidden = false;
+  } catch { /* hide on error */ }
+}
+
 /* ── Build: PROF-6 collector panel ────────────────────────── */
-function buildCollectorPanel(profileUser, scrollEl) {
+function buildCollectorPanel(profileUser, scrollEl, isMe) {
   const panel = document.createElement('div');
   panel.className = 'profile-panel';
   panel.id = 'panel-buyer';
@@ -505,14 +796,122 @@ function buildCollectorPanel(profileUser, scrollEl) {
   });
 
   panel.appendChild(menuGroup);
+
+  /* Tier card — own profile only */
+  if (isMe) {
+    const tierCard = buildTierCard();
+    panel.appendChild(tierCard);
+    loadTierCard(profileUser.id, tierCard);
+  }
+
+  /* Carbon stats */
+  const carbonCard = buildCarbonStats();
+  panel.appendChild(carbonCard);
+  loadCarbonStats(profileUser.id, carbonCard);
+
+  /* Delivery widget (buyer-only) */
+  panel.appendChild(buildDelivery());
+
   return panel;
 }
 
 /* ── Build: PROF-7 dealer panel ───────────────────────────── */
-function buildDealerPanel() {
+function buildDealerPanel(profileUser, isMe) {
   const panel = document.createElement('div');
   panel.className = 'profile-panel';
   panel.id = 'panel-seller';
+
+  /* Seller tier / fee card */
+  const feeCard = document.createElement('div');
+  feeCard.className = 'profile-tier profile-tier--seller';
+  feeCard.dataset.tier = 'sprout';
+  feeCard.innerHTML = `
+    <div class="profile-tier__top">
+      <div class="profile-tier__name">
+        <span class="profile-tier__emoji" data-field="s-emoji">🌱</span>
+        <span class="profile-tier__label" data-field="s-label">—</span>
+      </div>
+      <button class="profile-tier__help" data-tier-help="seller" aria-label="등급 안내">ⓘ</button>
+      <div class="profile-tier__progress" data-field="s-progress">
+        <span class="profile-tier__progress-label">
+          <span>다음 등급까지</span>
+          <span data-field="s-next-pct">0%</span>
+        </span>
+        <div class="profile-tier__bar">
+          <div class="profile-tier__bar-fill" data-field="s-bar-fill"></div>
+        </div>
+      </div>
+      <div class="profile-tier__master" data-field="s-master" hidden>최저 수수료 달성 🏆</div>
+    </div>
+    <div class="profile-tier__row">
+      <span class="profile-tier__row-label">최근 3개월 판매</span>
+      <span class="profile-tier__row-value" data-field="s-sales">—</span>
+    </div>
+    <div class="profile-tier__row">
+      <span class="profile-tier__row-label">현재 수수료율</span>
+      <span class="profile-tier__row-value" data-field="s-fee">—</span>
+    </div>
+  `;
+  /* Load seller-side tier info */
+  (async () => {
+    try {
+      const t = await api.getSellerTier(profileUser.id);
+      if (!t?.tier) return;
+      feeCard.dataset.tier = t.tier;
+      feeCard.querySelector('[data-field="s-emoji"]').textContent = t.emoji || '🌱';
+      feeCard.querySelector('[data-field="s-label"]').textContent = t.label || '—';
+
+      const isMaster = !t.nextTier;
+      const progressWrap = feeCard.querySelector('[data-field="s-progress"]');
+      const masterWrap   = feeCard.querySelector('[data-field="s-master"]');
+      if (isMaster) {
+        progressWrap.hidden = true;
+        masterWrap.hidden = false;
+      } else {
+        progressWrap.hidden = false;
+        masterWrap.hidden = true;
+        const pct = Math.max(0, Math.min(100, Number(t.progressPct || 0)));
+        feeCard.querySelector('[data-field="s-next-pct"]').textContent = `${Math.round(pct)}%`;
+        feeCard.querySelector('[data-field="s-bar-fill"]').style.width = `${pct}%`;
+      }
+
+      feeCard.querySelector('[data-field="s-sales"]').textContent =
+        `${Number(t.totalSales || 0).toLocaleString('ko-KR')}원`;
+
+      const feeRate = Number(t.sellerFeeRate || 0);
+      feeCard.querySelector('[data-field="s-fee"]').textContent =
+        `${(feeRate * 100).toFixed(1)}%`;
+    } catch {}
+  })();
+
+  /* Settlement account / NH badge card (본인 프로필일 때만) */
+  if (isMe) {
+    const bankCard = document.createElement('div');
+    const isVerified = !!profileUser.bankVerifiedAt;
+    const isNh = !!profileUser.isNhMember;
+
+    bankCard.className = `profile-bank-card profile-bank-card--${isVerified ? 'verified' : 'unverified'}`;
+    bankCard.innerHTML = isVerified
+      ? `${isNh ? '<span class="nh-badge">🏦 조합원 인증</span>' : '<span class="profile-bank-card__label">✅ 계좌 인증 완료</span>'}
+         <span class="profile-bank-card__account">${esc(profileUser.bankName || '')} ${esc(profileUser.bankAccount || '')}</span>`
+      : `<span class="profile-bank-card__label">정산계좌 미등록</span>
+         <button class="profile-bank-card__cta" id="bank-verify-cta">계좌 인증하기</button>`;
+
+    if (!isVerified) {
+      bankCard.querySelector('#bank-verify-cta').addEventListener('click', () => {
+        showBankVerifySheet(profileUser.id, ({ isNhMember, bankName }) => {
+          bankCard.className = 'profile-bank-card profile-bank-card--verified';
+          bankCard.innerHTML = isNhMember
+            ? `<span class="nh-badge">🏦 조합원 인증</span><span class="profile-bank-card__account">${esc(bankName)} ****????</span>`
+            : `<span class="profile-bank-card__label">✅ 계좌 인증 완료</span><span class="profile-bank-card__account">${esc(bankName)}</span>`;
+          // hero/topbar 뱃지 갱신
+          const heroBadge = document.querySelector('.profile-hero__nh-badge');
+          if (heroBadge && isNhMember) heroBadge.hidden = false;
+        });
+      });
+    }
+    panel.appendChild(bankCard);
+  }
 
   /* Revenue header */
   const revenue = document.createElement('div');
@@ -554,6 +953,7 @@ function buildDealerPanel() {
   });
 
   panel.appendChild(menuGroup);
+  panel.appendChild(feeCard);
   return panel;
 }
 
@@ -730,6 +1130,12 @@ export default async function load() {
 
   /* 1. Top nickname bar (sticky) */
   const topbar = buildTopbar(nickname);
+  /* NH 조합원 인증 뱃지 (이름 옆에 표시) */
+  const nhBadge = document.createElement('span');
+  nhBadge.className = 'nh-badge profile-hero__nh-badge';
+  nhBadge.textContent = '🏦 조합원 인증';
+  nhBadge.hidden = !(profileUser.isNhMember && profileUser.bankVerifiedAt);
+  topbar.nameEl.insertAdjacentElement('afterend', nhBadge);
   page.appendChild(topbar.el);
 
   /* Scroll wrapper — contains all content between topbar and tab bar */
@@ -750,12 +1156,10 @@ export default async function load() {
     : (profileUser.interests ? String(profileUser.interests).split(',').filter(Boolean) : []);
   scrollEl.appendChild(buildInterests(interests));
 
-  /* 4. PROF-5 Delivery widget */
-  scrollEl.appendChild(buildDelivery());
-
   /* 6+7. PROF-2 Tab toggle + PROF-6/7 panels */
-  const collectorPanel = buildCollectorPanel(profileUser, scrollEl);
-  const dealerPanel    = buildDealerPanel();
+  const isMe = String(profileUser.id) === String(user.id);
+  const collectorPanel = buildCollectorPanel(profileUser, scrollEl, isMe);
+  const dealerPanel    = buildDealerPanel(profileUser, isMe);
   const tabBar         = buildTabs(collectorPanel, dealerPanel);
 
   scrollEl.appendChild(tabBar);
@@ -769,6 +1173,12 @@ export default async function load() {
   scrollEl.appendChild(createTabSpacer());
 
   page.appendChild(scrollEl);
+
+  /* Help button delegation */
+  page.addEventListener('click', e => {
+    if (e.target.closest('[data-tier-help]'))   showTierHelp(e.target.closest('[data-tier-help]').dataset.tierHelp);
+    if (e.target.closest('[data-carbon-help]')) showCarbonHelp();
+  });
 
   /* 9. Bottom tab bar */
   page.appendChild(createBottomTabBar({ activeTab: 'profile' }));

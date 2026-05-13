@@ -17,6 +17,7 @@ interface AuctionRow {
   ends_at: string;
   seller_id: string;
   seller_name: string | null;
+  seller_farm_zipcode: string | null;
   top_bidder_id: string | null;
   buyer_name: string | null;
   delivery_name: string | null;
@@ -24,18 +25,28 @@ interface AuctionRow {
   delivery_address: string | null;
   delivery_detail: string | null;
   delivery_zipcode: string | null;
+  delivery_option: string;
+  hanaro_mart_name: string | null;
+  hanaro_mart_addr: string | null;
   tracking_company: string | null;
   tracking_number: string | null;
+  buyer_tier: string;
+  buyer_discount_rate: number;
+  buyer_discount_amt: number;
+  seller_fee_rate: number;
+  seller_fee_amt: number;
 }
 
 const AUCTION_QUERY = `
   SELECT
     a.id, a.product_name, a.start_price, a.current_price, a.mode,
     a.delivery_status, a.status, a.image_url, a.ends_at,
-    a.seller_id, s.nickname AS seller_name,
+    a.seller_id, s.nickname AS seller_name, s.farm_zipcode AS seller_farm_zipcode,
     a.top_bidder_id, b.nickname AS buyer_name,
     b.delivery_name, b.delivery_phone, b.delivery_address, b.delivery_detail, b.delivery_zipcode,
-    a.tracking_company, a.tracking_number
+    b.delivery_option, b.hanaro_mart_name, b.hanaro_mart_addr,
+    a.tracking_company, a.tracking_number,
+    a.buyer_tier, a.buyer_discount_rate, a.buyer_discount_amt, a.seller_fee_rate, a.seller_fee_amt
   FROM auctions a
   LEFT JOIN users s ON s.id = a.seller_id
   LEFT JOIN users b ON b.id = a.top_bidder_id
@@ -54,18 +65,27 @@ function formatAuction(row: AuctionRow) {
     imageUrl:        row.image_url ?? null,
     endsAt:          row.ends_at,
     sellerId:        row.seller_id,
-    sellerName:      row.seller_name ?? null,
-    buyerId:         row.top_bidder_id ?? null,
+    sellerName:          row.seller_name ?? null,
+    sellerFarmZipcode:   row.seller_farm_zipcode ?? null,
+    buyerId:             row.top_bidder_id ?? null,
     buyerName:       row.buyer_name ?? null,
     trackingCompany: row.tracking_company ?? null,
     trackingNumber:  row.tracking_number ?? null,
     buyerDelivery:   row.top_bidder_id ? {
-      name:    row.delivery_name ?? null,
-      phone:   row.delivery_phone ?? null,
-      address: row.delivery_address ?? null,
-      detail:  row.delivery_detail ?? null,
-      zipcode: row.delivery_zipcode ?? null,
+      name:           row.delivery_name ?? null,
+      phone:          row.delivery_phone ?? null,
+      address:        row.delivery_address ?? null,
+      detail:         row.delivery_detail ?? null,
+      zipcode:        row.delivery_zipcode ?? null,
+      option:         row.delivery_option ?? 'standard',
+      hanaroMartName: row.hanaro_mart_name ?? null,
+      hanaroMartAddr: row.hanaro_mart_addr ?? null,
     } : null,
+    buyerTier:          row.buyer_tier,
+    buyerDiscountRate:  Number(row.buyer_discount_rate),
+    buyerDiscountAmt:   Number(row.buyer_discount_amt),
+    sellerFeeRate:      Number(row.seller_fee_rate),
+    sellerFeeAmt:       Number(row.seller_fee_amt),
   };
 }
 

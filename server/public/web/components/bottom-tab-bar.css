@@ -9,10 +9,11 @@
   width: 100%;
   height: calc(60px + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
-  background: rgba(14, 26, 18, 0.96);
-  backdrop-filter: blur(12px) saturate(1.2);
-  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  background: var(--color-surface);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   border-top: 1px solid var(--color-line);
+  box-shadow: 0 -2px 12px var(--color-shadow);
   display: flex;
   align-items: stretch;
   z-index: var(--z-sticky);
@@ -84,17 +85,18 @@
 }
 
 .tab-item--fab .tab-fab-btn {
-  width: 46px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--color-cta);
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--color-cta), #C8453A);
   color: #fff;
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(214, 71, 58, 0.35);
+  box-shadow: 0 8px 22px rgba(229, 86, 74, .35);
+  margin-top: -10px;
   transition: transform var(--dur-fast) var(--ease-out),
               opacity var(--dur-fast) var(--ease-out);
   -webkit-tap-highlight-color: transparent;
@@ -117,22 +119,17 @@
   height: calc(60px + env(safe-area-inset-bottom));
 }
 
-/* ── Light theme override (home page) ── */
-[data-theme="light"] .bottom-tab-bar {
-  background: #FFFFFF;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  border-top-color: #E2E5D6;
-  box-shadow: 0 -2px 12px rgba(20,30,15,.05);
+/* ── Dark theme override ─────────────────────────────────── */
+[data-theme="dark"] .bottom-tab-bar {
+  background: rgba(14, 26, 18, 0.96);
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  box-shadow: none;
 }
-[data-theme="light"] .tab-item { color: #6B7560; }
-[data-theme="light"] .tab-item.is-active { color: #2D8A3E; }
-[data-theme="light"] .tab-item.is-active::before { background: #2D8A3E; }
-[data-theme="light"] .tab-item--fab .tab-fab-btn {
-  width: 54px;
-  height: 54px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #E5564A, #C8453A);
-  box-shadow: 0 8px 22px rgba(229,86,74,.35);
-  margin-top: -10px;
+[data-theme="dark"] .tab-item--fab .tab-fab-btn {
+  width: 46px;
+  height: 36px;
+  border-radius: 10px;
+  margin-top: 0;
+  box-shadow: 0 2px 8px rgba(214, 71, 58, 0.35);
 }

@@ -200,6 +200,13 @@ export default async function load(params = {}) {
         sellerEl.style.display = '';
         nameEl.textContent =
           seller.nickname || seller.displayName || '판매자';
+        // NH 조합원 인증 뱃지
+        if (seller.isNhMember && seller.bankVerifiedAt) {
+          const badge = document.createElement('span');
+          badge.className = 'nh-badge';
+          badge.textContent = '🏦 조합원 인증';
+          nameEl.insertAdjacentElement('afterend', badge);
+        }
         if (seller.avatarUrl) {
           avatarEl.innerHTML = `<img src="${escapeAttr(
             seller.avatarUrl
@@ -268,6 +275,24 @@ export default async function load(params = {}) {
         return;
       }
 
+      // 등급 기반 예상 할인 조회 (실패 시 할인 없이 표시)
+      let tier = null;
+      try {
+        tier = await api.getUserTier(currentUser.id);
+      } catch { /* ignore; show base price */ }
+      const basePrice    = Number(product.price) || 0;
+      const discountRate = Number(tier && tier.buyerDiscountRate) || 0;
+      const discountAmt  = Math.round(basePrice * discountRate / 100);
+      const finalPrice   = Math.max(0, basePrice - discountAmt);
+      const priceRowHtml = discountAmt > 0
+        ? `<span class="pd-confirm-sheet__value">
+             <span class="pd-confirm-sheet__price-original">${basePrice.toLocaleString('ko-KR')}원</span>
+             <span class="pd-confirm-sheet__price-arrow">→</span>
+             <span class="pd-confirm-sheet__price-final">${finalPrice.toLocaleString('ko-KR')}원</span>
+             <span class="pd-confirm-sheet__price-tag">(${escapeHtml(tier.label || '')} 등급 ${discountRate}% 할인)</span>
+           </span>`
+        : `<span class="pd-confirm-sheet__value">${basePrice.toLocaleString('ko-KR')}원</span>`;
+
       // 구매 확인 바텀시트
       const overlay = document.createElement('div');
       overlay.className = 'pd-confirm-overlay';
@@ -281,7 +306,7 @@ export default async function load(params = {}) {
           </div>
           <div class="pd-confirm-sheet__row">
             <span class="pd-confirm-sheet__label">가격</span>
-            <span class="pd-confirm-sheet__value">${Number(product.price).toLocaleString()}원</span>
+            ${priceRowHtml}
           </div>
           <div class="pd-confirm-sheet__row">
             <span class="pd-confirm-sheet__label">배송지</span>

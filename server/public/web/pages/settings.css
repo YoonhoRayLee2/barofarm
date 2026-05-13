@@ -16,9 +16,7 @@
   gap: var(--space-2);
   padding: max(14px, env(safe-area-inset-top)) var(--space-4) 14px;
   border-bottom: 1px solid var(--color-line);
-  background: rgba(14,26,18,0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--color-surface);
   position: sticky;
   top: 0;
   z-index: 50;

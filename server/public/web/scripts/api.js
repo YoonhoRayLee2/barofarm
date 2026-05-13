@@ -269,6 +269,28 @@ export async function getPublicProfile(userId, viewerId) {
 }
 
 /**
+ * Get a user's membership tier info.
+ * @param {string|number} userId
+ * @returns {Promise<{ tier: 'sprout'|'farmer'|'elite'|'master', label: string, emoji: string,
+ *   totalSpend: number, sellerFeeRate: number, buyerDiscountRate: number,
+ *   nextTier: string|null, nextThreshold: number|null, progressPct: number }>}
+ */
+export async function getUserTier(userId) {
+  return request(`/api/users/${encodeURIComponent(userId)}/tier`);
+}
+
+/**
+ * Get a user's seller-side tier info (sales-based fee tier).
+ * @param {string|number} userId
+ * @returns {Promise<{ tier: string, label: string, emoji: string,
+ *   totalSales: number, sellerFeeRate: number,
+ *   nextTier: string|null, nextThreshold: number|null, progressPct: number }>}
+ */
+export async function getSellerTier(userId) {
+  return request(`/api/users/${encodeURIComponent(userId)}/seller-tier`);
+}
+
+/**
  * Create a live session.
  * thumbnail이 있으면 multipart/form-data, 없으면 JSON으로 전송한다.
  * @param {{ sellerId: string, title: string, thumbnail?: File|Blob|null, scheduledAt?: number|null }} payload

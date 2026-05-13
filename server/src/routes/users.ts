@@ -4,6 +4,22 @@ import fs from 'fs';
 import path from 'path';
 import pool from '../db/mysql';
 import { lives, auctions } from '../store/memory';
+import {
+  getBuyerTier, getSellerTier,
+  BUYER_TIER_CONFIG, SELLER_TIER_CONFIG,
+  BUYER_TIER_ORDER, SELLER_TIER_ORDER,
+  BuyerTierKey, SellerTierKey,
+} from '../services/tier';
+import { requireAuth } from '../middleware/auth';
+
+// 정산계좌 1원 인증 대기 상태 (key: userId)
+const pendingBankVerify = new Map<number, {
+  code: string;
+  expiresAt: number;
+  bankName: string;
+  accountNumber: string;
+  holderName: string;
+}>();
 
 const AVATARS_DIR = path.join(__dirname, '..', '..', 'public', 'uploads', 'avatars');
 fs.mkdirSync(AVATARS_DIR, { recursive: true });
@@ -162,6 +178,104 @@ router.delete('/:id/follow', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/users/:id/tier — 구매자 등급
+router.get('/:id/tier', async (req: Request, res: Response) => {
+  const userId = Number(req.params.id);
+  if (!userId) {
+    res.status(400).json({ error: 'user id is required' });
+    return;
+  }
+
+  try {
+    const [rows]: any = await pool.execute(
+      `SELECT COALESCE(SUM(current_price), 0) AS total_spend
+       FROM auctions
+       WHERE top_bidder_id = ? AND status = 'ended'
+         AND ends_at >= DATE_SUB(NOW(), INTERVAL 3 MONTH)`,
+      [userId],
+    );
+    const totalSpend = Number(rows[0]?.total_spend ?? 0);
+
+    const tier = await getBuyerTier(userId);
+    const cfg  = BUYER_TIER_CONFIG[tier];
+
+    const currentIdx = BUYER_TIER_ORDER.indexOf(tier);
+    const nextTierKey: BuyerTierKey | null = currentIdx < BUYER_TIER_ORDER.length - 1
+      ? BUYER_TIER_ORDER[currentIdx + 1]
+      : null;
+    const nextThreshold = nextTierKey ? BUYER_TIER_CONFIG[nextTierKey].minSpend : null;
+
+    let progressPct = 100;
+    if (nextTierKey && nextThreshold !== null) {
+      const range = nextThreshold - cfg.minSpend;
+      progressPct = range > 0 ? Math.min(100, Math.round((totalSpend - cfg.minSpend) / range * 100)) : 100;
+    }
+
+    res.json({
+      tier,
+      label:             cfg.label,
+      emoji:             cfg.emoji,
+      totalSpend,
+      buyerDiscountRate: cfg.buyerDiscountRate,
+      nextTier:          nextTierKey,
+      nextThreshold,
+      progressPct,
+    });
+  } catch (err) {
+    console.error('[users] GET /:id/tier error:', err);
+    res.status(500).json({ error: 'database error' });
+  }
+});
+
+// GET /api/users/:id/seller-tier — 판매자 등급
+router.get('/:id/seller-tier', async (req: Request, res: Response) => {
+  const userId = Number(req.params.id);
+  if (!userId) {
+    res.status(400).json({ error: 'user id is required' });
+    return;
+  }
+
+  try {
+    const [rows]: any = await pool.execute(
+      `SELECT COALESCE(SUM(current_price), 0) AS total_sales
+       FROM auctions
+       WHERE seller_id = ? AND status = 'ended'
+         AND ends_at >= DATE_SUB(NOW(), INTERVAL 3 MONTH)`,
+      [userId],
+    );
+    const totalSales = Number(rows[0]?.total_sales ?? 0);
+
+    const tier = await getSellerTier(userId);
+    const cfg  = SELLER_TIER_CONFIG[tier];
+
+    const currentIdx = SELLER_TIER_ORDER.indexOf(tier);
+    const nextTierKey: SellerTierKey | null = currentIdx < SELLER_TIER_ORDER.length - 1
+      ? SELLER_TIER_ORDER[currentIdx + 1]
+      : null;
+    const nextThreshold = nextTierKey ? SELLER_TIER_CONFIG[nextTierKey].minSpend : null;
+
+    let progressPct = 100;
+    if (nextTierKey && nextThreshold !== null) {
+      const range = nextThreshold - cfg.minSpend;
+      progressPct = range > 0 ? Math.min(100, Math.round((totalSales - cfg.minSpend) / range * 100)) : 100;
+    }
+
+    res.json({
+      tier,
+      label:         cfg.label,
+      emoji:         cfg.emoji,
+      totalSales,
+      sellerFeeRate: cfg.sellerFeeRate,
+      nextTier:      nextTierKey,
+      nextThreshold,
+      progressPct,
+    });
+  } catch (err) {
+    console.error('[users] GET /:id/seller-tier error:', err);
+    res.status(500).json({ error: 'database error' });
+  }
+});
+
 // GET /api/users/:id — 퍼블릭 프로필
 router.get('/:id', async (req: Request, res: Response) => {
   const userId = req.params.id;
@@ -175,7 +289,10 @@ router.get('/:id', async (req: Request, res: Response) => {
       `SELECT id, name, nickname, avatar_url, role,
               nickname_changed_at,
               delivery_name, delivery_phone, delivery_address, delivery_detail, delivery_zipcode,
-              interests
+              farm_zipcode, farm_address,
+              interests,
+              bank_name, bank_account, bank_holder, bank_verified_at, is_nh_member,
+              delivery_option, hanaro_mart_name, hanaro_mart_addr
        FROM users WHERE id = ?`,
       [userId],
     ) as [unknown[], unknown];
@@ -192,7 +309,17 @@ router.get('/:id', async (req: Request, res: Response) => {
       delivery_address: string | null;
       delivery_detail: string | null;
       delivery_zipcode: string | null;
+      farm_zipcode: string | null;
+      farm_address: string | null;
       interests: string | null;
+      bank_name: string | null;
+      bank_account: string | null;
+      bank_holder: string | null;
+      bank_verified_at: string | null;
+      is_nh_member: number;
+      delivery_option: string;
+      hanaro_mart_name: string | null;
+      hanaro_mart_addr: string | null;
     }>)[0];
 
     if (!user) {
@@ -215,7 +342,19 @@ router.get('/:id', async (req: Request, res: Response) => {
         detail:  user.delivery_detail,
         zipcode: user.delivery_zipcode,
       } : null,
+      farmZipcode: user.farm_zipcode ?? null,
+      farmAddress: user.farm_address ?? null,
       interests: user.interests ? user.interests.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+      bankName:       user.bank_name ?? null,
+      bankAccount:    user.bank_account
+        ? '****' + user.bank_account.slice(-4)
+        : null,
+      bankHolder:     user.bank_holder ?? null,
+      bankVerifiedAt: user.bank_verified_at ?? null,
+      isNhMember:     !!user.is_nh_member,
+      deliveryOption:  user.delivery_option ?? 'standard',
+      hanaroMartName:  user.hanaro_mart_name ?? null,
+      hanaroMartAddr:  user.hanaro_mart_addr ?? null,
     });
   } catch (err) {
     console.error('[users] GET /:id error:', err);
@@ -231,9 +370,11 @@ router.patch('/:id', uploadAvatar.single('avatar'), async (req: Request, res: Re
     return;
   }
 
-  const { nickname, interests } = req.body as {
+  const { nickname, interests, farmZipcode, farmAddress } = req.body as {
     nickname?: string;
     interests?: string | string[];
+    farmZipcode?: string;
+    farmAddress?: string;
   };
 
   try {
@@ -278,11 +419,20 @@ router.patch('/:id', uploadAvatar.single('avatar'), async (req: Request, res: Re
       await pool.execute('UPDATE users SET interests = ? WHERE id = ?', [val || null, userId]);
     }
 
+    // 4. 농장 위치
+    if (farmZipcode !== undefined || farmAddress !== undefined) {
+      await pool.execute(
+        'UPDATE users SET farm_zipcode = ?, farm_address = ? WHERE id = ?',
+        [farmZipcode ?? null, farmAddress ?? null, userId],
+      );
+    }
+
     // 최신 row 조회 후 GET과 동일한 형태로 응답
     const [rows] = await pool.execute(
       `SELECT id, name, nickname, avatar_url, role,
               nickname_changed_at,
               delivery_name, delivery_phone, delivery_address, delivery_detail, delivery_zipcode,
+              farm_zipcode, farm_address,
               interests
        FROM users WHERE id = ?`,
       [userId],
@@ -300,6 +450,8 @@ router.patch('/:id', uploadAvatar.single('avatar'), async (req: Request, res: Re
       delivery_address: string | null;
       delivery_detail: string | null;
       delivery_zipcode: string | null;
+      farm_zipcode: string | null;
+      farm_address: string | null;
       interests: string | null;
     }>)[0];
 
@@ -323,6 +475,8 @@ router.patch('/:id', uploadAvatar.single('avatar'), async (req: Request, res: Re
         detail:  user.delivery_detail,
         zipcode: user.delivery_zipcode,
       } : null,
+      farmZipcode: user.farm_zipcode ?? null,
+      farmAddress: user.farm_address ?? null,
       interests: user.interests ? user.interests.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
     });
   } catch (err) {
@@ -679,6 +833,147 @@ router.get('/:id/unshipped', async (req: Request, res: Response) => {
     res.json(list);
   } catch (err) {
     console.error('[users] GET /:id/unshipped', err);
+    res.status(500).json({ error: 'database error' });
+  }
+});
+
+// GET /api/users/:id/carbon-stats — 탄소발자국 절감 통계
+router.get('/:id/carbon-stats', async (req: Request, res: Response) => {
+  const userId = req.params.id;
+  if (!userId) {
+    res.status(400).json({ error: 'user id is required' });
+    return;
+  }
+
+  try {
+    const { calcCarbon } = await import('../services/carbon');
+
+    const [rows] = await pool.execute(
+      `SELECT a.id,
+              s.farm_zipcode AS seller_farm_zipcode,
+              b.delivery_zipcode AS buyer_zipcode
+       FROM auctions a
+       JOIN users s ON s.id = a.seller_id
+       JOIN users b ON b.id = a.top_bidder_id
+       WHERE a.top_bidder_id = ?
+         AND a.status = 'ended'`,
+      [userId],
+    ) as [unknown[], unknown];
+
+    const orders = rows as Array<{
+      id: number;
+      seller_farm_zipcode: string | null;
+      buyer_zipcode: string | null;
+    }>;
+
+    let totalSavedKm = 0;
+    let totalSavedCo2g = 0;
+    let savedPctSum = 0;
+    let validCount = 0;
+
+    for (const order of orders) {
+      if (!order.seller_farm_zipcode || !order.buyer_zipcode) continue;
+      const result = calcCarbon(order.seller_farm_zipcode, order.buyer_zipcode);
+      if (!result) continue;
+      totalSavedKm  += result.savedKm;
+      totalSavedCo2g += result.savedCo2g;
+      savedPctSum   += result.savedPct;
+      validCount++;
+    }
+
+    res.json({
+      totalOrders:   orders.length,
+      totalSavedKm,
+      totalSavedCo2g,
+      avgSavedPct: validCount > 0 ? Math.round(savedPctSum / validCount) : 0,
+    });
+  } catch (err) {
+    console.error('[users] GET /:id/carbon-stats error:', err);
+    res.status(500).json({ error: 'database error' });
+  }
+});
+
+// POST /api/users/:id/bank/request — 1원 인증 요청
+router.post('/:id/bank/request', requireAuth, async (req, res) => {
+  const userId = Number(req.params.id);
+  if ((req as any).user?.id !== userId) { res.status(403).json({ error: 'forbidden' }); return; }
+
+  const { bankName, accountNumber, holderName } = req.body as {
+    bankName: string; accountNumber: string; holderName: string;
+  };
+  if (!bankName || !accountNumber || !holderName) {
+    res.status(400).json({ error: 'bankName, accountNumber, holderName required' });
+    return;
+  }
+
+  const code = String(Math.floor(1000 + Math.random() * 9000));
+  pendingBankVerify.set(userId, {
+    code,
+    expiresAt: Date.now() + 10 * 60 * 1000,
+    bankName,
+    accountNumber,
+    holderName,
+  });
+  console.log('[bank-verify] code for user', userId, ':', code);
+
+  res.json({ message: '1원을 송금했습니다. 입금자명의 숫자 4자리를 입력하세요.' });
+});
+
+// POST /api/users/:id/bank/confirm — 코드 확인 → 인증 완료
+router.post('/:id/bank/confirm', requireAuth, async (req, res) => {
+  const userId = Number(req.params.id);
+  if ((req as any).user?.id !== userId) { res.status(403).json({ error: 'forbidden' }); return; }
+
+  const { code } = req.body as { code: string };
+  const pending = pendingBankVerify.get(userId);
+
+  if (!pending) { res.status(400).json({ error: '인증 요청이 없습니다. 다시 시도해주세요.' }); return; }
+  if (Date.now() > pending.expiresAt) {
+    pendingBankVerify.delete(userId);
+    res.status(400).json({ error: '인증 시간이 만료됐습니다. 다시 시도해주세요.' });
+    return;
+  }
+  if (pending.code !== code) { res.status(400).json({ error: '인증번호가 맞지 않습니다.' }); return; }
+
+  const isNhMember = pending.bankName.includes('농협') ? 1 : 0;
+
+  await pool.execute(
+    `UPDATE users SET bank_name = ?, bank_account = ?, bank_holder = ?,
+                      bank_verified_at = NOW(), is_nh_member = ?
+     WHERE id = ?`,
+    [pending.bankName, pending.accountNumber, pending.holderName, isNhMember, userId],
+  );
+  pendingBankVerify.delete(userId);
+
+  res.json({ success: true, isNhMember: !!isNhMember });
+});
+
+// PATCH /api/users/:id/delivery-option
+router.patch('/:id/delivery-option', async (req: Request, res: Response) => {
+  const userId = req.params.id;
+  const { deliveryOption, hanaroMartName, hanaroMartAddr } = req.body as {
+    deliveryOption?: string;
+    hanaroMartName?: string;
+    hanaroMartAddr?: string;
+  };
+
+  if (!deliveryOption || !['standard', 'hanaro'].includes(deliveryOption)) {
+    res.status(400).json({ error: 'deliveryOption must be standard or hanaro' });
+    return;
+  }
+  if (deliveryOption === 'hanaro' && (!hanaroMartName || !hanaroMartAddr)) {
+    res.status(400).json({ error: 'hanaroMartName and hanaroMartAddr required for hanaro option' });
+    return;
+  }
+
+  try {
+    await pool.execute(
+      'UPDATE users SET delivery_option = ?, hanaro_mart_name = ?, hanaro_mart_addr = ? WHERE id = ?',
+      [deliveryOption, hanaroMartName ?? null, hanaroMartAddr ?? null, userId],
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[users] PATCH /:id/delivery-option error:', err);
     res.status(500).json({ error: 'database error' });
   }
 });
