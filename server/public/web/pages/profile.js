@@ -911,6 +911,42 @@ function buildDealerPanel(profileUser, isMe) {
       });
     }
     panel.appendChild(bankCard);
+
+    /* Shipping fee setting card */
+    const shippingFee = profileUser.sellerShippingFee != null ? Number(profileUser.sellerShippingFee) : 3000;
+    const shippingCard = document.createElement('div');
+    shippingCard.className = 'profile-shipping-fee-card';
+    shippingCard.innerHTML = `
+      <span class="profile-shipping-fee-card__label">기본 배송비</span>
+      <div class="profile-shipping-fee-card__row">
+        <input type="number" id="shipping-fee-input" value="${shippingFee}" min="0" step="500">
+        <span>원</span>
+        <button id="shipping-fee-save-btn">저장</button>
+      </div>
+      <p class="profile-shipping-fee-card__hint">합배송 처리 시 구매자에게 청구되는 배송비</p>
+    `;
+    panel.appendChild(shippingCard);
+
+    shippingCard.querySelector('#shipping-fee-save-btn').addEventListener('click', async () => {
+      const input = shippingCard.querySelector('#shipping-fee-input');
+      const val = Number(input.value);
+      if (!Number.isFinite(val) || val < 0) {
+        showToast('올바른 금액을 입력해주세요');
+        return;
+      }
+      const saveBtn = shippingCard.querySelector('#shipping-fee-save-btn');
+      saveBtn.disabled = true;
+      try {
+        await api.updateProfile(profileUser.id, { sellerShippingFee: val });
+        profileUser.sellerShippingFee = val;
+        try { await setSecureItem('user', JSON.stringify(profileUser)); } catch (_e) { /* ignore */ }
+        showToast('배송비가 저장되었습니다.', { variant: 'success', duration: 1800 });
+      } catch {
+        showToast('저장에 실패했습니다');
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
   }
 
   /* Revenue header */

@@ -378,3 +378,19 @@
   box-shadow: 0 4px 14px rgba(229,86,74,0.4); margin-top: 4px;
 }
 .auction-modal__submit:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ── Floating emoji animation (seller view) ─────────── */
+.ls-floating-emoji {
+  position: absolute;
+  bottom: 120px;
+  font-size: 30px;
+  pointer-events: none;
+  z-index: 30;
+  animation: ls-float-up 2.2s ease-out forwards;
+  user-select: none;
+}
+@keyframes ls-float-up {
+  0%   { transform: translateY(0)      scale(1);    opacity: 1; }
+  60%  { transform: translateY(-200px) scale(1.15); opacity: 0.95; }
+  100% { transform: translateY(-320px) scale(0.7);  opacity: 0; }
+}

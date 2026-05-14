@@ -140,59 +140,57 @@
   color: var(--color-ink);
 }
 
-/* ── 서브탭 ── */
-.home-subtabs {
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-line);
-  display: flex;
-  gap: 24px;
-  padding: 0 20px;
-  flex-shrink: 0;
-}
-.subtab {
-  position: relative;
-  padding: 14px 0;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--color-ink-mute);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  -webkit-tap-highlight-color: transparent;
-  transition: color 120ms;
-}
-.subtab.is-active {
-  font-weight: 800;
-  color: var(--color-ink);
-}
-.subtab.is-active::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: #2D8A3E;
-  border-radius: 2px;
-}
-.subtab__count {
-  font-size: 13px;
-  font-weight: 800;
-  color: #D63031;
-}
-
-/* ── 콘텐츠 그리드 (스크롤 영역) ── */
-.home-grid {
+/* ── 단일 스크롤 피드 ── */
+.home-feed {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  padding: 0 0 24px;
+}
+
+.home-section {
+  margin-top: 20px;
+}
+.home-section:first-child { margin-top: 14px; }
+
+.home-section__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 10px;
+}
+.home-section__title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-ink);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.home-section__count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-ink-mute);
+  margin-left: auto;
+}
+.home-section__badge {
+  display: inline-flex;
+  align-items: center;
+}
+.home-section__badge--live {
+  font-size: 11px;
+  font-weight: 800;
+  color: #D63031;
+  letter-spacing: 0.04em;
+}
+.home-section__badge--upcoming {
+  font-size: 14px;
+}
+
+.home-section__grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  padding: 14px;
+  padding: 0 14px;
   align-content: start;
 }
 
@@ -225,7 +223,7 @@
 }
 
 /* ── 라이브 카드 (live-card 컴포넌트 오버라이드) ── */
-.home-grid .live-card {
+.home-section__grid .live-card {
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(20,30,15,.04);
@@ -444,3 +442,61 @@
 .home-ticker__name { font-weight: 600; }
 .home-ticker__price { color: var(--color-accent); font-weight: 700; }
 .home-ticker__unit { color: var(--color-ink-mute); font-size: 11px; }
+
+/* ── Follow live banner (팔로우한 판매자 라이브 시작 알림) ── */
+.home-follow-banner {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: calc(100% - 24px);
+  max-width: 460px;
+  padding: 12px 14px;
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  font-family: var(--font-body);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  animation: home-follow-banner-in 0.28s var(--ease-out, ease-out);
+}
+.home-follow-banner__icon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.home-follow-banner__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.35;
+}
+.home-follow-banner__text strong {
+  font-weight: 700;
+}
+.home-follow-banner__sub {
+  font-size: 11px;
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.home-follow-banner__arrow {
+  font-size: 22px;
+  font-weight: 700;
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+@keyframes home-follow-banner-in {
+  from { opacity: 0; transform: translate(-50%, -16px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}

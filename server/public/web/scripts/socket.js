@@ -254,3 +254,56 @@ export function onViewerList(socket, cb) {
 export function requestViewerList(socket, liveId) {
   socket.emit('viewer:list:get', { liveId });
 }
+
+/**
+ * Send an emoji reaction.
+ * @param {Socket} socket
+ * @param {{ liveId: string, emoji: string, userId: string, userName: string }} opts
+ */
+export function sendEmojiReact(socket, { liveId, emoji, userId, userName }) {
+  socket.emit('emoji:react', { liveId, emoji, userId, userName });
+}
+
+/**
+ * Subscribe to emoji reaction broadcasts.
+ * @param {Socket} socket
+ * @param {(data: { emoji: string, userId?: string, userName?: string }) => void} cb
+ * @returns {() => void} unsubscribe
+ */
+export function onEmojiReaction(socket, cb) {
+  socket.on('emoji:reaction', cb);
+  return () => socket.off('emoji:reaction', cb);
+}
+
+/* ---------------- Follow / personal notifications ---------------- */
+
+/**
+ * Identify the current user to the server so they join their personal room.
+ * @param {Socket} socket
+ * @param {string|number} userId
+ */
+export function identifyUser(socket, userId) {
+  socket.emit('user:identify', { userId: String(userId) });
+}
+
+/**
+ * Subscribe to follow:live:started — fired when a followed seller goes live.
+ * @param {Socket} socket
+ * @param {(data: { liveId: string, sellerId: string, sellerName: string, title: string, thumbnailUrl?: string }) => void} cb
+ * @returns {() => void} unsubscribe
+ */
+export function onFollowLiveStarted(socket, cb) {
+  socket.on('follow:live:started', cb);
+  return () => socket.off('follow:live:started', cb);
+}
+
+/**
+ * Subscribe to auction:new — a new auction started inside a live room.
+ * @param {Socket} socket
+ * @param {(data: { auctionId: string, liveId: string, productName: string, startPrice: number, mode: string }) => void} cb
+ * @returns {() => void} unsubscribe
+ */
+export function onAuctionNew(socket, cb) {
+  socket.on('auction:new', cb);
+  return () => socket.off('auction:new', cb);
+}

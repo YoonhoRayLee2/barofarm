@@ -51,13 +51,14 @@ export async function endAuction(state: AuctionState): Promise<void> {
 
     await db.query(
       `INSERT INTO auctions
-         (id, seller_id, live_id, product_name, start_price, current_price, mode, image_url, status, top_bidder_id, ends_at,
+         (id, seller_id, live_id, product_name, start_price, current_price, mode, image_url, status, delivery_status, top_bidder_id, ends_at,
           buyer_tier, buyer_discount_rate, buyer_discount_amt, seller_fee_rate, seller_fee_amt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ended', ?, NOW(), ?, ?, ?, ?, ?)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ended', 'payment_complete', ?, NOW(), ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          current_price      = VALUES(current_price),
          top_bidder_id      = VALUES(top_bidder_id),
          status             = 'ended',
+         delivery_status    = 'payment_complete',
          image_url          = VALUES(image_url),
          ends_at            = NOW(),
          buyer_tier         = VALUES(buyer_tier),

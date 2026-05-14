@@ -178,6 +178,23 @@ router.delete('/:id/follow', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/users/:id/is-following?userId=
+router.get('/:id/is-following', async (req: Request, res: Response) => {
+  const followingId = Number(req.params.id);
+  const userId = Number(req.query.userId as string);
+  if (!userId) return res.status(400).json({ error: 'userId required' });
+  try {
+    const [rows] = await pool.execute(
+      'SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ? LIMIT 1',
+      [userId, followingId],
+    ) as [unknown[], unknown];
+    res.json({ isFollowing: (rows as unknown[]).length > 0 });
+  } catch (err) {
+    console.error('[users] GET /:id/is-following error:', err);
+    res.status(500).json({ error: 'database error' });
+  }
+});
+
 // GET /api/users/:id/tier — 구매자 등급
 router.get('/:id/tier', async (req: Request, res: Response) => {
   const userId = Number(req.params.id);
@@ -292,7 +309,8 @@ router.get('/:id', async (req: Request, res: Response) => {
               farm_zipcode, farm_address,
               interests,
               bank_name, bank_account, bank_holder, bank_verified_at, is_nh_member,
-              delivery_option, hanaro_mart_name, hanaro_mart_addr
+              delivery_option, hanaro_mart_name, hanaro_mart_addr,
+              seller_shipping_fee
        FROM users WHERE id = ?`,
       [userId],
     ) as [unknown[], unknown];
@@ -320,6 +338,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       delivery_option: string;
       hanaro_mart_name: string | null;
       hanaro_mart_addr: string | null;
+      seller_shipping_fee: number;
     }>)[0];
 
     if (!user) {
@@ -355,6 +374,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       deliveryOption:  user.delivery_option ?? 'standard',
       hanaroMartName:  user.hanaro_mart_name ?? null,
       hanaroMartAddr:  user.hanaro_mart_addr ?? null,
+      sellerShippingFee: user.seller_shipping_fee ?? 3000,
     });
   } catch (err) {
     console.error('[users] GET /:id error:', err);
@@ -370,11 +390,12 @@ router.patch('/:id', uploadAvatar.single('avatar'), async (req: Request, res: Re
     return;
   }
 
-  const { nickname, interests, farmZipcode, farmAddress } = req.body as {
+  const { nickname, interests, farmZipcode, farmAddress, sellerShippingFee } = req.body as {
     nickname?: string;
     interests?: string | string[];
     farmZipcode?: string;
     farmAddress?: string;
+    sellerShippingFee?: number;
   };
 
   try {
@@ -424,6 +445,13 @@ router.patch('/:id', uploadAvatar.single('avatar'), async (req: Request, res: Re
       await pool.execute(
         'UPDATE users SET farm_zipcode = ?, farm_address = ? WHERE id = ?',
         [farmZipcode ?? null, farmAddress ?? null, userId],
+      );
+    }
+
+    if (sellerShippingFee !== undefined) {
+      await pool.execute(
+        'UPDATE users SET seller_shipping_fee = ? WHERE id = ?',
+        [Number(sellerShippingFee), userId],
       );
     }
 
@@ -791,7 +819,7 @@ router.get('/:id/sales', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/users/:id/unshipped — 미발송 주문 목록 (delivery_status = payment_complete)
+// GET /api/users/:id/unshipped — 미발송 주문 목록 (payment_complete + shipping_fee_pending + shipping_fee_paid)
 router.get('/:id/unshipped', async (req: Request, res: Response) => {
   const sellerId = Number(req.params.id);
   if (!sellerId) {
@@ -807,27 +835,31 @@ router.get('/:id/unshipped', async (req: Request, res: Response) => {
          a.current_price AS final_price,
          a.image_url,
          a.ends_at     AS paid_at,
+         a.delivery_status,
+         a.shipping_fee,
          u.id          AS buyer_id,
          u.nickname    AS buyer_name,
          u.avatar_url  AS buyer_avatar
        FROM auctions a
        JOIN users u ON u.id = a.top_bidder_id
        WHERE a.seller_id = ?
-         AND a.delivery_status = 'payment_complete'
+         AND a.delivery_status IN ('payment_complete', 'shipping_fee_pending', 'shipping_fee_paid')
          AND a.top_bidder_id IS NOT NULL
        ORDER BY a.ends_at ASC`,
       [sellerId],
     ) as [unknown[], unknown];
 
     const list = (rows as any[]).map((r) => ({
-      auctionId:   r.auction_id,
-      productName: r.product_name,
-      finalPrice:  r.final_price != null ? Number(r.final_price) : null,
-      imageUrl:    r.image_url ?? null,
-      paidAt:      r.paid_at ?? null,
-      buyerId:     r.buyer_id,
-      buyerName:   r.buyer_name || '알 수 없음',
-      buyerAvatar: r.buyer_avatar ?? null,
+      auctionId:      r.auction_id,
+      productName:    r.product_name,
+      finalPrice:     r.final_price != null ? Number(r.final_price) : null,
+      imageUrl:       r.image_url ?? null,
+      paidAt:         r.paid_at ?? null,
+      deliveryStatus: r.delivery_status,
+      shippingFee:    r.shipping_fee != null ? Number(r.shipping_fee) : 0,
+      buyerId:        r.buyer_id,
+      buyerName:      r.buyer_name || '알 수 없음',
+      buyerAvatar:    r.buyer_avatar ?? null,
     }));
 
     res.json(list);

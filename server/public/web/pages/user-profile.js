@@ -120,6 +120,12 @@ export default async function load(params) {
         if (!res.ok && res.status !== 409) throw new Error('failed');
         isFollowing = !isFollowing;
         updateFollowBtn(isFollowing);
+        // 팔로워 카운트 갱신
+        const followersEl = page.querySelector('#up-followers');
+        if (followersEl) {
+          const cur = Number(followersEl.textContent) || 0;
+          followersEl.textContent = String(Math.max(0, cur + (isFollowing ? 1 : -1)));
+        }
       } catch {
         showToast('처리에 실패했습니다', { duration: 2000 });
       } finally {

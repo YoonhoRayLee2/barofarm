@@ -39,6 +39,35 @@
 }
 .lb-host-name { font-size: 13px; font-weight: 700; color: #fff; }
 .lb-host-sub { font-size: 11px; color: rgba(237,241,226,0.7); margin-top: 1px; }
+
+/* ── Follow button (in-room) ─────────────────────────── */
+.lb-follow-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+  padding: 4px 12px;
+  border-radius: 99px;
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+  background: transparent;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.lb-follow-btn.is-following {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.7);
+}
+.lb-follow-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .lb-meta { display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0; }
 .lb-live-badge {
   display: inline-flex; align-items: center; gap: 6px;
@@ -281,4 +310,49 @@
 /* Bidder info inside product card */
 .lb-product__bidder {
   font-size: 11px; color: var(--color-accent); margin-top: 2px; font-weight: 600;
+}
+
+/* ── Emoji reaction bar ──────────────────────────────── */
+.lb-emoji-bar {
+  display: flex;
+  gap: 6px;
+  padding: 4px 16px 4px;
+  align-items: center;
+}
+
+.lb-emoji-btn {
+  background: rgba(255, 255, 255, 0.13);
+  border: none;
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.12s, background 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lb-emoji-btn:active {
+  transform: scale(1.35);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ── Floating emoji animation ────────────────────────── */
+.lb-floating-emoji {
+  position: absolute;
+  bottom: 160px;
+  font-size: 30px;
+  pointer-events: none;
+  z-index: 30;
+  animation: lb-float-up 2.2s ease-out forwards;
+  user-select: none;
+}
+
+@keyframes lb-float-up {
+  0%   { transform: translateY(0)      scale(1);   opacity: 1; }
+  60%  { transform: translateY(-200px) scale(1.15); opacity: 0.95; }
+  100% { transform: translateY(-320px) scale(0.7);  opacity: 0; }
 }

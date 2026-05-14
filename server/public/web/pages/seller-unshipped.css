@@ -51,3 +51,67 @@
 .unshipped-item__days.is-urgent { color:var(--color-cta);font-weight:700; }
 
 .unshipped-item__price { font-size:14px;font-weight:700;color:var(--color-ink);flex-shrink:0;white-space:nowrap; }
+
+/* ── 구매자별 그룹 ─────────────────────────────────────────── */
+.unshipped-group {
+  margin: 0 16px 16px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-surface);
+}
+.unshipped-group__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--color-surface);
+  font-size: 14px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--color-line);
+}
+.unshipped-group__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--color-accent-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.unshipped-group__avatar-img { width:100%;height:100%;object-fit:cover; }
+.unshipped-group__avatar-initial { width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--color-accent); }
+.unshipped-group__name { font-weight: 700; color: var(--color-ink); }
+.unshipped-group__count { font-size: 12px; color: var(--color-ink-soft); }
+.unshipped-group__fee { font-size: 12px; color: var(--color-ink-soft); }
+
+.batch-ship-btn {
+  margin-left: auto;
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+.batch-ship-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.unshipped-group__items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.unshipped-group__items .unshipped-item {
+  border-bottom: 1px solid var(--color-line);
+}
+.unshipped-group__items .unshipped-item:last-child {
+  border-bottom: none;
+}
+
+.unshipped-status-badge--pending { color: #f59e0b; font-size: 12px; font-weight: 600; }
+.unshipped-status-badge--paid    { color: #22c55e; font-size: 12px; font-weight: 600; }

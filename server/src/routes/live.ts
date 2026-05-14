@@ -252,6 +252,23 @@ export function createLiveRouter(io: Server) {
 
     io.emit('lobby:live:new', { ...liveState, currentAuction: null });
 
+    // 팔로워에게 알림
+    try {
+      const [followers] = await pool.execute(
+        'SELECT follower_id FROM follows WHERE following_id = ?',
+        [Number(liveState.sellerId)],
+      ) as [Array<{ follower_id: number }>, unknown];
+      followers.forEach(({ follower_id }) => {
+        io.to(`user:${follower_id}`).emit('follow:live:started', {
+          liveId: liveState.id,
+          sellerId: liveState.sellerId,
+          sellerName: liveState.sellerName ?? '판매자',
+          title: liveState.title,
+          thumbnailUrl: liveState.thumbnailUrl ?? null,
+        });
+      });
+    } catch { /* 알림 실패는 무시 */ }
+
     res.json({
       id: liveState.id,
       sellerId: liveState.sellerId,
@@ -382,6 +399,23 @@ export function createLiveRouter(io: Server) {
     }
 
     io.emit('lobby:live:new', { ...live, currentAuction: null });
+
+    // 팔로워에게 알림
+    try {
+      const [followers] = await pool.execute(
+        'SELECT follower_id FROM follows WHERE following_id = ?',
+        [Number(live.sellerId)],
+      ) as [Array<{ follower_id: number }>, unknown];
+      followers.forEach(({ follower_id }) => {
+        io.to(`user:${follower_id}`).emit('follow:live:started', {
+          liveId: live.id,
+          sellerId: live.sellerId,
+          sellerName: live.sellerName ?? '판매자',
+          title: live.title,
+          thumbnailUrl: live.thumbnailUrl ?? null,
+        });
+      });
+    } catch { /* 알림 실패는 무시 */ }
 
     res.json({ id: liveId, token, serverUrl: liveKitUrl ?? null });
   });
@@ -565,6 +599,17 @@ export function createLiveRouter(io: Server) {
     // Live의 currentAuctionId는 startTimer 내부에서 업데이트됨
     const updatedLive = lives.get(liveId);
     io.emit('lobby:live:updated', updatedLive);
+
+    const auctionState = auctions.get(auctionId);
+    if (auctionState) {
+      io.to(liveId).emit('auction:new', {
+        auctionId,
+        liveId,
+        productName: auctionState.productName,
+        startPrice: auctionState.startPrice,
+        mode: auctionState.mode,
+      });
+    }
 
     res.json({ success: true });
   });

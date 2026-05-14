@@ -1,6 +1,6 @@
 /**
- * Home Page — 3-W14
- * Live broadcast list with category pills, sub-tabs, and socket subscription.
+ * Home Page — Single scroll feed
+ * Live broadcasts, regular products, and upcoming lives in one scroll view.
  *
  * @module pages/home
  */
@@ -31,7 +31,6 @@ const CATEGORIES = [
   { id: '수산', label: '수산', glyph: 'fish',  hue: '#4A8FBF' },
   { id: '곡물', label: '곡물', glyph: 'grain', hue: '#D6A84A' },
 ];
-const SUBTABS = ['지금경매', '예고'];
 
 function getCatGlyphSVG(kind, color, size = 32) {
   const g = {
@@ -130,11 +129,7 @@ export default async function load() {
         const c = CATEGORIES.find((c) => c.id === b.dataset.cat);
         if (c) b.querySelector('.cat-circle__inner').innerHTML = getCatGlyphSVG(c.glyph, isAct ? '#fff' : c.hue, 32);
       });
-      if (activeSubtab === '일반판매') {
-        renderProducts();
-      } else {
-        renderLivesByTab(activeSubtab);
-      }
+      renderFeed();
     });
     catRow.appendChild(btn);
   });
@@ -198,46 +193,49 @@ export default async function load() {
     }
   })();
 
-  // ---- Sub-tabs ----
-  const _initTabParam = new URLSearchParams(window.location.search).get('tab');
-  let activeSubtab =
-    _initTabParam === 'products' ? '일반판매'
-    : _initTabParam === 'upcoming' ? '예고'
-    : '지금경매';
-  const subtabRow = document.createElement('div');
-  subtabRow.className = 'home-subtabs';
-  if (activeSubtab === '일반판매') subtabRow.style.display = 'none';
+  // ---- Scrollable feed (3 sections: live, products, upcoming) ----
+  const feed = document.createElement('div');
+  feed.className = 'home-feed';
+  feed.innerHTML = `
+    <section class="home-section" id="section-live">
+      <div class="home-section__header">
+        <span class="home-section__badge home-section__badge--live">● LIVE</span>
+        <h2 class="home-section__title">라이브 경매</h2>
+        <span class="home-section__count" id="live-count"></span>
+      </div>
+      <div class="home-section__grid" id="live-grid"></div>
+    </section>
 
-  SUBTABS.forEach((tab) => {
-    const btn = document.createElement('button');
-    btn.className = 'subtab' + (tab === activeSubtab ? ' is-active' : '');
-    btn.dataset.tab = tab;
-    if (tab === '지금경매') {
-      btn.innerHTML = `<span>지금 경매</span><span class="subtab__count" id="subtab-live-count">0</span>`;
-    } else {
-      btn.textContent = tab;
-    }
-    btn.addEventListener('click', () => {
-      if (activeSubtab === btn.dataset.tab) return;
-      activeSubtab = btn.dataset.tab;
-      subtabRow.querySelectorAll('.subtab').forEach((b) => {
-        b.classList.toggle('is-active', b.dataset.tab === activeSubtab);
-      });
-      renderLivesByTab(activeSubtab);
-    });
-    subtabRow.appendChild(btn);
-  });
-  page.appendChild(subtabRow);
+    <section class="home-section" id="section-products">
+      <div class="home-section__header">
+        <h2 class="home-section__title">일반 상품</h2>
+      </div>
+      <div class="home-section__grid" id="products-grid"></div>
+    </section>
 
-  // ---- Content grid ----
-  const listContainer = document.createElement('div');
-  listContainer.className = 'home-grid';
-  page.appendChild(listContainer);
+    <section class="home-section" id="section-upcoming">
+      <div class="home-section__header">
+        <span class="home-section__badge home-section__badge--upcoming">📅</span>
+        <h2 class="home-section__title">라이브 예고</h2>
+        <span class="home-section__count" id="upcoming-count"></span>
+      </div>
+      <div class="home-section__grid" id="upcoming-grid"></div>
+    </section>
+  `;
+  page.appendChild(feed);
+
+  const liveGrid = feed.querySelector('#live-grid');
+  const productsGrid = feed.querySelector('#products-grid');
+  const upcomingGrid = feed.querySelector('#upcoming-grid');
+  const sectionLive = feed.querySelector('#section-live');
+  const sectionProducts = feed.querySelector('#section-products');
+  const sectionUpcoming = feed.querySelector('#section-upcoming');
+  const liveCountEl = feed.querySelector('#live-count');
+  const upcomingCountEl = feed.querySelector('#upcoming-count');
 
   // ---- Bottom tab bar ----
   page.appendChild(createTabSpacer());
-  const _activeBottomTab = activeSubtab === '일반판매' ? 'products' : 'home';
-  page.appendChild(createBottomTabBar({ activeTab: _activeBottomTab }));
+  page.appendChild(createBottomTabBar({ activeTab: 'home' }));
 
   // ---- State ----
   let livesList = [];
@@ -252,14 +250,18 @@ export default async function load() {
     }
   }
 
-  function renderSkeleton() {
-    listContainer.innerHTML = '';
-    // 6 skeleton live-cards using the shimmer state defined in live-card.css
-    for (let i = 0; i < 6; i++) {
+  function applyCategoryFilter(list) {
+    if (activeCategory === '전체') return list;
+    return list.filter((item) => item.category === activeCategory);
+  }
+
+  function renderLiveSkeleton(container, count = 4) {
+    container.innerHTML = '';
+    for (let i = 0; i < count; i++) {
       const skeletonLive = {
         id: `skel-${i}`,
-        title: '\u00A0',          // non-breaking space to preserve line height
-        sellerId: '\u00A0',
+        title: ' ',
+        sellerId: ' ',
         viewerCount: 0,
         currentAuction: null,
       };
@@ -267,64 +269,13 @@ export default async function load() {
       card.classList.add('is-skeleton');
       card.removeAttribute('role');
       card.removeAttribute('tabindex');
-      listContainer.appendChild(card);
+      container.appendChild(card);
     }
   }
 
-  function renderLivesByTab(tab) {
-    let filtered;
-    if (tab === '예고') {
-      filtered = livesList.filter(
-        (l) => l.status === 'upcoming' || l.status === 'scheduled'
-      );
-    } else {
-      // '지금경매' — live 중이거나 status 없는 것
-      filtered = livesList.filter((l) => !l.status || l.status === 'live');
-    }
-
-    listContainer.innerHTML = '';
-    if (!filtered.length) {
-      const empty = document.createElement('div');
-      empty.className = 'home-empty';
-      const emptyMsg =
-        tab === '예고'
-          ? {
-              title: '예고된 라이브가 없습니다',
-              desc: '곧 새로운 라이브가 예정될 거예요.',
-            }
-          : {
-              title: '진행 중인 라이브가 없습니다',
-              desc: '+ 버튼을 눌러 새 라이브를 시작해 보세요',
-            };
-      empty.innerHTML = `
-        <svg class="home-empty__svg" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <!-- 카메라/라이브 방송 테마 간단 아이콘: 화면 + 방송 전파 -->
-          <rect x="20" y="35" width="80" height="50" rx="8" stroke="currentColor" stroke-width="3" fill="none" opacity="0.3"/>
-          <circle cx="60" cy="60" r="14" stroke="currentColor" stroke-width="2.5" fill="none" opacity="0.5"/>
-          <circle cx="60" cy="60" r="7" fill="currentColor" opacity="0.4"/>
-          <path d="M10 20 Q60 5 110 20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.25"/>
-          <path d="M22 28 Q60 16 98 28" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.35"/>
-        </svg>
-        <span class="home-empty__title">${emptyMsg.title}</span>
-        <span class="home-empty__desc">${emptyMsg.desc}</span>
-      `;
-      listContainer.appendChild(empty);
-      updateCategoryLiveState([]);
-      return;
-    }
-    filtered.forEach((live) => {
-      const card = createLiveCard(live, {
-        currentUserId: currentUser ? String(currentUser.id) : null,
-        onClick: onCardClick,
-      });
-      listContainer.appendChild(card);
-    });
-    updateCategoryLiveState(filtered);
-  }
-
-  function renderProductSkeleton() {
-    listContainer.innerHTML = '';
-    for (let i = 0; i < 6; i++) {
+  function renderProductSkeleton(container, count = 4) {
+    container.innerHTML = '';
+    for (let i = 0; i < count; i++) {
       const sk = document.createElement('div');
       sk.className = 'skeleton-card';
       sk.innerHTML =
@@ -333,51 +284,118 @@ export default async function load() {
         '<div class="skeleton-line"></div>' +
         '<div class="skeleton-line skeleton-line--short"></div>' +
         '</div>';
-      listContainer.appendChild(sk);
+      container.appendChild(sk);
     }
   }
 
-  async function renderProducts() {
-    const cat = activeCategory !== '전체' ? activeCategory : null;
+  function renderEmpty(container, title, desc, iconKind = 'live') {
+    const empty = document.createElement('div');
+    empty.className = 'home-empty';
+    const svg = iconKind === 'product'
+      ? `<svg class="home-empty__svg" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="25" y="30" width="70" height="60" rx="6" stroke="currentColor" stroke-width="3" fill="none" opacity="0.3"/>
+          <path d="M40 50h40M40 62h28" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
+          <circle cx="60" cy="90" r="10" stroke="currentColor" stroke-width="2" fill="none" opacity="0.25"/>
+        </svg>`
+      : `<svg class="home-empty__svg" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="20" y="35" width="80" height="50" rx="8" stroke="currentColor" stroke-width="3" fill="none" opacity="0.3"/>
+          <circle cx="60" cy="60" r="14" stroke="currentColor" stroke-width="2.5" fill="none" opacity="0.5"/>
+          <circle cx="60" cy="60" r="7" fill="currentColor" opacity="0.4"/>
+          <path d="M10 20 Q60 5 110 20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.25"/>
+          <path d="M22 28 Q60 16 98 28" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.35"/>
+        </svg>`;
+    empty.innerHTML = `
+      ${svg}
+      <span class="home-empty__title">${title}</span>
+      <span class="home-empty__desc">${desc}</span>
+    `;
+    container.appendChild(empty);
+  }
 
-    if (!productsLoaded) {
-      renderProductSkeleton();
+  function renderLiveSection() {
+    const liveItems = applyCategoryFilter(
+      livesList.filter((l) => !l.status || l.status === 'live')
+    );
+    liveGrid.innerHTML = '';
+    liveCountEl.textContent = liveItems.length ? liveItems.length : '';
+
+    if (!liveItems.length) {
+      renderEmpty(
+        liveGrid,
+        '진행 중인 라이브가 없습니다',
+        '+ 버튼을 눌러 새 라이브를 시작해 보세요',
+        'live'
+      );
+    } else {
+      liveItems.forEach((live) => {
+        const card = createLiveCard(live, {
+          currentUserId: currentUser ? String(currentUser.id) : null,
+          onClick: onCardClick,
+        });
+        liveGrid.appendChild(card);
+      });
     }
+    // 카테고리 LIVE 배지 갱신 (전체 live 기준)
+    updateCategoryLiveState(livesList);
+  }
 
+  function renderUpcomingSection() {
+    const upcomingItems = applyCategoryFilter(
+      livesList.filter((l) => l.status === 'upcoming' || l.status === 'scheduled')
+    );
+    upcomingGrid.innerHTML = '';
+    upcomingCountEl.textContent = upcomingItems.length ? upcomingItems.length : '';
+
+    if (!upcomingItems.length) {
+      // 예고 없을 때는 섹션 자체를 숨김
+      sectionUpcoming.style.display = 'none';
+      return;
+    }
+    sectionUpcoming.style.display = '';
+    upcomingItems.forEach((live) => {
+      const card = createLiveCard(live, {
+        currentUserId: currentUser ? String(currentUser.id) : null,
+        onClick: onCardClick,
+      });
+      upcomingGrid.appendChild(card);
+    });
+  }
+
+  function renderProductsSection() {
+    const filtered = applyCategoryFilter(productsList);
+    productsGrid.innerHTML = '';
+
+    if (!filtered.length) {
+      renderEmpty(
+        productsGrid,
+        '등록된 상품이 없습니다',
+        '+ 버튼으로 상품을 등록해 보세요',
+        'product'
+      );
+      return;
+    }
+    filtered.forEach((product) => {
+      productsGrid.appendChild(buildProductCard(product));
+    });
+  }
+
+  async function fetchProductsIfNeeded() {
+    if (productsLoaded) return;
     try {
-      productsList = await getProducts(cat ? { category: cat } : {});
+      productsList = await getProducts();
       productsLoaded = true;
     } catch (err) {
       console.error('[home] getProducts error', err);
       showToast('상품 목록을 불러오지 못했습니다', { variant: 'error' });
       productsList = [];
+      productsLoaded = true;
     }
+  }
 
-    listContainer.innerHTML = '';
-
-    const filtered = cat
-      ? productsList.filter((p) => p.category === cat)
-      : productsList;
-
-    if (!filtered.length) {
-      const empty = document.createElement('div');
-      empty.className = 'home-empty';
-      empty.innerHTML = `
-        <svg class="home-empty__svg" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="25" y="30" width="70" height="60" rx="6" stroke="currentColor" stroke-width="3" fill="none" opacity="0.3"/>
-          <path d="M40 50h40M40 62h28" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
-          <circle cx="60" cy="90" r="10" stroke="currentColor" stroke-width="2" fill="none" opacity="0.25"/>
-        </svg>
-        <span class="home-empty__title">등록된 상품이 없습니다</span>
-        <span class="home-empty__desc">+ 버튼으로 상품을 등록해 보세요</span>
-      `;
-      listContainer.appendChild(empty);
-      return;
-    }
-
-    filtered.forEach((product) => {
-      listContainer.appendChild(buildProductCard(product));
-    });
+  function renderFeed() {
+    renderLiveSection();
+    renderProductsSection();
+    renderUpcomingSection();
   }
 
   const CAT_GRADIENTS = {
@@ -425,30 +443,32 @@ export default async function load() {
       const badge = btn.querySelector('.cat-circle__live-badge');
       if (badge) badge.style.display = hasLive ? 'flex' : 'none';
     });
-    const countEl = document.getElementById('subtab-live-count');
-    if (countEl) countEl.textContent = liveLives.length;
   }
 
   // ---- Socket subscription ----
   const socket = Sock.connect();
+  socket.on('connect', () => Sock.identifyUser(socket, currentUser.id));
+  // 이미 connect 된 후일 경우 즉시 emit
+  if (socket.connected) Sock.identifyUser(socket, currentUser.id);
 
   const unsubNew = Sock.onLobbyLiveNew(socket, (live) => {
     livesList = [live, ...livesList];
-    if (activeSubtab !== '일반판매') {
-      renderLivesByTab(activeSubtab);
-    }
+    renderFeed();
   });
 
   const unsubEnded = Sock.onLobbyLiveEnded(socket, ({ liveId }) => {
     livesList = livesList.filter((l) => l.id !== liveId);
-    if (activeSubtab !== '일반판매') {
-      renderLivesByTab(activeSubtab);
-    }
+    renderFeed();
+  });
+
+  const unsubFollowLive = Sock.onFollowLiveStarted(socket, ({ liveId, sellerName, title }) => {
+    showFollowLiveBanner(page, { liveId, sellerName, title });
   });
 
   setCleanup(() => {
     unsubNew();
     unsubEnded();
+    unsubFollowLive();
     socket.disconnect();
   });
 
@@ -498,28 +518,33 @@ export default async function load() {
             const c = CATEGORIES.find(c => c.id === b.dataset.cat);
             if (c) b.querySelector('.cat-circle__inner').innerHTML = getCatGlyphSVG(c.glyph, isAct2 ? '#fff' : c.hue, 32);
           });
-          if (activeSubtab === '일반판매') renderProducts();
-          else renderLivesByTab(activeSubtab);
+          renderFeed();
         });
         catRow.appendChild(btn);
       });
     }
   }).catch(() => {});
 
-  if (activeSubtab === '일반판매') {
-    renderProducts();
-  } else {
-    renderSkeleton();
-    try {
-      livesList = await getLives();
-      renderLivesByTab(activeSubtab);
-    } catch (err) {
-      console.error('[home] getLives error', err);
-      showToast('라이브 목록을 불러오지 못했습니다', { variant: 'error' });
-      livesList = [];
-      renderLivesByTab(activeSubtab);
-    }
-  }
+  // 초기 스켈레톤
+  renderLiveSkeleton(liveGrid, 2);
+  renderProductSkeleton(productsGrid, 4);
+  sectionUpcoming.style.display = 'none';
+
+  // 라이브 + 상품 병렬 로드
+  const [livesRes] = await Promise.allSettled([
+    (async () => {
+      try {
+        livesList = await getLives();
+      } catch (err) {
+        console.error('[home] getLives error', err);
+        showToast('라이브 목록을 불러오지 못했습니다', { variant: 'error' });
+        livesList = [];
+      }
+    })(),
+    fetchProductsIfNeeded(),
+  ]);
+
+  renderFeed();
 
   return page;
 }
@@ -533,4 +558,38 @@ function escapeHtml(s) {
 
 function escapeAttr(s) {
   return String(s ?? '').replace(/"/g, '&quot;');
+}
+
+/**
+ * 팔로우한 판매자가 라이브 시작 시 페이지 상단에 클릭 가능한 배너를 띄운다.
+ * 6초 후 자동 제거 또는 탭하면 라이브 입장.
+ */
+function showFollowLiveBanner(page, { liveId, sellerName, title }) {
+  // 중복 배너 제거
+  const existing = page.querySelector('.home-follow-banner');
+  if (existing) existing.remove();
+
+  const banner = document.createElement('button');
+  banner.type = 'button';
+  banner.className = 'home-follow-banner';
+  banner.innerHTML = `
+    <span class="home-follow-banner__icon">🌾</span>
+    <span class="home-follow-banner__text">
+      <strong>${escapeHtml(sellerName || '판매자')}</strong>님이 라이브를 시작했습니다
+      ${title ? `<span class="home-follow-banner__sub">${escapeHtml(title)}</span>` : ''}
+    </span>
+    <span class="home-follow-banner__arrow">›</span>
+  `;
+  let timer;
+  banner.addEventListener('click', () => {
+    clearTimeout(timer);
+    banner.remove();
+    if (liveId) {
+      import('/app/scripts/router.js').then(({ navigate }) => navigate(`/app/live-buyer/${liveId}`));
+    }
+  });
+  page.appendChild(banner);
+
+  // 자동 제거
+  timer = setTimeout(() => banner.remove(), 6000);
 }

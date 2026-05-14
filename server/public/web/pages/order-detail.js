@@ -19,10 +19,12 @@ if (!document.getElementById(_cssId)) {
 }
 
 const STEPS = [
-  { key: 'payment_complete',    label: '결제완료' },
-  { key: 'shipped',             label: '발송완료' },
-  { key: 'purchase_confirmed',  label: '구매확정' },
-  { key: 'settlement_complete', label: '정산완료' },
+  { key: 'payment_complete',      label: '결제완료' },
+  { key: 'shipping_fee_pending',  label: '배송비 대기' },
+  { key: 'shipping_fee_paid',     label: '배송비완료' },
+  { key: 'shipped',               label: '발송완료' },
+  { key: 'purchase_confirmed',    label: '구매확정' },
+  { key: 'settlement_complete',   label: '정산완료' },
 ];
 
 const BUYER_TIER_INFO = {
@@ -266,6 +268,28 @@ export default async function load(params) {
       }
     }
 
+    /* Shipping fee card — 합배송 배송비 결제 흐름 */
+    let shippingFeeHtml = '';
+    const shippingFee = Number(data.shippingFee || 0);
+    if (status === 'shipping_fee_pending' && !isSeller) {
+      shippingFeeHtml = `
+        <section class="od-shipping-fee-card od-shipping-fee-card--pending">
+          <div>
+            <span style="font-size:13px;color:var(--color-ink-soft)">배송비 결제 대기</span><br>
+            <strong>₩${shippingFee.toLocaleString('ko-KR')}</strong>
+          </div>
+          <button id="od-pay-shipping-btn">배송비 결제하기</button>
+        </section>
+      `;
+    } else if (['shipping_fee_paid', 'shipped', 'purchase_confirmed', 'settlement_complete'].includes(status)) {
+      shippingFeeHtml = `
+        <section class="od-shipping-fee-card od-shipping-fee-card--paid">
+          <span>✅ 배송비결제완료(합배송)</span>
+          <strong>₩${shippingFee.toLocaleString('ko-KR')}</strong>
+        </section>
+      `;
+    }
+
     /* Tracking info — shown whenever status is shipped or later */
     const hasTracking = !!(data.trackingCompany && data.trackingNumber);
     const isPostShip  = ['shipped', 'purchase_confirmed', 'settlement_complete'].includes(status);
@@ -350,6 +374,8 @@ export default async function load(params) {
     /* Action area */
     let actionHtml = '';
     if (isSeller && status === 'payment_complete') {
+      actionHtml = `<p class="od-batch-ship-hint">발송 처리는 미발송 주문 페이지에서 합배송으로 진행해주세요.</p>`;
+    } else if (isSeller && status === 'shipping_fee_paid') {
       const hanaroNotice = data.buyerDelivery?.option === 'hanaro'
         ? `<div class="od-hanaro-seller-notice">🏬 <strong>하나로마트 반값택배</strong> — 인근 하나로마트로 발송해주세요.<br><small>${escapeHtml(data.buyerDelivery.hanaroMartName || '')} · ${escapeHtml(data.buyerDelivery.hanaroMartAddr || '')}</small></div>`
         : '';
@@ -379,7 +405,28 @@ export default async function load(params) {
       actionHtml = `<button class="od-action-btn" id="od-action">정산 완료 처리</button>`;
     }
 
-    container.innerHTML = card + stepperHtml + feeHtml + trackingHtml + deliveryHtml + carbonHtml + actionHtml;
+    container.innerHTML = card + stepperHtml + feeHtml + shippingFeeHtml + trackingHtml + deliveryHtml + carbonHtml + actionHtml;
+
+    /* Bind shipping fee payment button */
+    const payShippingBtn = container.querySelector('#od-pay-shipping-btn');
+    if (payShippingBtn) {
+      payShippingBtn.addEventListener('click', async () => {
+        payShippingBtn.disabled = true;
+        try {
+          const res = await fetch(`/api/auctions/${encodeURIComponent(data.auctionId)}/delivery-status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'shipping_fee_paid', userId: user.id }),
+          });
+          if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || `HTTP ${res.status}`); }
+          showToast('배송비 결제가 완료되었습니다', { variant: 'success', duration: 1800 });
+          await loadDetail();
+        } catch (err) {
+          payShippingBtn.disabled = false;
+          showToast(err.message || '배송비 결제에 실패했습니다', { duration: 2000 });
+        }
+      });
+    }
 
     /* Bind fee help button */
     const feeHelpBtn = container.querySelector('.od-fee__help');
@@ -402,7 +449,7 @@ export default async function load(params) {
     const actionBtn = container.querySelector('#od-action');
     if (!actionBtn) return;
 
-    if (isSeller && status === 'payment_complete') {
+    if (isSeller && status === 'shipping_fee_paid') {
       actionBtn.addEventListener('click', async () => {
         const courierEl = container.querySelector('#od-courier');
         const trackingEl = container.querySelector('#od-tracking');

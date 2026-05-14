@@ -394,7 +394,11 @@ export default async function load(params) {
     if (currentPrice) currentPrice.textContent = `[무료나눔] ${count}명 참여 중`;
   });
 
-  unsubFns.push(unsubAuctionUpdate, unsubAuctionEnded, unsubChat, unsubViewers, unsubViewerList, unsubGiveawayCount);
+  const unsubEmoji = Sock.onEmojiReaction(socket, ({ emoji }) => {
+    spawnFloatingEmoji(emoji);
+  });
+
+  unsubFns.push(unsubAuctionUpdate, unsubAuctionEnded, unsubChat, unsubViewers, unsubViewerList, unsubGiveawayCount, unsubEmoji);
 
   // ---- Auction UI helpers ----
   /** @type {{ id?: string, productName?: string, currentPrice?: number, currentBidder?: string, remaining?: number, mode?: string, stockTotal?: number, stockSold?: number } | null} */
@@ -503,6 +507,15 @@ export default async function load(params) {
       });
       productBlock.appendChild(endFcfsBtn);
     }
+  }
+
+  function spawnFloatingEmoji(emoji) {
+    const el = document.createElement('span');
+    el.className = 'ls-floating-emoji';
+    el.textContent = emoji;
+    el.style.left = (10 + Math.random() * 70) + '%';
+    page.appendChild(el);
+    el.addEventListener('animationend', () => el.remove(), { once: true });
   }
 
   function showWonOverlay(auction) {

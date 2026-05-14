@@ -738,3 +738,51 @@
   margin-bottom: var(--space-3);
   line-height: 1.6;
 }
+
+/* ── 합배송 배송비 카드 ────────────────────────────────────── */
+.od-shipping-fee-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  margin: 0 16px 12px;
+}
+.od-shipping-fee-card--pending {
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.3);
+}
+.od-shipping-fee-card--paid {
+  background: rgba(34,197,94,0.08);
+  border: 1px solid rgba(34,197,94,0.3);
+}
+.od-shipping-fee-card strong {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  color: var(--color-ink);
+  font-weight: 800;
+}
+.od-shipping-fee-card button {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border: none;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+}
+.od-shipping-fee-card button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.od-batch-ship-hint {
+  font-size: 13px;
+  color: var(--color-ink-soft);
+  margin: 0 16px 12px;
+  padding: 12px 16px;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  line-height: 1.55;
+}

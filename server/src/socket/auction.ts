@@ -228,11 +228,24 @@ export default function registerAuctionSocket(io: Server): void {
       }
     });
 
+    // emoji:react: { liveId, emoji, userId, userName } — 이모지 반응 브로드캐스트
+    socket.on('emoji:react', ({ liveId, emoji, userId, userName }: {
+      liveId: string; emoji: string; userId: string; userName: string;
+    }) => {
+      const ALLOWED = ['❤️', '🔥', '👍', '😂', '🎉', '😱'];
+      if (!ALLOWED.includes(emoji)) return;
+      io.to(liveId).emit('emoji:reaction', { emoji, userId, userName });
+    });
+
     // viewer:list:get — 현재 시청자 목록을 요청 소켓에만 전송
     socket.on('viewer:list:get', ({ liveId }: { liveId: string }) => {
       const room = viewerCounts.get(liveId);
       const viewers = room ? Array.from(room.values()) : [];
       socket.emit('viewer:list', { viewers });
+    });
+
+    socket.on('user:identify', ({ userId }: { userId: string }) => {
+      if (userId) socket.join(`user:${userId}`);
     });
 
     socket.on('disconnect', () => {

@@ -3,7 +3,7 @@ import pool from '../db/mysql';
 
 const router = Router();
 
-type DeliveryStatus = 'payment_complete' | 'shipped' | 'purchase_confirmed' | 'settlement_complete';
+type DeliveryStatus = 'payment_complete' | 'shipping_fee_pending' | 'shipping_fee_paid' | 'shipped' | 'purchase_confirmed' | 'settlement_complete';
 
 interface AuctionRow {
   id: string;
@@ -35,6 +35,7 @@ interface AuctionRow {
   buyer_discount_amt: number;
   seller_fee_rate: number;
   seller_fee_amt: number;
+  shipping_fee: number;
 }
 
 const AUCTION_QUERY = `
@@ -46,7 +47,8 @@ const AUCTION_QUERY = `
     b.delivery_name, b.delivery_phone, b.delivery_address, b.delivery_detail, b.delivery_zipcode,
     b.delivery_option, b.hanaro_mart_name, b.hanaro_mart_addr,
     a.tracking_company, a.tracking_number,
-    a.buyer_tier, a.buyer_discount_rate, a.buyer_discount_amt, a.seller_fee_rate, a.seller_fee_amt
+    a.buyer_tier, a.buyer_discount_rate, a.buyer_discount_amt, a.seller_fee_rate, a.seller_fee_amt,
+    a.shipping_fee
   FROM auctions a
   LEFT JOIN users s ON s.id = a.seller_id
   LEFT JOIN users b ON b.id = a.top_bidder_id
@@ -86,8 +88,61 @@ function formatAuction(row: AuctionRow) {
     buyerDiscountAmt:   Number(row.buyer_discount_amt),
     sellerFeeRate:      Number(row.seller_fee_rate),
     sellerFeeAmt:       Number(row.seller_fee_amt),
+    shippingFee:        Number(row.shipping_fee ?? 0),
   };
 }
+
+// POST /api/auctions/batch-ship — 합배송 처리 (판매자: 구매자별 payment_complete 주문 일괄 shipping_fee_pending 전환)
+router.post('/batch-ship', async (req: Request, res: Response) => {
+  const { sellerId, buyerId, auctionIds } = req.body as {
+    sellerId?: number;
+    buyerId?: number;
+    auctionIds?: string[];
+  };
+  if (!sellerId || !buyerId || !Array.isArray(auctionIds) || auctionIds.length === 0) {
+    res.status(400).json({ error: 'sellerId, buyerId, auctionIds required' });
+    return;
+  }
+  try {
+    const placeholders = auctionIds.map(() => '?').join(',');
+    const [rows] = await pool.execute(
+      `SELECT id, seller_id, top_bidder_id, delivery_status FROM auctions WHERE id IN (${placeholders})`,
+      auctionIds,
+    ) as [unknown[], unknown];
+    const list = rows as Array<{ id: string; seller_id: string; top_bidder_id: string | null; delivery_status: string }>;
+
+    for (const a of list) {
+      if (String(a.seller_id) !== String(sellerId)) {
+        res.status(403).json({ error: `auction ${a.id} does not belong to seller` });
+        return;
+      }
+      if (String(a.top_bidder_id) !== String(buyerId)) {
+        res.status(400).json({ error: `auction ${a.id} buyer mismatch` });
+        return;
+      }
+      if (a.delivery_status !== 'payment_complete') {
+        res.status(400).json({ error: `auction ${a.id} is not in payment_complete status` });
+        return;
+      }
+    }
+
+    const [userRows] = await pool.execute(
+      'SELECT seller_shipping_fee FROM users WHERE id = ?',
+      [sellerId],
+    ) as [unknown[], unknown];
+    const shippingFee: number = (userRows as Array<{ seller_shipping_fee: number }>)[0]?.seller_shipping_fee ?? 3000;
+
+    await pool.execute(
+      `UPDATE auctions SET delivery_status='shipping_fee_pending', shipping_fee=? WHERE id IN (${placeholders})`,
+      [shippingFee, ...auctionIds],
+    );
+
+    res.json({ ok: true, shippingFee, count: auctionIds.length });
+  } catch (err) {
+    console.error('[auctions] POST /batch-ship error:', err);
+    res.status(500).json({ error: 'database error' });
+  }
+});
 
 // GET /api/auctions/:id
 router.get('/:id', async (req: Request, res: Response) => {
@@ -134,16 +189,17 @@ router.patch('/:id/delivery-status', async (req: Request, res: Response) => {
 
     // 전환 규칙 검증
     const allowed =
-      (current === 'payment_complete'   && next === 'shipped'             && String(userId) === String(row.seller_id))   ||
-      (current === 'shipped'            && next === 'purchase_confirmed'   && String(userId) === String(row.top_bidder_id)) ||
-      (current === 'purchase_confirmed' && next === 'settlement_complete'  && String(userId) === String(row.seller_id));
+      (current === 'shipping_fee_pending' && next === 'shipping_fee_paid'   && String(userId) === String(row.top_bidder_id)) ||
+      (current === 'shipping_fee_paid'    && next === 'shipped'              && String(userId) === String(row.seller_id))     ||
+      (current === 'shipped'              && next === 'purchase_confirmed'   && String(userId) === String(row.top_bidder_id)) ||
+      (current === 'purchase_confirmed'   && next === 'settlement_complete'  && String(userId) === String(row.seller_id));
 
     if (!allowed) {
       res.status(400).json({ error: `invalid transition: ${current} → ${next}` });
       return;
     }
 
-    // 발송 처리 시 택배사·운송장 번호 필수
+    // shipping_fee_paid → shipped 전환 시 택배사·운송장 번호 필수
     if (next === 'shipped') {
       if (!trackingCompany || !trackingCompany.trim()) {
         res.status(400).json({ error: '택배사를 선택해주세요' });

@@ -54,13 +54,19 @@ async function searchKakao(query: string, lat?: number, lng?: number): Promise<S
     x: string; y: string; distance: string;
   }>};
 
-  return data.documents.map(d => ({
-    name:     d.place_name,
-    address:  d.road_address_name || d.address_name,
-    lat:      parseFloat(d.y),
-    lng:      parseFloat(d.x),
-    distance: d.distance ? parseFloat(d.distance) / 1000 : undefined,
-  }));
+  return data.documents
+    .filter(d =>
+      d.place_name.startsWith('하나로마트') ||
+      d.place_name.includes('농협하나로마트') ||
+      d.place_name.includes('축협하나로마트'),
+    )
+    .map(d => ({
+      name:     d.place_name,
+      address:  d.road_address_name || d.address_name,
+      lat:      parseFloat(d.y),
+      lng:      parseFloat(d.x),
+      distance: d.distance ? parseFloat(d.distance) / 1000 : undefined,
+    }));
 }
 
 // GET /api/hanaro-stores?lat=&lng=&radius=10&q=

@@ -203,6 +203,20 @@ export default async function load(params) {
   `;
   bidControls.appendChild(giveawayWrap);
 
+  // ---- Emoji reaction bar ----
+  const emojiBar = document.createElement('div');
+  emojiBar.className = 'lb-emoji-bar';
+  emojiBar.id = 'lb-emoji-bar';
+  emojiBar.innerHTML = `
+    <button class="lb-emoji-btn" data-emoji="❤️">❤️</button>
+    <button class="lb-emoji-btn" data-emoji="🔥">🔥</button>
+    <button class="lb-emoji-btn" data-emoji="👍">👍</button>
+    <button class="lb-emoji-btn" data-emoji="😂">😂</button>
+    <button class="lb-emoji-btn" data-emoji="🎉">🎉</button>
+    <button class="lb-emoji-btn" data-emoji="😱">😱</button>
+  `;
+  productPanel.appendChild(emojiBar);
+
   // ---- Actions bar (bottom) ----
   const actionsBar = document.createElement('div');
   actionsBar.className = 'lb-actions';
@@ -479,6 +493,15 @@ export default async function load(params) {
     }
   }
 
+  function spawnFloatingEmoji(emoji) {
+    const el = document.createElement('span');
+    el.className = 'lb-floating-emoji';
+    el.textContent = emoji;
+    el.style.left = (10 + Math.random() * 70) + '%';
+    page.appendChild(el);
+    el.addEventListener('animationend', () => el.remove(), { once: true });
+  }
+
   function spawnConfetti(container) {
     const colors = ['var(--color-cta)', 'var(--color-accent)', 'var(--color-ink)'];
     for (let i = 0; i < 10; i++) {
@@ -612,11 +635,56 @@ export default async function load(params) {
           avatarEl.innerHTML = personIconSVG(36);
         }
       }
+      // 팔로우 버튼 — 본인 라이브가 아닐 때만
+      if (_sellerId !== String(user.id)) {
+        attachFollowButton(_sellerId);
+      }
     } catch (_e) {
       // graceful fallback — keep defaults
     }
   }
   loadSellerInfo();
+
+  // ---- Follow button ----
+  let isFollowing = false;
+  function attachFollowButton(sellerId) {
+    const nameEl = page.querySelector('#lb-seller-name');
+    if (!nameEl || nameEl.parentElement.querySelector('.lb-follow-btn')) return;
+    const followBtn = document.createElement('button');
+    followBtn.className = 'lb-follow-btn';
+    followBtn.type = 'button';
+    followBtn.textContent = '팔로우';
+    nameEl.insertAdjacentElement('afterend', followBtn);
+
+    fetch(`/api/users/${encodeURIComponent(sellerId)}/is-following?userId=${encodeURIComponent(user.id)}`)
+      .then(r => r.ok ? r.json() : { isFollowing: false })
+      .then(({ isFollowing: f }) => {
+        isFollowing = !!f;
+        followBtn.textContent = isFollowing ? '팔로잉' : '팔로우';
+        followBtn.classList.toggle('is-following', isFollowing);
+      })
+      .catch(() => {});
+
+    followBtn.addEventListener('click', async () => {
+      const method = isFollowing ? 'DELETE' : 'POST';
+      followBtn.disabled = true;
+      try {
+        const res = await fetch(`/api/users/${encodeURIComponent(sellerId)}/follow`, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ followerId: user.id }),
+        });
+        if (!res.ok) throw new Error('follow request failed');
+        isFollowing = !isFollowing;
+        followBtn.textContent = isFollowing ? '팔로잉' : '팔로우';
+        followBtn.classList.toggle('is-following', isFollowing);
+      } catch (_e) {
+        showToast('요청에 실패했습니다', { variant: 'error' });
+      } finally {
+        followBtn.disabled = false;
+      }
+    });
+  }
 
   // ---- Load live list for swipe navigation ----
   (async () => {
@@ -919,10 +987,15 @@ export default async function load(params) {
 
   // ---- Socket connection ----
   socket = Sock.connect();
+  Sock.identifyUser(socket, user.id);
   Sock.joinRoom(socket, liveId, String(user.id), user.nickname || user.username || '시청자');
 
   const unsubAuctionUpdate = Sock.onAuctionUpdate(socket, (auction) => {
     updateAuctionUI(auction);
+  });
+  const unsubAuctionNew = Sock.onAuctionNew(socket, ({ productName, mode }) => {
+    const modeLabel = mode === 'giveaway' ? '무료나눔' : mode === 'blind' ? '블라인드' : mode === 'fcfs' ? '선착순' : '경매';
+    showToast(`🛒 새 ${modeLabel} 시작: ${productName || ''}`, { variant: 'info', duration: 4000 });
   });
   const unsubAuctionEnded = Sock.onAuctionEnded(socket, (auction) => {
     endedAuctions.push({ ...auction, endedAt: auction.endedAt || Date.now() });
@@ -1101,10 +1174,15 @@ export default async function load(params) {
     }, 10000);
   });
 
+  const unsubEmoji = Sock.onEmojiReaction(socket, ({ emoji }) => {
+    spawnFloatingEmoji(emoji);
+  });
+
   unsubFns.push(
-    unsubAuctionUpdate, unsubAuctionEnded, unsubChat, unsubViewers, unsubViewerList,
+    unsubAuctionUpdate, unsubAuctionNew, unsubAuctionEnded, unsubChat, unsubViewers, unsubViewerList,
     unsubBlindBidCount, unsubGiveawayCount, unsubGiveawayJoinAck,
     unsubPurchaseMade, unsubBidBlindAck, unsubBidRejected, unsubLiveEnded,
+    unsubEmoji,
   );
 
   // ---- Event listeners ----
@@ -1136,6 +1214,18 @@ export default async function load(params) {
 
   // Products button
   page.querySelector('#lb-products-btn').addEventListener('click', openProductSheet);
+
+  // Emoji reaction bar
+  page.querySelector('#lb-emoji-bar').addEventListener('click', (e) => {
+    const btn = e.target.closest('.lb-emoji-btn');
+    if (!btn || !socket) return;
+    Sock.sendEmojiReact(socket, {
+      liveId,
+      emoji: btn.dataset.emoji,
+      userId: String(user.id),
+      userName: user.nickname || user.username || '익명',
+    });
+  });
 
   // Giveaway join button
   const giveawayBtn = page.querySelector('#lb-giveaway-btn');
