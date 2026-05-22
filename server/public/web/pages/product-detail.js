@@ -12,6 +12,8 @@ import { navigate, replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
 import { showConfirmDialog } from '/app/components/confirm-dialog.js';
 import { personIconSVG } from '/app/scripts/person-icon.js';
+import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
+import { formatPriceRaw } from '/app/scripts/format.js';
 
 /* ── CSS injection ─────────────────────────────────────────── */
 const _cssId = 'page-css-product-detail';
@@ -104,7 +106,7 @@ export default async function load(params = {}) {
         </div>
 
         <div class="pd-price-area">
-          <span class="pd-price">${formatPrice(product.price)}</span>
+          <span class="pd-price">${formatPriceRaw(product.price)}</span>
           <span class="pd-price__won">원</span>
         </div>
 
@@ -361,27 +363,4 @@ function renderChips(jsonStr, className) {
   return `<div class="${className}">${arr
     .map((v) => `<span class="pd-chip">${escapeHtml(v)}</span>`)
     .join('')}</div>`;
-}
-
-function formatPrice(n) {
-  const num = Number(n);
-  if (!Number.isFinite(num)) return '0';
-  return num.toLocaleString('ko-KR');
-}
-
-function escapeHtml(s) {
-  return String(s ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function escapeAttr(s) {
-  return String(s ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
 }

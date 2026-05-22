@@ -7,6 +7,8 @@ import { navigate, replace } from '/app/scripts/router.js';
 import { personIconSVG } from '/app/scripts/person-icon.js';
 import * as api from '/app/scripts/api.js';
 import { showToast } from '/app/components/toast.js';
+import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
+import { formatPrice, formatDateDay } from '/app/scripts/format.js';
 
 const _cssId = 'page-css-seller-unshipped';
 if (!document.getElementById(_cssId)) {
@@ -16,9 +18,9 @@ if (!document.getElementById(_cssId)) {
   document.head.appendChild(link);
 }
 
-const STATUS_LABEL = {
-  shipping_fee_pending: '📦 배송비 대기',
-  shipping_fee_paid:    '✅ 배송비완료',
+const SHIPPING_FEE_LABEL = {
+  pending: '📦 배송비 대기',
+  paid:    '✅ 배송비완료',
 };
 
 export default async function load() {
@@ -95,7 +97,7 @@ export default async function load() {
 
   function renderGroup(group) {
     const pendingIds = group.orders
-      .filter((o) => o.deliveryStatus === 'payment_complete')
+      .filter((o) => o.deliveryStatus === 'payment_complete' && (!o.shippingFeeStatus || o.shippingFeeStatus === 'none'))
       .map((o) => o.auctionId);
 
     const batchBtn = pendingIds.length > 0
@@ -132,8 +134,8 @@ export default async function load() {
         : 0;
       const isUrgent = daysPassed >= 10;
 
-      const statusBadge = STATUS_LABEL[item.deliveryStatus]
-        ? `<span class="unshipped-status-badge unshipped-status-badge--${item.deliveryStatus === 'shipping_fee_pending' ? 'pending' : 'paid'}">${STATUS_LABEL[item.deliveryStatus]}</span>`
+      const statusBadge = item.shippingFeeStatus && SHIPPING_FEE_LABEL[item.shippingFeeStatus]
+        ? `<span class="unshipped-status-badge unshipped-status-badge--${item.shippingFeeStatus}">${SHIPPING_FEE_LABEL[item.shippingFeeStatus]}</span>`
         : '';
 
       const li = document.createElement('li');
@@ -142,7 +144,7 @@ export default async function load() {
         <div class="unshipped-item__body">
           <div class="unshipped-item__product">${escapeHtml(item.productName || '상품')}</div>
           <div class="unshipped-item__meta">
-            <span class="unshipped-item__date">${formatDate(item.paidAt)}</span>
+            <span class="unshipped-item__date">${formatDateDay(item.paidAt)}</span>
             <span class="unshipped-item__days${isUrgent ? ' is-urgent' : ''}">결제 후 ${daysPassed}일 경과</span>
             ${statusBadge}
           </div>
@@ -194,10 +196,3 @@ export default async function load() {
   return page;
 }
 
-function formatDate(iso) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
-}
-function formatPrice(p) { return p == null ? '—' : Number(p).toLocaleString('ko-KR') + '원'; }
-function escapeHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-function escapeAttr(s) { return escapeHtml(s); }

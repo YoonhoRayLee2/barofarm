@@ -6,6 +6,8 @@ import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
 import { personIconSVG } from '/app/scripts/person-icon.js';
+import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
+import { formatPrice } from '/app/scripts/format.js';
 
 const _cssId = 'page-css-user-profile';
 if (!document.getElementById(_cssId)) {
@@ -178,6 +180,3 @@ export default async function load(params) {
   return page;
 }
 
-function formatPrice(p) { return p == null ? '—' : Number(p).toLocaleString('ko-KR') + '원'; }
-function escapeHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-function escapeAttr(s) { return escapeHtml(s); }

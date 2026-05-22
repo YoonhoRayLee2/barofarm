@@ -17,6 +17,8 @@ import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
 import { showConfirmDialog } from '/app/components/confirm-dialog.js';
+import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
+import { formatPriceRaw } from '/app/scripts/format.js';
 
 /* ── CSS injection ─────────────────────────────────────────── */
 const _cssId = 'page-css-my-products';
@@ -129,7 +131,7 @@ export default async function load() {
           <span class="mp-status-badge ${meta.cls}">${escapeHtml(meta.label)}</span>
         </div>
         <div class="mp-item__meta">
-          <span class="mp-item__price">${formatPrice(product.price)}원</span>
+          <span class="mp-item__price">${formatPriceRaw(product.price)}원</span>
           ${categoryHtml}
         </div>
       </div>
@@ -196,27 +198,3 @@ export default async function load() {
   return page;
 }
 
-/* ─── Helpers ─────────────────────────────────────────────── */
-
-function formatPrice(n) {
-  const num = Number(n);
-  if (!Number.isFinite(num)) return '0';
-  return num.toLocaleString('ko-KR');
-}
-
-function escapeHtml(s) {
-  return String(s ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function escapeAttr(s) {
-  return String(s ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}

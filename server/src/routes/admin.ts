@@ -8,7 +8,7 @@ import { verifyPassword } from '../services/auth';
 const router = Router();
 
 function getSecret(): string {
-  return process.env.JWT_SECRET ?? 'barofarm-insecure-dev-secret';
+  return process.env.JWT_SECRET!;
 }
 
 function requireAdmin(req: Request, res: Response, next: NextFunction): void {

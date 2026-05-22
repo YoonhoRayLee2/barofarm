@@ -278,6 +278,9 @@ register('/app/consignment/apply',   async ()  => import('/app/pages/consignment
 register('/app/consignment/find',    async ()  => import('/app/pages/consignment-find.js').then(m => m.default()));
 register('/app/consignment/:id',     async (p) => import('/app/pages/consignment-detail.js').then(m => m.default(p)));
 register('/app/market-prices/:itemCode', async (p) => import('/app/pages/market-prices.js').then(m => m.default(p)));
+register('/app/group-deals',         async ()  => import('/app/pages/group-deal-list.js').then(m => m.default()));
+register('/app/group-deals/create',  async ()  => import('/app/pages/group-deal-create.js').then(m => m.default()));
+register('/app/group-deals/:id',     async (p) => import('/app/pages/group-deal-detail.js').then(m => m.default(p)));
 
 /* ----------------------------- Global handlers ----------------------------- */
 

@@ -6,6 +6,7 @@ import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
 import { personIconSVG } from '/app/scripts/person-icon.js';
+import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
 
 const _cssId = 'page-css-dm';
 if (!document.getElementById(_cssId)) {
@@ -99,7 +100,3 @@ function formatTime(iso) {
   return d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
 }
 
-function escapeHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-}
-function escapeAttr(s) { return escapeHtml(s); }

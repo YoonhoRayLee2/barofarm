@@ -10,6 +10,8 @@
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
+import { escapeHtml } from '/app/scripts/dom.js';
+import { formatPrice } from '/app/scripts/format.js';
 
 // Inject page CSS once
 const _cssId = 'page-css-auction-detail';
@@ -199,16 +201,3 @@ function renderEnded(content, live) {
   });
 }
 
-function formatPrice(price) {
-  if (price == null) return '—';
-  return Number(price).toLocaleString('ko-KR') + '원';
-}
-
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}

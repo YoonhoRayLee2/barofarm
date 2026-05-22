@@ -15,6 +15,7 @@ import * as api from '/app/scripts/api.js';
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace, setCleanup } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
+import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
 
 // Inject page CSS once
 const _cssId = 'page-css-product-register';
@@ -511,23 +512,6 @@ export default async function load(params = {}) {
 }
 
 /* ─── Helpers ─────────────────────────────────────────────── */
-
-function escapeHtml(s) {
-  return String(s ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function escapeAttr(s) {
-  return String(s ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
 
 /**
  * Parse a stored list field — server stores features/attributes as JSON string.

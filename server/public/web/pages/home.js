@@ -12,6 +12,7 @@ import * as Sock from '/app/scripts/socket.js';
 import { createLiveCard } from '/app/components/live-card.js';
 import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 import { showToast } from '/app/components/toast.js';
+import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
 
 // Inject CSS once
 const _cssId = 'page-css-home';
@@ -62,6 +63,8 @@ export default async function load() {
     await replace('/app/login');
     return document.createElement('div');
   }
+
+  const isProductsTab = new URLSearchParams(window.location.search).get('tab') === 'products';
 
   const page = document.createElement('div');
   page.className = 'home-page';
@@ -221,6 +224,15 @@ export default async function load() {
       </div>
       <div class="home-section__grid" id="upcoming-grid"></div>
     </section>
+
+    <section class="home-section home-section--group-deals" id="section-group-deals" style="display:none">
+      <div class="home-section__header">
+        <span class="home-section__badge home-section__badge--group">🌾</span>
+        <h2 class="home-section__title">공동구매</h2>
+        <button class="home-section__more" id="group-deals-more" type="button">더보기 ›</button>
+      </div>
+      <div class="home-group-deals" id="group-deals-grid"></div>
+    </section>
   `;
   page.appendChild(feed);
 
@@ -230,12 +242,22 @@ export default async function load() {
   const sectionLive = feed.querySelector('#section-live');
   const sectionProducts = feed.querySelector('#section-products');
   const sectionUpcoming = feed.querySelector('#section-upcoming');
+  const sectionGroupDeals = feed.querySelector('#section-group-deals');
+  const groupDealsGrid = feed.querySelector('#group-deals-grid');
+  const groupDealsMore = feed.querySelector('#group-deals-more');
   const liveCountEl = feed.querySelector('#live-count');
   const upcomingCountEl = feed.querySelector('#upcoming-count');
 
+  groupDealsMore.addEventListener('click', () => navigate('/app/group-deals'));
+
   // ---- Bottom tab bar ----
+  if (isProductsTab) {
+    tickerWrap.style.display = 'none';
+    sectionLive.style.display = 'none';
+  }
+
   page.appendChild(createTabSpacer());
-  page.appendChild(createBottomTabBar({ activeTab: 'home' }));
+  page.appendChild(createBottomTabBar({ activeTab: isProductsTab ? 'products' : 'home' }));
 
   // ---- State ----
   let livesList = [];
@@ -392,10 +414,87 @@ export default async function load() {
     }
   }
 
+  // ── 공동구매 섹션 (모집중 4건만) ──
+  async function fetchAndRenderGroupDeals() {
+    try {
+      const res = await fetch('/api/group-deals?status=recruiting&limit=4');
+      if (!res.ok) return;
+      const list = await res.json();
+      renderGroupDealsSection(Array.isArray(list) ? list : []);
+    } catch {
+      // 조용히 실패 — 섹션 숨김 유지
+    }
+  }
+
+  const GD_CAT_EMOJI = {
+    '과일': '🍎', '채소': '🥬', '수산': '🐟', '축산': '🥩', '곡물': '🌾', '기타': '🛒',
+  };
+
+  function renderGroupDealsSection(list) {
+    if (!list || !list.length) {
+      sectionGroupDeals.style.display = 'none';
+      return;
+    }
+    sectionGroupDeals.style.display = '';
+    groupDealsGrid.innerHTML = '';
+
+    list.forEach((deal) => {
+      const cur = Number(deal.currentParticipants || 0);
+      const min = Number(deal.minParticipants || 1);
+      const pct = Math.min(100, Math.round((cur / min) * 100));
+      const dday = formatGroupDealDday(deal.closesAt);
+      const emoji = GD_CAT_EMOJI[deal.category] || '🛒';
+
+      const card = document.createElement('article');
+      card.className = 'home-gd-card';
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
+
+      const thumbHtml = deal.imageUrl
+        ? `<img src="${escapeAttr(deal.imageUrl)}" alt="" loading="lazy">`
+        : `<span class="home-gd-card__emoji">${emoji}</span>`;
+
+      card.innerHTML = `
+        <div class="home-gd-card__thumb">${thumbHtml}</div>
+        <div class="home-gd-card__body">
+          <h3 class="home-gd-card__title">${escapeHtml(deal.title || '')}</h3>
+          <div class="home-gd-card__progress">
+            <div class="home-gd-card__progress-bar">
+              <div class="home-gd-card__progress-fill" style="width:${pct}%"></div>
+            </div>
+            <span class="home-gd-card__progress-text">${cur}/${min}명</span>
+          </div>
+          <div class="home-gd-card__bottom">
+            <span class="home-gd-card__price">${Number(deal.pricePerUnit || 0).toLocaleString('ko-KR')}<small>원/${escapeHtml(deal.unitLabel || '개')}</small></span>
+            <span class="home-gd-card__dday${dday.urgent ? ' is-urgent' : ''}">${escapeHtml(dday.label)}</span>
+          </div>
+        </div>
+      `;
+      card.addEventListener('click', () => navigate('/app/group-deals/' + deal.id));
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); }
+      });
+      groupDealsGrid.appendChild(card);
+    });
+  }
+
+  function formatGroupDealDday(closesAt) {
+    if (!closesAt) return { label: '마감일 미정', urgent: false };
+    const diffMs = new Date(closesAt).getTime() - Date.now();
+    if (!Number.isFinite(diffMs)) return { label: '마감일 미정', urgent: false };
+    if (diffMs <= 0) return { label: '마감', urgent: true };
+    const diffH = Math.floor(diffMs / (1000 * 60 * 60));
+    if (diffH < 24) return { label: `${diffH}시간 남음`, urgent: true };
+    const diffD = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    return { label: `D-${diffD}`, urgent: diffD <= 2 };
+  }
+
   function renderFeed() {
-    renderLiveSection();
+    if (!isProductsTab) {
+      renderLiveSection();
+      renderUpcomingSection();
+    }
     renderProductsSection();
-    renderUpcomingSection();
   }
 
   const CAT_GRADIENTS = {
@@ -526,13 +625,13 @@ export default async function load() {
   }).catch(() => {});
 
   // 초기 스켈레톤
-  renderLiveSkeleton(liveGrid, 2);
+  if (!isProductsTab) renderLiveSkeleton(liveGrid, 2);
   renderProductSkeleton(productsGrid, 4);
   sectionUpcoming.style.display = 'none';
 
   // 라이브 + 상품 병렬 로드
-  const [livesRes] = await Promise.allSettled([
-    (async () => {
+  await Promise.allSettled([
+    isProductsTab ? Promise.resolve() : (async () => {
       try {
         livesList = await getLives();
       } catch (err) {
@@ -546,18 +645,10 @@ export default async function load() {
 
   renderFeed();
 
+  // 공동구매 섹션은 백그라운드로 로드 (실패해도 다른 섹션엔 영향 없음)
+  fetchAndRenderGroupDeals();
+
   return page;
-}
-
-function escapeHtml(s) {
-  return String(s ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
-
-function escapeAttr(s) {
-  return String(s ?? '').replace(/"/g, '&quot;');
 }
 
 /**

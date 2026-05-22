@@ -1,0 +1,210 @@
+/* Group Deal Create Page — Fresh Field */
+
+.gdc-page {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--color-bg);
+  font-family: var(--font-body);
+  color: var(--color-ink);
+}
+
+/* ── Header ── */
+.gdc-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 14px var(--space-4);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-line);
+  flex-shrink: 0;
+}
+.gdc-header__back {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--color-ink);
+  padding: 0 var(--space-2) 0 0;
+  line-height: 1;
+}
+.gdc-header__title {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  margin: 0;
+}
+
+/* ── Form (scrollable) ── */
+.gdc-form {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--space-4) var(--space-4) calc(var(--space-7) + var(--space-5));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.gdc-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.gdc-row {
+  flex-direction: row;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+.gdc-row .gdc-field { flex: 1; min-width: 0; }
+.gdc-row .gdc-field--narrow { flex: 0 0 30%; }
+
+.gdc-label {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--color-ink);
+}
+.gdc-required {
+  color: var(--color-danger);
+  margin-left: 2px;
+}
+.gdc-hint {
+  font-size: var(--fs-xs);
+  color: var(--color-ink-soft);
+  margin: 4px 0 0;
+}
+
+/* ── Inputs ── */
+.gdc-input,
+.gdc-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-base);
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  box-sizing: border-box;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.gdc-input:focus,
+.gdc-textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+.gdc-textarea {
+  resize: vertical;
+  min-height: 96px;
+  line-height: var(--lh-normal);
+}
+
+.gdc-input-suffix {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.gdc-input-suffix .gdc-input {
+  padding-right: 56px;
+}
+.gdc-input-suffix__text {
+  position: absolute;
+  right: 12px;
+  font-size: var(--fs-sm);
+  color: var(--color-ink-soft);
+  font-weight: 600;
+  pointer-events: none;
+}
+
+/* ── Image slot ── */
+.gdc-thumb-slot {
+  display: block;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 1.5px dashed var(--color-line);
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.gdc-thumb-slot:hover { border-color: var(--color-accent); }
+.gdc-thumb-slot__inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  color: var(--color-ink-soft);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.gdc-thumb-slot__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── Category chips (2x3 grid) ── */
+.gdc-cat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-2);
+}
+.gdc-cat-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 14px 4px;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease-out);
+  font-family: var(--font-body);
+}
+.gdc-cat-chip:active { transform: scale(0.96); }
+.gdc-cat-chip.is-active {
+  background: var(--color-accent-tint);
+  border-color: var(--color-accent);
+}
+.gdc-cat-chip__emoji { font-size: 24px; line-height: 1; }
+.gdc-cat-chip__label {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--color-ink);
+}
+.gdc-cat-chip.is-active .gdc-cat-chip__label {
+  color: var(--color-accent);
+}
+
+/* ── Submit ── */
+.gdc-submit-wrap {
+  margin-top: var(--space-3);
+}
+.gdc-submit {
+  width: 100%;
+  padding: 16px;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--fs-base);
+  font-weight: 700;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.gdc-submit:hover:not(:disabled) { background: var(--color-accent-soft); }
+.gdc-submit:active { transform: scale(0.99); }
+.gdc-submit:disabled {
+  background: var(--color-ink-mute);
+  cursor: not-allowed;
+  opacity: 0.7;
+}

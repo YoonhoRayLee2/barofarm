@@ -9,6 +9,8 @@
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
+import { escapeHtml } from '/app/scripts/dom.js';
+import { formatPrice, formatDateShort } from '/app/scripts/format.js';
 
 // Inject CSS once
 const _cssId = 'page-css-profile-history';
@@ -148,8 +150,8 @@ function renderLives(container, list) {
   list.forEach((live) => {
     const li = document.createElement('li');
     li.className = 'history-item';
-    const startDate = live.startedAt ? formatDate(live.startedAt) : '—';
-    const endDate = live.endedAt ? formatDate(live.endedAt) : '진행 중';
+    const startDate = live.startedAt ? formatDateShort(live.startedAt) : '—';
+    const endDate = live.endedAt ? formatDateShort(live.endedAt) : '진행 중';
     const statusClass = live.status === 'ended' ? 'history-status--ended' : 'history-status--live';
     const statusLabel = live.status === 'ended' ? '종료' : 'LIVE';
     li.innerHTML = `
@@ -186,7 +188,7 @@ function renderBids(container, list) {
   list.forEach((bid) => {
     const li = document.createElement('li');
     li.className = 'history-item history-item--has-thumb';
-    const bidDate = bid.bidAt ? formatDate(bid.bidAt) : '—';
+    const bidDate = bid.bidAt ? formatDateShort(bid.bidAt) : '—';
 
     const thumb = document.createElement('div');
     thumb.className = 'history-item__thumb';
@@ -226,25 +228,3 @@ function renderBids(container, list) {
   container.appendChild(ul);
 }
 
-function formatDate(iso) {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  } catch {
-    return iso;
-  }
-}
-
-function formatPrice(price) {
-  if (price == null) return '—';
-  return Number(price).toLocaleString('ko-KR') + '원';
-}
-
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}

@@ -1,10 +1,13 @@
-/* Profile Orders Page — Fresh Field */
+/* Profile Orders Page — Fresh Field
+ * 그룹: 날짜 헤더 + 판매자 행 + 아이템 목록 + 결제 요약 + 판매자 모아보기 CTA
+ */
 
 .orders-page {
   background: var(--color-bg);
-  min-height: 100dvh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   max-width: 480px;
   margin: 0 auto;
   font-family: var(--font-body);
@@ -17,9 +20,8 @@
   padding: max(14px, env(safe-area-inset-top)) var(--space-4) 14px;
   border-bottom: 1px solid var(--color-line);
   background: var(--color-surface);
-  position: sticky;
-  top: 0;
-  z-index: 50;
+  flex-shrink: 0;
+  z-index: var(--z-sticky);
 }
 
 .orders-header__back {
@@ -53,47 +55,10 @@
   flex: 1;
 }
 
-.orders-filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px var(--space-4);
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-line);
-}
-
-.orders-filter-bar__label {
-  font-size: 12px;
-  color: var(--color-ink-soft);
-  white-space: nowrap;
-}
-
-.orders-filter-bar__select {
-  appearance: none;
-  -webkit-appearance: none;
-  background: var(--color-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23888'/%3E%3C/svg%3E") no-repeat right 8px center;
-  background-size: 8px 5px;
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-pill);
-  color: var(--color-ink);
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 600;
-  height: 30px;
-  padding: 0 24px 0 10px;
-  cursor: pointer;
-  outline: none;
-  min-width: 80px;
-}
-
-.orders-filter-bar__select:focus {
-  border-color: var(--color-accent);
-}
-
 .orders-content {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 0;
+  padding: var(--space-3) 0 var(--space-6);
 }
 
 .orders-loading {
@@ -160,7 +125,73 @@
   cursor: pointer;
 }
 
-/* List */
+/* ─── Groups ─────────────────────────────────────────── */
+.orders-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: 0;
+}
+
+.orders-group {
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line);
+}
+
+/* 1) 날짜 헤더 */
+.orders-group__date {
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-ink-soft);
+  letter-spacing: 0.2px;
+}
+
+/* 2) 판매자 행 */
+.orders-group__seller-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.orders-group__avatar {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--color-surface-alt);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orders-group__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.orders-group__avatar--initial {
+  background: var(--color-accent-tint);
+  color: var(--color-accent);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.orders-group__seller-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-ink);
+  letter-spacing: -0.2px;
+}
+
+/* 3) 아이템 목록 */
 .orders-list {
   list-style: none;
   margin: 0;
@@ -169,7 +200,7 @@
 
 .orders-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--color-line);
@@ -177,18 +208,17 @@
 }
 
 .orders-item:active {
-  background: var(--color-surface);
+  background: var(--color-surface-alt);
 }
 
 .orders-item:last-child {
   border-bottom: none;
 }
 
-/* Thumbnail — fixed 64×64 square */
 .orders-item__thumb {
   flex-shrink: 0;
-  width: 64px;
-  height: 64px;
+  width: 60px;
+  height: 60px;
   border-radius: var(--radius-sm);
   overflow: hidden;
   background: var(--color-surface-alt);
@@ -208,135 +238,151 @@
   opacity: 0.5;
 }
 
-/* Body — right side */
 .orders-item__body {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-
-.orders-item__row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 4px;
 }
 
 .orders-item__name {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--color-ink);
-  flex: 1;
   line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .orders-item__price {
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
-  color: var(--color-accent);
-  white-space: nowrap;
+  color: var(--color-ink);
   letter-spacing: -0.3px;
-  flex-shrink: 0;
+}
+
+.orders-item__shipping {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-warn);
 }
 
 .orders-item__meta {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
   flex-wrap: wrap;
-}
-
-.orders-item__meta span {
-  font-size: 11px;
-  color: var(--color-ink-mute);
-}
-
-.orders-item__mode {
-  font-size: 10px !important;
-  font-weight: 700 !important;
-  color: var(--color-ink-soft) !important;
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-pill);
-  padding: 2px 8px;
+  margin-top: 2px;
 }
 
 .orders-item__delivery-status {
-  font-size: 10px !important;
-  font-weight: 700 !important;
+  font-size: 11px;
+  font-weight: 700;
   border-radius: var(--radius-pill);
   padding: 2px 8px;
   border: 1px solid transparent;
 }
 
 .orders-item__delivery-status--payment_complete {
-  color: #92400e;
-  background: #fef3c7;
-  border-color: #fde68a;
+  color: var(--color-warn);
+  background: var(--color-warn-tint);
+  border-color: var(--color-warn-tint);
 }
 
 .orders-item__delivery-status--shipped {
-  color: var(--color-bg);
+  color: var(--color-surface);
   background: var(--color-accent);
   border-color: var(--color-accent);
 }
 
 .orders-item__delivery-status--purchase_confirmed {
-  color: #064e3b;
-  background: #d1fae5;
-  border-color: #6ee7b7;
+  color: var(--color-accent);
+  background: var(--color-accent-tint);
+  border-color: var(--color-accent-tint);
 }
 
 .orders-item__delivery-status--settlement_complete {
-  color: var(--color-ink-soft) !important;
+  color: var(--color-ink-soft);
   background: var(--color-surface-alt);
   border-color: var(--color-line);
 }
 
-/* Groups — sellerId + liveId 기준 그루핑 */
-.orders-groups { padding: 0; }
-
-.orders-group {
-  margin-bottom: 8px;
+/* 4) 결제 요약 카드 */
+.orders-group__summary {
+  background: var(--color-surface-alt);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.orders-group__header {
+.orders-summary__row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px var(--space-4) 6px;
-  background: var(--color-bg);
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: 13px;
 }
 
-.orders-group__seller {
-  font-size: 13px;
+.orders-summary__label {
+  color: var(--color-ink-soft);
+  font-weight: 500;
+}
+
+.orders-summary__value {
+  color: var(--color-ink);
+  font-weight: 600;
+  font-family: var(--font-display);
+  letter-spacing: -0.2px;
+}
+
+.orders-summary__divider {
+  height: 1px;
+  background: var(--color-line);
+  margin: 4px 0;
+}
+
+.orders-summary__row--total .orders-summary__label {
+  font-size: 14px;
   font-weight: 700;
   color: var(--color-ink);
 }
 
-.orders-group__live {
-  font-size: 12px;
-  color: var(--color-ink-soft);
-}
-.orders-group__live::before {
-  content: '/';
-  margin-right: 4px;
-}
-
-.orders-group .orders-list {
-  background: var(--color-surface);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  margin: 0 var(--space-4);
-  border: 1px solid var(--color-line);
+.orders-summary__row--total .orders-summary__value {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--color-accent);
+  letter-spacing: -0.4px;
 }
 
-.orders-group .orders-item:last-child {
-  border-bottom: none;
+/* 5) 판매자 구매 내역 모아보기 CTA */
+.orders-group__seller-cta {
+  display: block;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-accent);
+  border: none;
+  border-top: 1px solid var(--color-line);
+  color: var(--color-surface);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.orders-group__seller-cta:hover {
+  background: var(--color-accent-soft);
+}
+
+.orders-group__seller-cta:active {
+  background: var(--color-accent-soft);
+  transform: scale(0.995);
 }

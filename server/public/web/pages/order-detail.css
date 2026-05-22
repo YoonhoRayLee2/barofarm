@@ -545,6 +545,13 @@
 .od-fee__value--minus {
   color: var(--color-cta);
 }
+.od-fee__value--plus {
+  color: var(--color-ink);
+}
+.od-fee__value--pending {
+  color: var(--color-warn);
+  font-weight: 600;
+}
 
 .od-fee__row--total {
   padding-top: var(--space-2);

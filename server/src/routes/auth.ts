@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import pool from '../db/mysql';
 import { hashPassword, verifyPassword } from '../services/auth';
 import { generateUniqueNickname } from '../services/nickname';
@@ -8,8 +9,16 @@ import { normalizePhone } from '../utils/phone';
 
 const router = Router();
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: '너무 많은 요청입니다. 잠시 후 다시 시도해주세요' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // ─── POST /api/auth/signup ────────────────────────────────────────────────────
-router.post('/signup', async (req: Request, res: Response): Promise<void> => {
+router.post('/signup', authLimiter, async (req: Request, res: Response): Promise<void> => {
   const { username, password, phone } = req.body as {
     username?: string;
     password?: string;
@@ -67,7 +76,7 @@ router.post('/signup', async (req: Request, res: Response): Promise<void> => {
 });
 
 // ─── POST /api/auth/login ─────────────────────────────────────────────────────
-router.post('/login', async (req: Request, res: Response): Promise<void> => {
+router.post('/login', authLimiter, async (req: Request, res: Response): Promise<void> => {
   const { username, password } = req.body as { username?: string; password?: string };
 
   if (!username || !password) {

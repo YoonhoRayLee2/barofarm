@@ -8,6 +8,8 @@
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import { personIconSVG } from '/app/scripts/person-icon.js';
+import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
+import { formatPrice, formatDateShort } from '/app/scripts/format.js';
 
 const _cssId = 'page-css-seller-sales';
 if (!document.getElementById(_cssId)) {
@@ -125,7 +127,7 @@ export default async function load() {
 
       const headerEl = document.createElement('div');
       headerEl.className = 'sg-header';
-      const dateStr = liveGroup.liveStartedAt ? formatDate(liveGroup.liveStartedAt) : (allItems[0]?.soldAt ? formatDate(allItems[0].soldAt) : '');
+      const dateStr = liveGroup.liveStartedAt ? formatDateShort(liveGroup.liveStartedAt) : (allItems[0]?.soldAt ? formatDateShort(allItems[0].soldAt) : '');
       headerEl.innerHTML = `
         <div class="sg-header__left">
           <span class="sg-live-badge ${isDirect ? 'sg-live-badge--direct' : ''}">${isDirect ? '직접구매' : 'LIVE'}</span>
@@ -190,27 +192,3 @@ export default async function load() {
   return page;
 }
 
-function formatDate(iso) {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  } catch { return String(iso); }
-}
-
-function formatPrice(price) {
-  if (price == null) return '—';
-  return Number(price).toLocaleString('ko-KR') + '원';
-}
-
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function escapeAttr(s) {
-  return String(s).replace(/"/g, '&quot;');
-}

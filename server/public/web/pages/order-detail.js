@@ -8,6 +8,8 @@
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
+import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
+import { formatPrice, formatDate } from '/app/scripts/format.js';
 
 const _cssId = 'page-css-order-detail';
 if (!document.getElementById(_cssId)) {
@@ -19,12 +21,10 @@ if (!document.getElementById(_cssId)) {
 }
 
 const STEPS = [
-  { key: 'payment_complete',      label: '결제완료' },
-  { key: 'shipping_fee_pending',  label: '배송비 대기' },
-  { key: 'shipping_fee_paid',     label: '배송비완료' },
-  { key: 'shipped',               label: '발송완료' },
-  { key: 'purchase_confirmed',    label: '구매확정' },
-  { key: 'settlement_complete',   label: '정산완료' },
+  { key: 'payment_complete',    label: '결제완료' },
+  { key: 'shipped',             label: '발송완료' },
+  { key: 'purchase_confirmed',  label: '구매확정' },
+  { key: 'settlement_complete', label: '정산완료' },
 ];
 
 const BUYER_TIER_INFO = {
@@ -221,7 +221,11 @@ export default async function load(params) {
 
       if (!isSeller) {
         const showDiscount = discountAmt > 0;
-        const netPay = Math.max(0, finalPrice - discountAmt);
+        const shippingFeeStatus = data.shippingFeeStatus || 'none';
+        const shippingFee = Number(data.shippingFee || 0);
+        const shippingFeePaid = shippingFeeStatus === 'paid';
+        const shippingFeePending = shippingFeeStatus === 'pending';
+        const netPay = Math.max(0, finalPrice - discountAmt) + (shippingFeePaid ? shippingFee : 0);
         feeHtml = `
           <section class="od-fee">
             <div class="od-fee__title-row">
@@ -236,6 +240,16 @@ export default async function load(params) {
               <div class="od-fee__row">
                 <span class="od-fee__label">할인 금액</span>
                 <span class="od-fee__value od-fee__value--minus">-${discountAmt.toLocaleString('ko-KR')}원 (${(discountRate * 100).toFixed(1)}%)</span>
+              </div>` : ''}
+            ${shippingFeePaid ? `
+              <div class="od-fee__row">
+                <span class="od-fee__label">배송비 (합배송)</span>
+                <span class="od-fee__value od-fee__value--plus">+${shippingFee.toLocaleString('ko-KR')}원</span>
+              </div>` : ''}
+            ${shippingFeePending ? `
+              <div class="od-fee__row">
+                <span class="od-fee__label">배송비 (합배송)</span>
+                <span class="od-fee__value od-fee__value--pending">${shippingFee.toLocaleString('ko-KR')}원 결제 대기</span>
               </div>` : ''}
             <div class="od-fee__row od-fee__row--total">
               <span class="od-fee__label">실결제액</span>
@@ -268,20 +282,27 @@ export default async function load(params) {
       }
     }
 
-    /* Shipping fee card — 합배송 배송비 결제 흐름 */
-    let shippingFeeHtml = '';
+    /* Shipping fee card — 합배송 배송비 결제 흐름 (deliveryStatus와 독립) */
+    const shippingFeeStatus = data.shippingFeeStatus || 'none';
     const shippingFee = Number(data.shippingFee || 0);
-    if (status === 'shipping_fee_pending' && !isSeller) {
-      shippingFeeHtml = `
-        <section class="od-shipping-fee-card od-shipping-fee-card--pending">
-          <div>
-            <span style="font-size:13px;color:var(--color-ink-soft)">배송비 결제 대기</span><br>
-            <strong>₩${shippingFee.toLocaleString('ko-KR')}</strong>
-          </div>
-          <button id="od-pay-shipping-btn">배송비 결제하기</button>
-        </section>
-      `;
-    } else if (['shipping_fee_paid', 'shipped', 'purchase_confirmed', 'settlement_complete'].includes(status)) {
+    let shippingFeeHtml = '';
+    if (shippingFeeStatus === 'pending') {
+      shippingFeeHtml = isSeller
+        ? `<section class="od-shipping-fee-card od-shipping-fee-card--pending">
+            <div>
+              <span style="font-size:13px;color:var(--color-ink-soft)">배송비 결제 대기 중</span><br>
+              <strong>₩${shippingFee.toLocaleString('ko-KR')}</strong>
+            </div>
+            <span style="font-size:12px;color:var(--color-ink-soft)">구매자 결제 대기</span>
+          </section>`
+        : `<section class="od-shipping-fee-card od-shipping-fee-card--pending">
+            <div>
+              <span style="font-size:13px;color:var(--color-ink-soft)">배송비 결제 대기</span><br>
+              <strong>₩${shippingFee.toLocaleString('ko-KR')}</strong>
+            </div>
+            <button id="od-pay-shipping-btn">배송비 결제하기</button>
+          </section>`;
+    } else if (shippingFeeStatus === 'paid') {
       shippingFeeHtml = `
         <section class="od-shipping-fee-card od-shipping-fee-card--paid">
           <span>✅ 배송비결제완료(합배송)</span>
@@ -374,31 +395,35 @@ export default async function load(params) {
     /* Action area */
     let actionHtml = '';
     if (isSeller && status === 'payment_complete') {
-      actionHtml = `<p class="od-batch-ship-hint">발송 처리는 미발송 주문 페이지에서 합배송으로 진행해주세요.</p>`;
-    } else if (isSeller && status === 'shipping_fee_paid') {
-      const hanaroNotice = data.buyerDelivery?.option === 'hanaro'
-        ? `<div class="od-hanaro-seller-notice">🏬 <strong>하나로마트 반값택배</strong> — 인근 하나로마트로 발송해주세요.<br><small>${escapeHtml(data.buyerDelivery.hanaroMartName || '')} · ${escapeHtml(data.buyerDelivery.hanaroMartAddr || '')}</small></div>`
-        : '';
-      actionHtml = `
-        <section class="od-ship-form" id="od-ship-form">
-          ${hanaroNotice}
-          <h2 class="od-ship-form__title">발송 처리</h2>
-          <label class="od-ship-form__label">택배사 <span class="od-ship-form__required">*</span></label>
-          <select class="od-ship-form__select" id="od-courier">
-            <option value="">택배사 선택</option>
-            <option value="CJ대한통운">CJ대한통운</option>
-            <option value="우체국택배">우체국택배</option>
-            <option value="한진택배">한진택배</option>
-            <option value="롯데택배">롯데택배</option>
-            <option value="로젠택배">로젠택배</option>
-            <option value="경동택배">경동택배</option>
-            <option value="기타">기타</option>
-          </select>
-          <label class="od-ship-form__label">운송장 번호 <span class="od-ship-form__required">*</span></label>
-          <input class="od-ship-form__input" id="od-tracking" type="text" placeholder="운송장 번호 입력" inputmode="numeric">
-          <button class="od-action-btn" id="od-action">발송 처리 완료</button>
-        </section>
-      `;
+      if (shippingFeeStatus === 'none') {
+        actionHtml = `<p class="od-batch-ship-hint">발송 처리는 미발송 주문 페이지에서 합배송으로 진행해주세요.</p>`;
+      } else if (shippingFeeStatus === 'pending') {
+        actionHtml = `<p class="od-batch-ship-hint">구매자가 배송비를 결제하면 발송 처리가 가능합니다.</p>`;
+      } else if (shippingFeeStatus === 'paid') {
+        const hanaroNotice = data.buyerDelivery?.option === 'hanaro'
+          ? `<div class="od-hanaro-seller-notice">🏬 <strong>하나로마트 반값택배</strong> — 인근 하나로마트로 발송해주세요.<br><small>${escapeHtml(data.buyerDelivery.hanaroMartName || '')} · ${escapeHtml(data.buyerDelivery.hanaroMartAddr || '')}</small></div>`
+          : '';
+        actionHtml = `
+          <section class="od-ship-form" id="od-ship-form">
+            ${hanaroNotice}
+            <h2 class="od-ship-form__title">발송 처리</h2>
+            <label class="od-ship-form__label">택배사 <span class="od-ship-form__required">*</span></label>
+            <select class="od-ship-form__select" id="od-courier">
+              <option value="">택배사 선택</option>
+              <option value="CJ대한통운">CJ대한통운</option>
+              <option value="우체국택배">우체국택배</option>
+              <option value="한진택배">한진택배</option>
+              <option value="롯데택배">롯데택배</option>
+              <option value="로젠택배">로젠택배</option>
+              <option value="경동택배">경동택배</option>
+              <option value="기타">기타</option>
+            </select>
+            <label class="od-ship-form__label">운송장 번호 <span class="od-ship-form__required">*</span></label>
+            <input class="od-ship-form__input" id="od-tracking" type="text" placeholder="운송장 번호 입력" inputmode="numeric">
+            <button class="od-action-btn" id="od-action">발송 처리 완료</button>
+          </section>
+        `;
+      }
     } else if (!isSeller && status === 'shipped') {
       actionHtml = `<button class="od-action-btn" id="od-action">구매 확정</button>`;
     } else if (isSeller && status === 'purchase_confirmed') {
@@ -413,10 +438,10 @@ export default async function load(params) {
       payShippingBtn.addEventListener('click', async () => {
         payShippingBtn.disabled = true;
         try {
-          const res = await fetch(`/api/auctions/${encodeURIComponent(data.auctionId)}/delivery-status`, {
+          const res = await fetch(`/api/auctions/${encodeURIComponent(data.auctionId)}/pay-shipping-fee`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'shipping_fee_paid', userId: user.id }),
+            body: JSON.stringify({ userId: user.id }),
           });
           if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || `HTTP ${res.status}`); }
           showToast('배송비 결제가 완료되었습니다', { variant: 'success', duration: 1800 });
@@ -449,7 +474,7 @@ export default async function load(params) {
     const actionBtn = container.querySelector('#od-action');
     if (!actionBtn) return;
 
-    if (isSeller && status === 'shipping_fee_paid') {
+    if (isSeller && status === 'payment_complete' && shippingFeeStatus === 'paid') {
       actionBtn.addEventListener('click', async () => {
         const courierEl = container.querySelector('#od-courier');
         const trackingEl = container.querySelector('#od-tracking');
@@ -510,31 +535,6 @@ const CARRIER_URLS = {
 function carrierTrackingUrl(company, number) {
   const fn = CARRIER_URLS[company];
   return fn ? fn(encodeURIComponent(number)) : null;
-}
-
-function formatDate(iso) {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  } catch { return String(iso); }
-}
-
-function formatPrice(price) {
-  if (price == null) return '—';
-  return Number(price).toLocaleString('ko-KR') + '원';
-}
-
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function escapeAttr(s) {
-  return String(s).replace(/"/g, '&quot;');
 }
 
 /* ── Carbon footprint helper ──────────────────────────────── */

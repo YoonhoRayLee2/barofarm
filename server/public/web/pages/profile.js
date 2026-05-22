@@ -764,6 +764,7 @@ function buildCollectorPanel(profileUser, scrollEl, isMe) {
     { icon: '⭐', label: '관심카테고리 설정', path: '__interests__' },
     { icon: '📋', label: '딜러 위탁 신청하기', path: '/app/consignment/apply' },
     { icon: '🛍️', label: '주문 목록',       path: '/app/profile/orders' },
+    { icon: '🛒', label: '공동구매 참여 현황', path: '/app/group-deals?mine=true' },
     { icon: '💳', label: '결제 수단 관리',   path: null },
     { icon: '🏠', label: '배송지 관리',      path: '/app/delivery-addresses' },
     { icon: '📦', label: '박스 공구 현황',   path: null },
@@ -971,6 +972,8 @@ function buildDealerPanel(profileUser, isMe) {
 
   [
     { icon: '📤', label: '미발송 구매자 모아보기',  path: '/app/seller/unshipped' },
+    { icon: '➕', label: '공동판매 등록',             path: '/app/group-deals/create' },
+    { icon: '🤝', label: '공동판매 관리',           path: '/app/group-deals?mine=true' },
     { icon: '📦', label: '판매내역',                path: '/app/seller/sales' },
     { icon: '💬', label: '상품 문의 채팅',           path: '/app/dm' },
     { icon: '🔍', label: '판매 대행 상품 찾기',     path: '/app/consignment/find' },

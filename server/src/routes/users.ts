@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
+import jwt from 'jsonwebtoken';
 import pool from '../db/mysql';
 import { lives, auctions } from '../store/memory';
 import {
@@ -390,6 +391,21 @@ router.patch('/:id', uploadAvatar.single('avatar'), async (req: Request, res: Re
     return;
   }
 
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) {
+    try {
+      const token = authHeader.slice(7);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: number };
+      if (decoded.userId !== parseInt(userId, 10)) {
+        res.status(403).json({ error: '권한이 없습니다' });
+        return;
+      }
+    } catch {
+      res.status(401).json({ error: '인증이 필요합니다' });
+      return;
+    }
+  }
+
   const { nickname, interests, farmZipcode, farmAddress, sellerShippingFee } = req.body as {
     nickname?: string;
     interests?: string | string[];
@@ -705,6 +721,9 @@ router.get('/:id/orders', async (req: Request, res: Response) => {
          a.live_id,
          a.seller_id,
          s.nickname        AS seller_name,
+         s.avatar_url      AS seller_avatar,
+         a.shipping_fee,
+         a.shipping_fee_status,
          l.title           AS live_title,
          l.created_at      AS live_created_at
        FROM auctions a
@@ -727,6 +746,9 @@ router.get('/:id/orders', async (req: Request, res: Response) => {
       live_id: string | null;
       seller_id: number;
       seller_name: string | null;
+      seller_avatar: string | null;
+      shipping_fee: number | null;
+      shipping_fee_status: string | null;
       live_title: string | null;
       live_created_at: string | null;
     }>).map(r => ({
@@ -740,6 +762,9 @@ router.get('/:id/orders', async (req: Request, res: Response) => {
       liveId:         r.live_id ?? null,
       sellerId:       r.seller_id,
       sellerName:     r.seller_name || '알 수 없음',
+      sellerAvatar:   r.seller_avatar ?? null,
+      shippingFee:    Number(r.shipping_fee ?? 0),
+      shippingFeeStatus: r.shipping_fee_status ?? 'none',
       liveTitle:      r.live_title ?? null,
       liveCreatedAt:  r.live_created_at ?? null,
     }));
@@ -819,7 +844,7 @@ router.get('/:id/sales', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/users/:id/unshipped — 미발송 주문 목록 (payment_complete + shipping_fee_pending + shipping_fee_paid)
+// GET /api/users/:id/unshipped — 미발송 주문 목록 (payment_complete)
 router.get('/:id/unshipped', async (req: Request, res: Response) => {
   const sellerId = Number(req.params.id);
   if (!sellerId) {
@@ -837,29 +862,31 @@ router.get('/:id/unshipped', async (req: Request, res: Response) => {
          a.ends_at     AS paid_at,
          a.delivery_status,
          a.shipping_fee,
+         a.shipping_fee_status,
          u.id          AS buyer_id,
          u.nickname    AS buyer_name,
          u.avatar_url  AS buyer_avatar
        FROM auctions a
        JOIN users u ON u.id = a.top_bidder_id
        WHERE a.seller_id = ?
-         AND a.delivery_status IN ('payment_complete', 'shipping_fee_pending', 'shipping_fee_paid')
+         AND a.delivery_status = 'payment_complete'
          AND a.top_bidder_id IS NOT NULL
        ORDER BY a.ends_at ASC`,
       [sellerId],
     ) as [unknown[], unknown];
 
     const list = (rows as any[]).map((r) => ({
-      auctionId:      r.auction_id,
-      productName:    r.product_name,
-      finalPrice:     r.final_price != null ? Number(r.final_price) : null,
-      imageUrl:       r.image_url ?? null,
-      paidAt:         r.paid_at ?? null,
-      deliveryStatus: r.delivery_status,
-      shippingFee:    r.shipping_fee != null ? Number(r.shipping_fee) : 0,
-      buyerId:        r.buyer_id,
-      buyerName:      r.buyer_name || '알 수 없음',
-      buyerAvatar:    r.buyer_avatar ?? null,
+      auctionId:        r.auction_id,
+      productName:      r.product_name,
+      finalPrice:       r.final_price != null ? Number(r.final_price) : null,
+      imageUrl:         r.image_url ?? null,
+      paidAt:           r.paid_at ?? null,
+      deliveryStatus:   r.delivery_status,
+      shippingFee:      r.shipping_fee != null ? Number(r.shipping_fee) : 0,
+      shippingFeeStatus: r.shipping_fee_status ?? 'none',
+      buyerId:          r.buyer_id,
+      buyerName:        r.buyer_name || '알 수 없음',
+      buyerAvatar:      r.buyer_avatar ?? null,
     }));
 
     res.json(list);
@@ -946,8 +973,6 @@ router.post('/:id/bank/request', requireAuth, async (req, res) => {
     accountNumber,
     holderName,
   });
-  console.log('[bank-verify] code for user', userId, ':', code);
-
   res.json({ message: '1원을 송금했습니다. 입금자명의 숫자 4자리를 입력하세요.' });
 });
 

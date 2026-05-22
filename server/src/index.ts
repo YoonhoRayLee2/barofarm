@@ -18,15 +18,46 @@ import deliveryAddressesRouter from './routes/delivery-addresses';
 import marketPricesRouter from './routes/market-prices';
 import hanaroStoresRouter from './routes/hanaro-stores';
 import adminRouter from './routes/admin';
+import { createGroupDealsRouter } from './routes/group-deals';
 import registerAuctionSocket from './socket/auction';
 import registerChatSocket from './socket/chat';
 import pool from './db/mysql';
 
+if (!process.env.JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET environment variable is not set');
+  process.exit(1);
+}
+
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
 
-app.use(cors());
+const allowedOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
+  : ['http://localhost:3000', 'http://localhost:8080'];
+
+const io = new Server(server, {
+  cors: {
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+  },
+});
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
 app.use(express.json());
 
 // LiveKit WebView HTML (live-seller.html / live-buyer.html) 정적 서빙
@@ -80,13 +111,10 @@ app.use('/api/delivery-addresses', deliveryAddressesRouter);
 app.use('/api/market-prices', marketPricesRouter);
 app.use('/api/hanaro-stores', hanaroStoresRouter);
 app.use('/admin', adminRouter);
+app.use('/api/group-deals', createGroupDealsRouter(io));
 
 registerAuctionSocket(io);
 registerChatSocket(io);
-
-if (!process.env.JWT_SECRET) {
-  console.warn('[auth] JWT_SECRET not set — using insecure default');
-}
 
 const PORT = Number(process.env.PORT ?? 3000);
 const HOST = process.env.HOST ?? '0.0.0.0';

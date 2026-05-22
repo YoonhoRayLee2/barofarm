@@ -2,11 +2,19 @@
  * Profile Orders Page — 구매내역 목록
  * Route: /app/profile/orders
  *
+ * URL params:
+ *   - sellerId: 특정 판매자의 주문만 표시 (선택)
+ *
+ * 주문은 (sellerId, liveId) 기준으로 그룹화되며,
+ * 각 그룹은 날짜 헤더 + 판매자 행 + 아이템 목록 + 결제 요약 + "판매자 구매 내역 보기" 버튼으로 구성.
+ *
  * @module pages/profile-orders
  */
 
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
+import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
+import { formatPrice, formatYmd } from '/app/scripts/format.js';
 
 const _cssId = 'page-css-profile-orders';
 if (!document.getElementById(_cssId)) {
@@ -30,13 +38,9 @@ export default async function load() {
     settlement_complete: '정산완료',
   };
 
-  const FILTER_OPTIONS = [
-    { value: '',                     label: '전체' },
-    { value: 'payment_complete',     label: '결제완료' },
-    { value: 'shipped',              label: '발송완료' },
-    { value: 'purchase_confirmed',   label: '구매확정' },
-    { value: 'settlement_complete',  label: '정산완료' },
-  ];
+  // URL param: sellerId 필터 (있으면 해당 판매자만 표시)
+  const urlParams = new URLSearchParams(window.location.search);
+  const sellerIdFilter = urlParams.get('sellerId');
 
   const page = document.createElement('div');
   page.className = 'orders-page';
@@ -45,14 +49,8 @@ export default async function load() {
   page.innerHTML = `
     <header class="orders-header">
       <button class="orders-header__back" aria-label="뒤로 가기">‹</button>
-      <h1 class="orders-header__title">주문 목록</h1>
+      <h1 class="orders-header__title">${sellerIdFilter ? '판매자별 구매 내역' : '주문 목록'}</h1>
     </header>
-    <div class="orders-filter-bar">
-      <span class="orders-filter-bar__label">배송 상태</span>
-      <select class="orders-filter-bar__select" id="orders-filter" aria-label="배송 상태 필터">
-        ${FILTER_OPTIONS.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
-      </select>
-    </div>
     <div class="orders-content" id="orders-content">
       <div class="orders-loading">
         <div class="orders-loading__dot"></div>
@@ -63,16 +61,7 @@ export default async function load() {
 
   page.querySelector('.orders-header__back').addEventListener('click', () => window.history.back());
 
-  let allOrders = [];
-  const filterEl = page.querySelector('#orders-filter');
   const contentEl = page.querySelector('#orders-content');
-
-  filterEl.addEventListener('change', () => {
-    const filtered = filterEl.value
-      ? allOrders.filter(o => o.deliveryStatus === filterEl.value)
-      : allOrders;
-    renderOrders(contentEl, filtered, filterEl.value);
-  });
 
   async function loadOrders() {
     contentEl.innerHTML = `
@@ -84,8 +73,12 @@ export default async function load() {
     try {
       const res = await fetch(`/api/users/${encodeURIComponent(user.id)}/orders`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      allOrders = await res.json();
-      renderOrders(contentEl, allOrders, '');
+      let orders = await res.json();
+      // sellerId URL param 필터링
+      if (sellerIdFilter) {
+        orders = orders.filter(o => String(o.sellerId) === String(sellerIdFilter));
+      }
+      renderOrders(contentEl, orders);
     } catch (err) {
       contentEl.innerHTML = `
         <div class="orders-empty">
@@ -98,16 +91,16 @@ export default async function load() {
     }
   }
 
-  function renderOrders(container, list, activeFilter) {
+  function renderOrders(container, list) {
     if (!list || list.length === 0) {
-      const msg = activeFilter
-        ? `'${DELIVERY_LABELS[activeFilter]}' 내역이 없습니다`
+      const msg = sellerIdFilter
+        ? '이 판매자에게서 구매한 내역이 없습니다'
         : '구매 내역이 없습니다';
       container.innerHTML = `
         <div class="orders-empty">
           <span class="orders-empty__icon">🛍️</span>
           <span class="orders-empty__title">${msg}</span>
-          ${!activeFilter ? '<span class="orders-empty__desc">라이브 경매에 참여하여 낙찰받으면<br>여기에 기록됩니다.</span>' : ''}
+          ${!sellerIdFilter ? '<span class="orders-empty__desc">라이브 경매에 참여하여 낙찰받으면<br>여기에 기록됩니다.</span>' : ''}
         </div>
       `;
       return;
@@ -121,8 +114,8 @@ export default async function load() {
         groupMap.set(key, {
           sellerId: order.sellerId,
           sellerName: order.sellerName || '판매자',
+          sellerAvatar: order.sellerAvatar || null,
           liveId: order.liveId ?? null,
-          liveTitle: order.liveTitle || null,
           liveCreatedAt: order.liveCreatedAt || null,
           firstOrderAt: order.orderAt || null,
           items: [],
@@ -130,13 +123,15 @@ export default async function load() {
       }
       const g = groupMap.get(key);
       g.items.push(order);
-      // 그룹의 첫 번째(가장 최신) orderAt 추적
+      // 가장 최신 orderAt 추적
       if (order.orderAt && (!g.firstOrderAt || new Date(order.orderAt) > new Date(g.firstOrderAt))) {
         g.firstOrderAt = order.orderAt;
       }
+      // 그룹 단위 메타가 채워지지 않은 경우 보완
+      if (!g.sellerAvatar && order.sellerAvatar) g.sellerAvatar = order.sellerAvatar;
     });
 
-    // 그룹 정렬: 최신 firstOrderAt 내림차순
+    // 최신 firstOrderAt 내림차순 정렬
     const groups = Array.from(groupMap.values()).sort((a, b) => {
       const ta = a.firstOrderAt ? new Date(a.firstOrderAt).getTime() : 0;
       const tb = b.firstOrderAt ? new Date(b.firstOrderAt).getTime() : 0;
@@ -147,31 +142,38 @@ export default async function load() {
     groupsWrap.className = 'orders-groups';
 
     groups.forEach((group) => {
-      const groupEl = document.createElement('div');
+      const groupEl = document.createElement('section');
       groupEl.className = 'orders-group';
 
-      const firstItem = group.items[0];
-      const modeLabel = firstItem && firstItem.mode !== 'direct' ? '라이브 경매' : '직접 구매';
-      const dateLabel = group.liveCreatedAt ? formatLiveDate(group.liveCreatedAt) : modeLabel;
+      // 1) 날짜 헤더 (YYYY.MM.DD)
+      const dateSource = group.liveCreatedAt || group.firstOrderAt;
+      const dateLabel = dateSource ? formatYmd(dateSource) : '';
+      if (dateLabel) {
+        const dateHeader = document.createElement('div');
+        dateHeader.className = 'orders-group__date';
+        dateHeader.textContent = dateLabel;
+        groupEl.appendChild(dateHeader);
+      }
 
-      const header = document.createElement('div');
-      header.className = 'orders-group__header';
-      header.innerHTML = `
-        <span class="orders-group__seller">${escapeHtml(group.sellerName)}</span>
-        ${dateLabel ? `<span class="orders-group__live">${escapeHtml(dateLabel)}</span>` : ''}
+      // 2) 판매자 행 (아바타 + 이름)
+      const sellerRow = document.createElement('div');
+      sellerRow.className = 'orders-group__seller-row';
+      sellerRow.innerHTML = `
+        ${renderAvatar(group.sellerAvatar, group.sellerName)}
+        <span class="orders-group__seller-name">${escapeHtml(group.sellerName)}</span>
       `;
-      groupEl.appendChild(header);
+      groupEl.appendChild(sellerRow);
 
+      // 3) 아이템 목록
       const ul = document.createElement('ul');
       ul.className = 'orders-list';
       group.items.forEach((order) => {
         const li = document.createElement('li');
         li.className = 'orders-item';
-        const dateStr = order.orderAt ? formatDate(order.orderAt) : '—';
-        const modeLabel = order.mode === 'blind' ? '블라인드' : order.mode === 'fcfs' ? '선착순' : '경매';
         const imgSrc = order.imageUrl || null;
         const dsKey = order.deliveryStatus || 'payment_complete';
         const dsLabel = DELIVERY_LABELS[dsKey] || dsKey;
+        const shippingPaid = order.shippingFeeStatus === 'paid' && order.shippingFee > 0;
         li.innerHTML = `
           <div class="orders-item__thumb">
             ${imgSrc
@@ -179,13 +181,10 @@ export default async function load() {
               : `<span class="orders-item__thumb-fallback">🌿</span>`}
           </div>
           <div class="orders-item__body">
-            <div class="orders-item__row">
-              <span class="orders-item__name">${escapeHtml(order.productName || '상품')}</span>
-              <span class="orders-item__price">${formatPrice(order.finalPrice)}</span>
-            </div>
+            <div class="orders-item__name">${escapeHtml(order.productName || '상품')}</div>
+            <div class="orders-item__price">${formatPrice(order.finalPrice)}</div>
+            ${shippingPaid ? `<div class="orders-item__shipping">+ 배송비 ${Number(order.shippingFee).toLocaleString('ko-KR')}원</div>` : ''}
             <div class="orders-item__meta">
-              <span>${dateStr}</span>
-              <span class="orders-item__mode">${modeLabel}</span>
               <span class="orders-item__delivery-status orders-item__delivery-status--${dsKey}">${dsLabel}</span>
             </div>
           </div>
@@ -195,6 +194,48 @@ export default async function load() {
         ul.appendChild(li);
       });
       groupEl.appendChild(ul);
+
+      // 4) 결제 요약 카드
+      const itemsTotal = group.items.reduce((sum, o) => sum + (Number(o.finalPrice) || 0), 0);
+      const shippingTotal = group.items.reduce((sum, o) => {
+        if (o.shippingFeeStatus === 'paid') return sum + (Number(o.shippingFee) || 0);
+        return sum;
+      }, 0);
+      const grandTotal = itemsTotal + shippingTotal;
+
+      const summary = document.createElement('div');
+      summary.className = 'orders-group__summary';
+      summary.innerHTML = `
+        <div class="orders-summary__row">
+          <span class="orders-summary__label">총 상품 가격</span>
+          <span class="orders-summary__value">${formatPrice(itemsTotal)}</span>
+        </div>
+        ${shippingTotal > 0 ? `
+          <div class="orders-summary__row">
+            <span class="orders-summary__label">총 배송비</span>
+            <span class="orders-summary__value">${formatPrice(shippingTotal)}</span>
+          </div>
+        ` : ''}
+        <div class="orders-summary__divider"></div>
+        <div class="orders-summary__row orders-summary__row--total">
+          <span class="orders-summary__label">총 결제 금액</span>
+          <span class="orders-summary__value">${formatPrice(grandTotal)}</span>
+        </div>
+      `;
+      groupEl.appendChild(summary);
+
+      // 5) "판매자 구매 내역 모아보기" 버튼 (단, 이미 필터 모드면 숨김)
+      if (!sellerIdFilter && group.sellerId != null) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'orders-group__seller-cta';
+        btn.textContent = '이 판매자로부터 구매한 내역 모아보기';
+        btn.addEventListener('click', () => {
+          navigate('/app/profile/orders?sellerId=' + encodeURIComponent(group.sellerId));
+        });
+        groupEl.appendChild(btn);
+      }
+
       groupsWrap.appendChild(groupEl);
     });
 
@@ -206,39 +247,11 @@ export default async function load() {
   return page;
 }
 
-function formatDate(iso) {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-  } catch { return String(iso); }
+function renderAvatar(src, name) {
+  if (src) {
+    return `<span class="orders-group__avatar"><img src="${escapeAttr(src)}" alt="${escapeHtml(name)}" loading="lazy"></span>`;
+  }
+  const initial = (name && name.trim().length > 0) ? name.trim().charAt(0) : '?';
+  return `<span class="orders-group__avatar orders-group__avatar--initial">${escapeHtml(initial)}</span>`;
 }
 
-function formatLiveDate(iso) {
-  try {
-    const d = new Date(iso);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const h = String(d.getHours()).padStart(2, '0');
-    const min = String(d.getMinutes()).padStart(2, '0');
-    return `${y}.${m}.${day} ${h}:${min}`;
-  } catch { return String(iso); }
-}
-
-function formatPrice(price) {
-  if (price == null) return '—';
-  return Number(price).toLocaleString('ko-KR') + '원';
-}
-
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function escapeAttr(s) {
-  return String(s).replace(/"/g, '&quot;');
-}

@@ -10,6 +10,7 @@ import { replace, setCleanup } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
 import { connect } from '/app/scripts/socket.js';
 import { personIconSVG } from '/app/scripts/person-icon.js';
+import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
 
 // Inject CSS once
 const _cssId = 'page-css-chat-room';
@@ -487,15 +488,3 @@ function formatTime(isoOrSql) {
   return `${period} ${h}:${m}`;
 }
 
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function escapeAttr(s) {
-  return escapeHtml(s);
-}
