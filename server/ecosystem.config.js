@@ -1,3 +1,5 @@
+require('dotenv').config({ path: __dirname + '/.env' });
+
 module.exports = {
   apps: [{
     name: 'barofarm',
@@ -5,6 +7,6 @@ module.exports = {
     interpreter: '/home/ec2-user/.bun/bin/bun',
     exec_mode: 'fork',
     cwd: '/home/ec2-user/barofarm/server',
-    env_file: '/home/ec2-user/barofarm/server/.env'
+    env: process.env,
   }]
 }

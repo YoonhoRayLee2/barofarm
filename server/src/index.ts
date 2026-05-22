@@ -33,31 +33,20 @@ const server = http.createServer(app);
 
 const allowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
-  : ['http://localhost:3000', 'http://localhost:8080'];
+  : null; // null = 모든 origin 허용 (미설정 시 개방)
+
+const corsOrigin = allowedOrigins
+  ? (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      if (!origin || allowedOrigins.includes(origin)) callback(null, true);
+      else callback(null, false);
+    }
+  : true;
 
 const io = new Server(server, {
-  cors: {
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: true,
-  },
+  cors: { origin: corsOrigin, credentials: true },
 });
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-}));
+app.use(cors({ origin: corsOrigin, credentials: true }));
 app.use(express.json());
 
 // LiveKit WebView HTML (live-seller.html / live-buyer.html) 정적 서빙
