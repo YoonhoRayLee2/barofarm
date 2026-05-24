@@ -85,6 +85,33 @@ export default async function load() {
     if (el) el.textContent = '불러오기 실패';
   });
 
+  // Theme section
+  const themeSection = document.createElement('div');
+  themeSection.className = 'settings-section';
+  const savedTheme = localStorage.getItem('barofarm_theme') || 'light';
+  themeSection.innerHTML = `
+    <div class="settings-section-label">화면</div>
+    <div class="settings-item">
+      <div class="settings-item__label-area">
+        <span class="settings-item__label">다크 모드</span>
+      </div>
+      <label class="settings-theme-toggle" aria-label="다크 모드 전환">
+        <input type="checkbox" id="settings-theme-checkbox" ${savedTheme === 'dark' ? 'checked' : ''} />
+        <span class="settings-theme-slider"></span>
+      </label>
+    </div>
+  `;
+  page.appendChild(themeSection);
+
+  const themeCheckbox = themeSection.querySelector('#settings-theme-checkbox');
+  themeCheckbox.addEventListener('change', () => {
+    const theme = themeCheckbox.checked ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('barofarm_theme', theme);
+    // Also update the page's own data-theme for immediate feedback
+    page.dataset.theme = theme;
+  });
+
   // Legal section
   const legalSection = document.createElement('div');
   legalSection.className = 'settings-section';

@@ -84,9 +84,10 @@ export default async function load() {
             autocomplete="username"
             inputmode="text"
             maxlength="30"
+            aria-describedby="su-username-error"
           />
           <span class="signup-field-hint">영문, 숫자, 언더스코어(_) 4~30자</span>
-          <span class="signup-field-error" id="su-username-error"></span>
+          <span class="signup-field-error" id="su-username-error" role="alert" aria-live="polite"></span>
         </div>
 
         <!-- Password -->
@@ -100,8 +101,9 @@ export default async function load() {
             placeholder="8자 이상"
             autocomplete="new-password"
             maxlength="128"
+            aria-describedby="su-password-error"
           />
-          <span class="signup-field-error" id="su-password-error"></span>
+          <span class="signup-field-error" id="su-password-error" role="alert" aria-live="polite"></span>
         </div>
 
         <!-- Password confirm -->
@@ -115,8 +117,9 @@ export default async function load() {
             placeholder="비밀번호 재입력"
             autocomplete="new-password"
             maxlength="128"
+            aria-describedby="su-password-confirm-error"
           />
-          <span class="signup-field-error" id="su-password-confirm-error"></span>
+          <span class="signup-field-error" id="su-password-confirm-error" role="alert" aria-live="polite"></span>
         </div>
 
         <!-- Phone -->
@@ -131,8 +134,9 @@ export default async function load() {
             autocomplete="tel"
             inputmode="numeric"
             maxlength="13"
+            aria-describedby="su-phone-error"
           />
-          <span class="signup-field-error" id="su-phone-error"></span>
+          <span class="signup-field-error" id="su-phone-error" role="alert" aria-live="polite"></span>
         </div>
 
         <!-- Terms -->

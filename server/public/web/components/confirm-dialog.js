@@ -80,10 +80,15 @@ export function showConfirmDialog({
     backdrop.appendChild(dialog);
     document.body.appendChild(backdrop);
 
+    // Remember the element that triggered this dialog so we can restore focus
+    const previouslyFocused = document.activeElement;
+
     // Trigger enter animation (rAF ensures transition fires)
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         backdrop.classList.add('is-visible');
+        // Focus the cancel button (safe default — avoids accidental confirmation)
+        cancelBtn.focus();
       });
     });
 
@@ -92,6 +97,10 @@ export function showConfirmDialog({
       // Wait for transition to finish before removing
       backdrop.addEventListener('transitionend', () => backdrop.remove(), { once: true });
       document.removeEventListener('keydown', onKeyDown);
+      // Restore focus to the element that opened the dialog
+      if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+        previouslyFocused.focus();
+      }
       resolve(result);
     }
 

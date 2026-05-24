@@ -78,9 +78,6 @@ export default async function load(params) {
       <button class="ls-ctrl-btn" id="ls-mic-btn" title="마이크">🎙</button>
       <button class="ls-ctrl-btn ls-ctrl-btn--danger" id="ls-end-btn" title="방송 종료">✕</button>
     </div>
-    <span id="ls-zoom-out-btn" hidden></span>
-    <span id="ls-zoom-in-btn" hidden></span>
-    <span id="ls-zoom-label" hidden></span>
   `;
   page.appendChild(topBar);
 
@@ -98,15 +95,15 @@ export default async function load(params) {
   bottomPanel.innerHTML = `
     <div class="live-seller__auction-card" id="ls-auction-info">
       <div class="live-seller__no-auction" id="ls-no-auction">경매를 등록하세요</div>
-      <div class="live-seller__product-block" id="ls-product-block" style="display:none">
-        <img class="ls-product-thumb" id="ls-product-thumb" src="" alt="" style="display:none" />
+      <div class="live-seller__product-block is-hidden" id="ls-product-block">
+        <img class="ls-product-thumb is-hidden" id="ls-product-thumb" src="" alt="" />
         <div class="ls-product-text">
           <div class="live-seller__product-name" id="ls-product-name"></div>
           <div class="live-seller__current-price" id="ls-current-price"></div>
           <div class="live-seller__bidder" id="ls-bidder"></div>
         </div>
       </div>
-      <div class="ls-timer-bar-wrap" id="ls-timer-wrap" style="display:none">
+      <div class="ls-timer-bar-wrap is-hidden" id="ls-timer-wrap">
         <span class="ls-timer-label" id="ls-timer-label">30</span>
         <div class="ls-timer-track">
           <div class="ls-timer-fill" id="ls-timer-fill"></div>
@@ -143,7 +140,7 @@ export default async function load(params) {
 
   // Keep createTimer for its destroy() cleanup but don't render its element
   const timer = createTimer({ initialRemaining: 30 });
-  timer.el.style.display = 'none';
+  timer.el.classList.add('is-hidden');
 
   // Loading overlay
   const overlay = document.createElement('div');
@@ -368,7 +365,7 @@ export default async function load(params) {
 
   const unsubAuctionEnded = Sock.onAuctionEnded(socket, (auction) => {
     sellerEndedAuctions.push({ ...auction, endedAt: auction.endedAt || Date.now() });
-    timerWrap.style.display = 'none';
+    timerWrap.classList.add('is-hidden');
     showWonOverlay(auction);
     updateAuctionUI(null);
   });
@@ -420,22 +417,22 @@ export default async function load(params) {
     if (endFcfsBtn) { endFcfsBtn.remove(); endFcfsBtn = null; }
 
     if (!auction) {
-      if (noAuction) noAuction.style.display = '';
-      if (productBlock) productBlock.style.display = 'none';
-      timerWrap.style.display = 'none';
+      if (noAuction) noAuction.classList.remove('is-hidden');
+      if (productBlock) productBlock.classList.add('is-hidden');
+      timerWrap.classList.add('is-hidden');
       return;
     }
 
-    if (noAuction) noAuction.style.display = 'none';
-    if (productBlock) productBlock.style.display = '';
+    if (noAuction) noAuction.classList.add('is-hidden');
+    if (productBlock) productBlock.classList.remove('is-hidden');
     if (productName) productName.textContent = auction.productName || '';
     if (thumb) {
       if (auction.imageUrl) {
         thumb.src = auction.imageUrl;
-        thumb.style.display = '';
+        thumb.classList.remove('is-hidden');
       } else {
         thumb.src = '';
-        thumb.style.display = 'none';
+        thumb.classList.add('is-hidden');
       }
     }
 
@@ -479,7 +476,7 @@ export default async function load(params) {
 
     const remaining = auction.remaining != null ? auction.remaining : auction.timeLeft;
     if (remaining != null) {
-      timerWrap.style.display = '';
+      timerWrap.classList.remove('is-hidden');
       updateTimerBar(remaining);
       timer.update(remaining); // keep internal timer state in sync
     }
@@ -539,7 +536,7 @@ export default async function load(params) {
             <div class="won-slot" id="won-slot-names">
               <div class="won-slot__name" id="won-slot-display">...</div>
             </div>
-            <div class="won-card__winner-msg" id="won-winner-msg" style="display:none;"></div>
+            <div class="won-card__winner-msg is-hidden" id="won-winner-msg"></div>
           </div>
         `;
         const slotEl = backdrop.querySelector('#won-slot-display');
@@ -562,7 +559,7 @@ export default async function load(params) {
             slotEl.classList.add('won-slot__name--winner');
             if (msgEl) {
               msgEl.textContent = `${auction.winnerName}님 당첨 축하합니다! 🎉`;
-              msgEl.style.display = 'block';
+              msgEl.classList.remove('is-hidden');
             }
             return;
           }
@@ -620,7 +617,7 @@ export default async function load(params) {
           </div>
           <div class="auction-modal__photo-btns">
             <button class="auction-modal__capture-btn" id="am-capture">📷 상품 촬영</button>
-            <button class="auction-modal__retake-btn" id="am-retake" style="display:none">다시 찍기</button>
+            <button class="auction-modal__retake-btn is-hidden" id="am-retake">다시 찍기</button>
           </div>
         </div>
 
@@ -666,7 +663,7 @@ export default async function load(params) {
         </div>
 
         <!-- FCFS: duration select + stock -->
-        <div class="auction-modal__mode-opts" id="am-opts-fcfs" style="display:none">
+        <div class="auction-modal__mode-opts is-hidden" id="am-opts-fcfs">
           <div class="auction-modal__field">
             <label class="auction-modal__label">구매 시간</label>
             <select class="auction-modal__input" id="am-dur-fcfs">
@@ -691,7 +688,7 @@ export default async function load(params) {
         </div>
 
         <!-- Blind: 10s / 20s / 30s -->
-        <div class="auction-modal__mode-opts" id="am-opts-blind" style="display:none">
+        <div class="auction-modal__mode-opts is-hidden" id="am-opts-blind">
           <label class="auction-modal__label">입찰 시간</label>
           <div class="auction-modal__radio-row">
             <label><input type="radio" name="am-dur-blind" value="10" checked /> 10초</label>
@@ -701,7 +698,7 @@ export default async function load(params) {
         </div>
 
         <!-- Giveaway: 10초 후 자동 추첨 -->
-        <div class="auction-modal__mode-opts" id="am-opts-giveaway" style="display:none">
+        <div class="auction-modal__mode-opts is-hidden" id="am-opts-giveaway">
           <div class="am-giveaway-info">
             🎁 시작 후 10초 동안 참여자를 모집한 뒤,<br>
             자동으로 한 명을 무작위 추첨합니다.
@@ -741,8 +738,8 @@ export default async function load(params) {
         previewUrl = URL.createObjectURL(blob);
         previewEl.style.backgroundImage = `url(${previewUrl})`;
         previewEl.classList.add('has-image');
-        retakeBtn.style.display = '';
-        captureBtn.style.display = 'none';
+        retakeBtn.classList.remove('is-hidden');
+        captureBtn.classList.add('is-hidden');
       } catch (err) {
         showToast('촬영 실패: ' + err.message, 'error');
       } finally {
@@ -757,8 +754,8 @@ export default async function load(params) {
       if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
       previewEl.style.backgroundImage = '';
       previewEl.classList.remove('has-image');
-      retakeBtn.style.display = 'none';
-      captureBtn.style.display = '';
+      retakeBtn.classList.add('is-hidden');
+      captureBtn.classList.remove('is-hidden');
     });
 
     backdrop.querySelector('#am-cancel').addEventListener('click', () => {
@@ -782,12 +779,12 @@ export default async function load(params) {
     const startPriceField = backdrop.querySelector('#am-start-price-field');
 
     function switchMode(mode) {
-      optsNormal.style.display = mode === 'normal' ? '' : 'none';
-      optsFcfs.style.display = mode === 'fcfs' ? '' : 'none';
-      optsBlind.style.display = mode === 'blind' ? '' : 'none';
-      optsGiveaway.style.display = mode === 'giveaway' ? '' : 'none';
+      optsNormal.classList.toggle('is-hidden', mode !== 'normal');
+      optsFcfs.classList.toggle('is-hidden', mode !== 'fcfs');
+      optsBlind.classList.toggle('is-hidden', mode !== 'blind');
+      optsGiveaway.classList.toggle('is-hidden', mode !== 'giveaway');
       // 블라인드/무료나눔은 시작가 없음 (0원 고정)
-      startPriceField.style.display = (mode === 'blind' || mode === 'giveaway') ? 'none' : '';
+      startPriceField.classList.toggle('is-hidden', mode === 'blind' || mode === 'giveaway');
     }
 
     modeRadios.forEach((r) => r.addEventListener('change', () => switchMode(r.value)));

@@ -67,6 +67,8 @@
 .profile-topbar__icon-btn {
   background: none;
   border: none;
+  min-width: 44px;
+  min-height: 44px;
   padding: var(--space-1);
   cursor: pointer;
   color: var(--color-ink-soft);
@@ -161,6 +163,7 @@
   background: none;
   border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
+  min-height: 44px;
   padding: var(--space-2) var(--space-3);
   font-family: var(--font-body);
   font-size: var(--fs-sm);
@@ -252,6 +255,8 @@
 .profile-delivery__help {
   background: none;
   border: none;
+  min-width: 44px;
+  min-height: 44px;
   padding: var(--space-1);
   cursor: pointer;
   color: var(--color-ink-mute);
@@ -278,6 +283,7 @@
   flex: 1;
   background: none;
   border: none;
+  min-height: 44px;
   padding: var(--space-3) 0;
   font-family: var(--font-body);
   font-size: var(--fs-base);
@@ -955,7 +961,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: #004A96;
+  background: var(--color-nh-blue);
   color: #fff;
   font-size: 11px;
   font-weight: 700;
@@ -1097,61 +1103,3 @@
 .bank-sheet__btn:disabled { opacity: 0.5; cursor: default; }
 .bank-sheet__btn:not(:disabled):active { opacity: 0.85; }
 
-/* ── 판매자 배송비 설정 카드 ───────────────────────────────── */
-.profile-shipping-fee-card {
-  padding: 16px;
-  margin: 0 16px 12px;
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-line);
-}
-.profile-shipping-fee-card__label {
-  font-size: 13px;
-  color: var(--color-ink-soft);
-  display: block;
-}
-.profile-shipping-fee-card__row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-}
-.profile-shipping-fee-card__row input {
-  flex: 1;
-  background: var(--color-bg);
-  border: 1px solid var(--color-line);
-  border-radius: 8px;
-  padding: 8px;
-  color: var(--color-ink);
-  font-size: 14px;
-  font-family: var(--font-body);
-  outline: none;
-}
-.profile-shipping-fee-card__row input:focus {
-  border-color: var(--color-accent);
-}
-.profile-shipping-fee-card__row span {
-  font-size: 14px;
-  color: var(--color-ink-soft);
-}
-.profile-shipping-fee-card__row button {
-  background: var(--color-accent);
-  color: var(--color-bg);
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 13px;
-  cursor: pointer;
-  font-family: var(--font-body);
-}
-.profile-shipping-fee-card__row button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.profile-shipping-fee-card__hint {
-  font-size: 12px;
-  color: var(--color-ink-soft);
-  margin: 6px 0 0;
-  line-height: 1.5;
-}

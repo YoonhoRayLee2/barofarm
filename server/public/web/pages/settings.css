@@ -25,6 +25,8 @@
 .settings-header__back {
   width: 38px;
   height: 38px;
+  min-width: 44px;
+  min-height: 44px;
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   display: flex;
@@ -142,3 +144,52 @@
 .settings-item--btn:active {
   background: var(--color-surface-alt);
 }
+
+/* ── 다크/라이트 테마 토글 스위치 ── */
+.settings-theme-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 48px;
+  height: 28px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.settings-theme-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.settings-theme-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--color-line);
+  border-radius: var(--radius-pill);
+  transition: background var(--dur-base) var(--ease-in-out);
+}
+
+.settings-theme-slider::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: var(--elev-1);
+  transition: transform var(--dur-base) var(--ease-in-out);
+}
+
+.settings-theme-toggle input:checked + .settings-theme-slider {
+  background: var(--color-accent);
+}
+
+.settings-theme-toggle input:checked + .settings-theme-slider::after {
+  transform: translateX(20px);
+}
+

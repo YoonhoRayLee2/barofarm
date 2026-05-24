@@ -57,8 +57,9 @@ export default async function load() {
             autocomplete="username"
             inputmode="text"
             maxlength="30"
+            aria-describedby="login-username-error"
           />
-          <span class="login-field-error" id="login-username-error"></span>
+          <span class="login-field-error" id="login-username-error" role="alert" aria-live="polite"></span>
         </div>
 
         <div class="login-field">
@@ -71,8 +72,9 @@ export default async function load() {
             placeholder="비밀번호 입력"
             autocomplete="current-password"
             maxlength="128"
+            aria-describedby="login-password-error"
           />
-          <span class="login-field-error" id="login-password-error"></span>
+          <span class="login-field-error" id="login-password-error" role="alert" aria-live="polite"></span>
         </div>
 
         <span class="login-global-error" id="login-global-error"></span>

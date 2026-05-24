@@ -912,42 +912,6 @@ function buildDealerPanel(profileUser, isMe) {
       });
     }
     panel.appendChild(bankCard);
-
-    /* Shipping fee setting card */
-    const shippingFee = profileUser.sellerShippingFee != null ? Number(profileUser.sellerShippingFee) : 3000;
-    const shippingCard = document.createElement('div');
-    shippingCard.className = 'profile-shipping-fee-card';
-    shippingCard.innerHTML = `
-      <span class="profile-shipping-fee-card__label">기본 배송비</span>
-      <div class="profile-shipping-fee-card__row">
-        <input type="number" id="shipping-fee-input" value="${shippingFee}" min="0" step="500">
-        <span>원</span>
-        <button id="shipping-fee-save-btn">저장</button>
-      </div>
-      <p class="profile-shipping-fee-card__hint">합배송 처리 시 구매자에게 청구되는 배송비</p>
-    `;
-    panel.appendChild(shippingCard);
-
-    shippingCard.querySelector('#shipping-fee-save-btn').addEventListener('click', async () => {
-      const input = shippingCard.querySelector('#shipping-fee-input');
-      const val = Number(input.value);
-      if (!Number.isFinite(val) || val < 0) {
-        showToast('올바른 금액을 입력해주세요');
-        return;
-      }
-      const saveBtn = shippingCard.querySelector('#shipping-fee-save-btn');
-      saveBtn.disabled = true;
-      try {
-        await api.updateProfile(profileUser.id, { sellerShippingFee: val });
-        profileUser.sellerShippingFee = val;
-        try { await setSecureItem('user', JSON.stringify(profileUser)); } catch (_e) { /* ignore */ }
-        showToast('배송비가 저장되었습니다.', { variant: 'success', duration: 1800 });
-      } catch {
-        showToast('저장에 실패했습니다');
-      } finally {
-        saveBtn.disabled = false;
-      }
-    });
   }
 
   /* Revenue header */
@@ -966,6 +930,15 @@ function buildDealerPanel(profileUser, isMe) {
   revenue.appendChild(ramount);
   panel.appendChild(revenue);
 
+  /* 조합원 인증마크 — 판매자 탭에서만, 계좌 인증 완료 시에만 */
+  const isVerified = profileUser.isNhMember === true && !!profileUser.bankVerifiedAt;
+  if (isVerified) {
+    const badge = document.createElement('div');
+    badge.className = 'profile-seller-nh-badge';
+    badge.innerHTML = '<span class="nh-badge">🏦 NH농협 조합원 인증</span><span class="profile-seller-nh-badge__desc">인증된 농협 조합원 판매자입니다</span>';
+    panel.appendChild(badge);
+  }
+
   /* Menu group */
   const menuGroup = document.createElement('div');
   menuGroup.className = 'profile-menu-group';
@@ -974,6 +947,7 @@ function buildDealerPanel(profileUser, isMe) {
     { icon: '📤', label: '미발송 구매자 모아보기',  path: '/app/seller/unshipped' },
     { icon: '➕', label: '공동판매 등록',             path: '/app/group-deals/create' },
     { icon: '🤝', label: '공동판매 관리',           path: '/app/group-deals?mine=true' },
+    { icon: '🚚', label: '배송비 정책',             path: '/app/seller/shipping-policy' },
     { icon: '📦', label: '판매내역',                path: '/app/seller/sales' },
     { icon: '💬', label: '상품 문의 채팅',           path: '/app/dm' },
     { icon: '🔍', label: '판매 대행 상품 찾기',     path: '/app/consignment/find' },
@@ -1169,12 +1143,6 @@ export default async function load() {
 
   /* 1. Top nickname bar (sticky) */
   const topbar = buildTopbar(nickname);
-  /* NH 조합원 인증 뱃지 (이름 옆에 표시) */
-  const nhBadge = document.createElement('span');
-  nhBadge.className = 'nh-badge profile-hero__nh-badge';
-  nhBadge.textContent = '🏦 조합원 인증';
-  nhBadge.hidden = !(profileUser.isNhMember && profileUser.bankVerifiedAt);
-  topbar.nameEl.insertAdjacentElement('afterend', nhBadge);
   page.appendChild(topbar.el);
 
   /* Scroll wrapper — contains all content between topbar and tab bar */

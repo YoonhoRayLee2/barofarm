@@ -33,16 +33,32 @@ const CATEGORIES = [
   { id: '곡물', label: '곡물', glyph: 'grain', hue: '#D6A84A' },
 ];
 
+/**
+ * Generate a category glyph SVG using currentColor so the color can be
+ * controlled via the CSS `color` property (supports CSS variables).
+ * The optional `color` param sets an inline style on the SVG wrapper span
+ * when provided; pass a CSS variable expression like `var(--color-accent)`
+ * to keep colors token-based.
+ *
+ * @param {string} kind
+ * @param {string} [color] - CSS color value or CSS variable expression
+ * @param {number} [size]
+ * @returns {string} HTML string (span wrapping an SVG)
+ */
 function getCatGlyphSVG(kind, color, size = 32) {
-  const g = {
-    cart:  `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M5 8h4l3 13h13l3-9H10" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="13" cy="26" r="2" fill="${color}"/><circle cx="23" cy="26" r="2" fill="${color}"/></svg>`,
-    apple: `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M16 9c0-2 1.5-3.5 3.5-3.5M16 9c-3-2-7-1-8.5 1.5-2 3-1 8 2 11 1.5 1.5 3 2 4.5 2 1 0 1.5-.5 2-.5s1 .5 2 .5c1.5 0 3-.5 4.5-2 3-3 4-8 2-11C21 7 19 6 16 9z" fill="${color}"/></svg>`,
-    leaf:  `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M6 22c0-9 7-16 20-16-1 13-9 20-16 20-1.5 0-3-.5-4-1.5z" fill="${color}"/></svg>`,
-    meat:  `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M9 8c4-3 11-3 14 0 3 3 3 9 0 12-2 2-5 2.5-7 4-2 1.5-5 1-6.5-1-1.5-2-1-4 .5-5C8 16 6 11 9 8z" fill="${color}"/></svg>`,
-    fish:  `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M4 16c4-6 10-8 16-6 3 1 5 3 6 4l4-4v12l-4-4c-1 1-3 3-6 4-6 2-12 0-16-6z" fill="${color}"/></svg>`,
-    grain: `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M16 4v24" stroke="${color}" stroke-width="2" stroke-linecap="round"/><path d="M16 8c-3-1-6 0-7 3 3 1 6 0 7-3zM16 8c3-1 6 0 7 3-3 1-6 0-7-3zM16 14c-3-1-6 0-7 3 3 1 6 0 7-3zM16 14c3-1 6 0 7 3-3 1-6 0-7-3zM16 20c-3-1-6 0-7 3 3 1 6 0 7-3zM16 20c3-1 6 0 7 3-3 1-6 0-7-3z" fill="${color}"/></svg>`,
+  // All paths use currentColor — callers control the tint via `color` style
+  const svgs = {
+    cart:  `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M5 8h4l3 13h13l3-9H10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="13" cy="26" r="2" fill="currentColor"/><circle cx="23" cy="26" r="2" fill="currentColor"/></svg>`,
+    apple: `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M16 9c0-2 1.5-3.5 3.5-3.5M16 9c-3-2-7-1-8.5 1.5-2 3-1 8 2 11 1.5 1.5 3 2 4.5 2 1 0 1.5-.5 2-.5s1 .5 2 .5c1.5 0 3-.5 4.5-2 3-3 4-8 2-11C21 7 19 6 16 9z" fill="currentColor"/></svg>`,
+    leaf:  `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M6 22c0-9 7-16 20-16-1 13-9 20-16 20-1.5 0-3-.5-4-1.5z" fill="currentColor"/></svg>`,
+    meat:  `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M9 8c4-3 11-3 14 0 3 3 3 9 0 12-2 2-5 2.5-7 4-2 1.5-5 1-6.5-1-1.5-2-1-4 .5-5C8 16 6 11 9 8z" fill="currentColor"/></svg>`,
+    fish:  `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M4 16c4-6 10-8 16-6 3 1 5 3 6 4l4-4v12l-4-4c-1 1-3 3-6 4-6 2-12 0-16-6z" fill="currentColor"/></svg>`,
+    grain: `<svg width="${size}" height="${size}" viewBox="0 0 32 32" fill="none"><path d="M16 4v24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16 8c-3-1-6 0-7 3 3 1 6 0 7-3zM16 8c3-1 6 0 7 3-3 1-6 0-7-3zM16 14c-3-1-6 0-7 3 3 1 6 0 7-3zM16 14c3-1 6 0 7 3-3 1-6 0-7-3zM16 20c-3-1-6 0-7 3 3 1 6 0 7-3zM16 20c3-1 6 0 7 3-3 1-6 0-7-3z" fill="currentColor"/></svg>`,
   };
-  return g[kind] ?? g.cart;
+  const svg = svgs[kind] ?? svgs.cart;
+  // Wrap in a span so the color cascades down to the SVG via currentColor
+  const styleAttr = color ? ` style="color:${color}"` : '';
+  return `<span class="cat-glyph-wrap"${styleAttr}>${svg}</span>`;
 }
 
 /**
@@ -84,7 +100,7 @@ export default async function load() {
           <path d="M10 20a2 2 0 004 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
       </button>
-      <button class="home-header__icon-btn" aria-label="설정" onclick="window.location.href='/app/settings'">
+      <button class="home-header__icon-btn" aria-label="설정" id="home-settings-btn">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
           <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
           <path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -93,6 +109,9 @@ export default async function load() {
     </div>
   `;
   page.appendChild(header);
+
+  // Settings button: use SPA navigate instead of inline onclick
+  header.querySelector('#home-settings-btn').addEventListener('click', () => navigate('/app/settings'));
 
   // ---- Category bubbles ----
   let activeCategory = '전체';
@@ -118,7 +137,7 @@ export default async function load() {
     btn.setAttribute('aria-label', cat.label);
     btn.innerHTML = `
       <div class="cat-circle" style="--cat-hue: ${cat.hue}">
-        <div class="cat-circle__inner">${getCatGlyphSVG(cat.glyph, isActive ? '#fff' : cat.hue, 32)}</div>
+        <div class="cat-circle__inner">${getCatGlyphSVG(cat.glyph, isActive ? 'var(--color-bg)' : cat.hue, 32)}</div>
         <span class="cat-circle__live-badge">LIVE</span>
       </div>
       <span class="cat-circle__label">${cat.label}</span>
@@ -130,9 +149,11 @@ export default async function load() {
         const isAct = b.dataset.cat === cat.id;
         b.classList.toggle('is-active', isAct);
         const c = CATEGORIES.find((c) => c.id === b.dataset.cat);
-        if (c) b.querySelector('.cat-circle__inner').innerHTML = getCatGlyphSVG(c.glyph, isAct ? '#fff' : c.hue, 32);
+        if (c) b.querySelector('.cat-circle__inner').innerHTML = getCatGlyphSVG(c.glyph, isAct ? 'var(--color-bg)' : c.hue, 32);
       });
       renderFeed();
+      // 카테고리 전환 시 피드 스크롤 맨 위로 초기화
+      feed.scrollTop = 0;
     });
     catRow.appendChild(btn);
   });
@@ -225,7 +246,7 @@ export default async function load() {
       <div class="home-section__grid" id="upcoming-grid"></div>
     </section>
 
-    <section class="home-section home-section--group-deals" id="section-group-deals" style="display:none">
+    <section class="home-section home-section--group-deals is-hidden" id="section-group-deals">
       <div class="home-section__header">
         <span class="home-section__badge home-section__badge--group">🌾</span>
         <h2 class="home-section__title">공동구매</h2>
@@ -252,8 +273,8 @@ export default async function load() {
 
   // ---- Bottom tab bar ----
   if (isProductsTab) {
-    tickerWrap.style.display = 'none';
-    sectionLive.style.display = 'none';
+    tickerWrap.classList.add('is-hidden');
+    sectionLive.classList.add('is-hidden');
   }
 
   page.appendChild(createTabSpacer());
@@ -370,10 +391,10 @@ export default async function load() {
 
     if (!upcomingItems.length) {
       // 예고 없을 때는 섹션 자체를 숨김
-      sectionUpcoming.style.display = 'none';
+      sectionUpcoming.classList.add('is-hidden');
       return;
     }
-    sectionUpcoming.style.display = '';
+    sectionUpcoming.classList.remove('is-hidden');
     upcomingItems.forEach((live) => {
       const card = createLiveCard(live, {
         currentUserId: currentUser ? String(currentUser.id) : null,
@@ -432,10 +453,10 @@ export default async function load() {
 
   function renderGroupDealsSection(list) {
     if (!list || !list.length) {
-      sectionGroupDeals.style.display = 'none';
+      sectionGroupDeals.classList.add('is-hidden');
       return;
     }
-    sectionGroupDeals.style.display = '';
+    sectionGroupDeals.classList.remove('is-hidden');
     groupDealsGrid.innerHTML = '';
 
     list.forEach((deal) => {
@@ -516,7 +537,7 @@ export default async function load() {
     const glyph = CAT_GLYPHS[product.category] ?? 'cart';
     card.innerHTML = `
       <div class="home-product-card__thumb" style="background:linear-gradient(135deg,${bg1},${bg2})">
-        <div class="home-product-card__glyph">${getCatGlyphSVG(glyph, 'rgba(255,255,255,0.45)', 100)}</div>
+        <div class="home-product-card__glyph">${getCatGlyphSVG(glyph, 'var(--color-white-tint-30)', 100)}</div>
         ${product.imageUrl ? `<img src="${escapeAttr(product.imageUrl)}" alt="" class="home-product-card__img" loading="lazy"/>` : ''}
         <span class="home-product-card__cat">${escapeHtml(product.category || '')}</span>
       </div>
@@ -618,6 +639,8 @@ export default async function load() {
             if (c) b.querySelector('.cat-circle__inner').innerHTML = getCatGlyphSVG(c.glyph, isAct2 ? '#fff' : c.hue, 32);
           });
           renderFeed();
+          // 카테고리 전환 시 피드 스크롤 맨 위로 초기화
+          feed.scrollTop = 0;
         });
         catRow.appendChild(btn);
       });
@@ -627,7 +650,7 @@ export default async function load() {
   // 초기 스켈레톤
   if (!isProductsTab) renderLiveSkeleton(liveGrid, 2);
   renderProductSkeleton(productsGrid, 4);
-  sectionUpcoming.style.display = 'none';
+  sectionUpcoming.classList.add('is-hidden');
 
   // 라이브 + 상품 병렬 로드
   await Promise.allSettled([

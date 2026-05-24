@@ -1,0 +1,230 @@
+/* Shipping Policy Page — Fresh Field */
+
+.sp-page {
+  background: var(--color-bg);
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-width: 480px;
+  margin: 0 auto;
+  font-family: var(--font-body);
+}
+
+/* ─── Header ────────────────────────────────────────────── */
+.sp-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: max(14px, env(safe-area-inset-top)) var(--space-4) 14px;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-bg-overlay);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  flex-shrink: 0;
+  z-index: var(--z-sticky);
+}
+
+.sp-header__back {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  font-size: 18px;
+  color: var(--color-ink);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.sp-header__back:active {
+  background: var(--color-surface-alt);
+  transform: scale(0.94);
+}
+
+.sp-header__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  color: var(--color-ink);
+  letter-spacing: -0.3px;
+  flex: 1;
+  margin: 0;
+}
+
+/* ─── Scroll area ───────────────────────────────────────── */
+.sp-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--space-4) var(--space-4) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ─── Section card ──────────────────────────────────────── */
+.sp-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-line);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sp-card__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--color-ink);
+  letter-spacing: -0.2px;
+  margin: 0 0 var(--space-1);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-line);
+}
+
+/* ─── Field ─────────────────────────────────────────────── */
+.sp-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.sp-field__label {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--color-ink-soft);
+}
+
+.sp-field__hint {
+  font-size: var(--fs-xs);
+  color: var(--color-ink-mute);
+  margin: 0;
+  line-height: var(--lh-normal);
+}
+
+/* ─── Input group (input + unit) ────────────────────────── */
+.sp-input-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sp-input {
+  flex: 1;
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 10px var(--space-3);
+  color: var(--color-ink);
+  font-size: var(--fs-base);
+  font-family: var(--font-body);
+  outline: none;
+  transition: border-color var(--dur-fast) var(--ease-out);
+  min-width: 0;
+}
+
+.sp-input:focus {
+  border-color: var(--color-accent);
+}
+
+.sp-input-unit {
+  font-size: var(--fs-base);
+  color: var(--color-ink-soft);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ─── Select ────────────────────────────────────────────── */
+.sp-select {
+  width: 100%;
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 10px var(--space-3);
+  color: var(--color-ink);
+  font-size: var(--fs-base);
+  font-family: var(--font-body);
+  outline: none;
+  appearance: auto;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.sp-select:focus {
+  border-color: var(--color-accent);
+}
+
+/* ─── Textarea ──────────────────────────────────────────── */
+.sp-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 10px var(--space-3);
+  color: var(--color-ink);
+  font-size: var(--fs-base);
+  font-family: var(--font-body);
+  outline: none;
+  resize: vertical;
+  line-height: var(--lh-normal);
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.sp-textarea:focus {
+  border-color: var(--color-accent);
+}
+
+.sp-textarea::placeholder {
+  color: var(--color-ink-mute);
+}
+
+/* ─── Footer spacer ─────────────────────────────────────── */
+.sp-footer-spacer {
+  height: var(--space-7);
+  flex-shrink: 0;
+}
+
+/* ─── Save button (sticky bottom) ──────────────────────── */
+.sp-footer {
+  flex-shrink: 0;
+  padding: var(--space-3) var(--space-4) max(var(--space-4), env(safe-area-inset-bottom));
+  background: var(--color-bg-overlay);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--color-line);
+}
+
+.sp-save-btn {
+  width: 100%;
+  background: var(--grad-cta);
+  color: var(--color-surface);
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 15px var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  cursor: pointer;
+  transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+
+.sp-save-btn:active {
+  opacity: 0.88;
+  transform: scale(0.98);
+}
+
+.sp-save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}

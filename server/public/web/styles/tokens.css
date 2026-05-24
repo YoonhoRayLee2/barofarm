@@ -240,4 +240,7 @@
   --grad-cta:    linear-gradient(135deg, #E85A4E 0%, #E5564A 60%, #C7403A 100%);
   --grad-bg:     linear-gradient(180deg, #FAFAF5 0%, #F0F2EA 100%);
   --grad-hero:   radial-gradient(ellipse at top, rgba(45,138,62,0.10) 0%, transparent 60%);
+
+  /* NH 농협 */
+  --color-nh-blue: #004A96;
 }

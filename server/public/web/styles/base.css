@@ -175,6 +175,11 @@ ol {
   border-radius: var(--radius-pill);
 }
 
+/* ── 유틸리티: 가시성 제어 ──────────────────────────────────── */
+.is-hidden {
+  display: none !important;
+}
+
 /* ── 바텀시트: phone frame 너비로 제한 (모든 기기 동일) ─── */
 .pi-overlay,
 .pd-confirm-overlay,

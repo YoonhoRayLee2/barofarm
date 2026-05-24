@@ -87,6 +87,8 @@ export default async function load(params) {
     const url = new URL(window.location.href);
     url.searchParams.set('tab', activeTab);
     window.history.replaceState({}, '', url.toString());
+    // 탭 전환 시 콘텐츠 영역 스크롤 맨 위로 초기화
+    contentArea.scrollTop = 0;
     loadTab(activeTab);
   });
 

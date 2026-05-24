@@ -209,7 +209,7 @@
   width: 80px;
   height: 80px;
   opacity: 0.5;
-  color: #2D8A3E;
+  color: var(--color-accent);
 }
 .home-empty__title {
   font-size: 18px;
