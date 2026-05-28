@@ -30,6 +30,7 @@ const DEFAULTS = {
   returnShippingFee:    6000,
   exchangeShippingFee:  6000,
   noDeliveryZones:      '',
+  allowHanaroDelivery:  true,
 };
 
 export default async function load() {
@@ -150,6 +151,22 @@ export default async function load() {
         </div>
       </section>
 
+      <!-- 섹션 5: 하나로마트 반값택배 -->
+      <section class="sp-card">
+        <h2 class="sp-card__title">하나로마트 반값택배</h2>
+
+        <div class="sp-field sp-field--row">
+          <div class="sp-field__text">
+            <span class="sp-field__label">반값택배 허용</span>
+            <p class="sp-field__hint">구매자가 하나로마트 수령을 선택할 수 있도록 허용합니다</p>
+          </div>
+          <label class="sp-toggle" aria-label="하나로마트 반값택배 허용">
+            <input type="checkbox" id="sp-allow-hanaro" class="sp-toggle__input">
+            <span class="sp-toggle__track"></span>
+          </label>
+        </div>
+      </section>
+
       <div class="sp-footer-spacer"></div>
     </div>
 
@@ -179,6 +196,7 @@ export default async function load() {
     page.querySelector('#sp-return-fee').value      = p.returnShippingFee     != null ? p.returnShippingFee     : DEFAULTS.returnShippingFee;
     page.querySelector('#sp-exchange-fee').value    = p.exchangeShippingFee   != null ? p.exchangeShippingFee   : DEFAULTS.exchangeShippingFee;
     page.querySelector('#sp-no-delivery').value     = p.noDeliveryZones       != null ? p.noDeliveryZones       : DEFAULTS.noDeliveryZones;
+    page.querySelector('#sp-allow-hanaro').checked  = p.allowHanaroDelivery   != null ? p.allowHanaroDelivery   : DEFAULTS.allowHanaroDelivery;
 
     const leadDaysVal = p.shippingLeadDays != null ? p.shippingLeadDays : DEFAULTS.shippingLeadDays;
     const leadSel = page.querySelector('#sp-lead-days');
@@ -204,6 +222,7 @@ export default async function load() {
     const returnShippingFee     = Number(page.querySelector('#sp-return-fee').value);
     const exchangeShippingFee   = Number(page.querySelector('#sp-exchange-fee').value);
     const noDeliveryZones       = page.querySelector('#sp-no-delivery').value.trim();
+    const allowHanaroDelivery   = page.querySelector('#sp-allow-hanaro').checked;
 
     if (!Number.isFinite(sellerShippingFee) || sellerShippingFee < 0) {
       showToast('기본 배송비를 올바르게 입력해주세요'); return;
@@ -236,6 +255,7 @@ export default async function load() {
         returnShippingFee,
         exchangeShippingFee,
         noDeliveryZones,
+        allowHanaroDelivery,
       });
       /* 캐시 갱신 */
       try {

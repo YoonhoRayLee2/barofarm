@@ -156,8 +156,8 @@ export default async function load() {
       return;
     }
 
-    // 1. live 기준 그룹핑 (liveId null → '직접구매' 그룹)
-    const liveMap = new Map(); // liveId(or '__direct__') → { meta, buyers: Map }
+    // 1. live/deal 기준 그룹핑
+    const liveMap = new Map();
     list.forEach((item) => {
       const liveKey = item.liveId || '__direct__';
       if (!liveMap.has(liveKey)) {
@@ -165,6 +165,8 @@ export default async function load() {
           liveId: item.liveId,
           liveTitle: item.liveTitle,
           liveStartedAt: item.liveStartedAt,
+          isGroupDeal: item.itemType === 'group_deal',
+          dealId: item.dealId || null,
           buyers: new Map(),
         });
       }
@@ -187,21 +189,30 @@ export default async function load() {
       const allItems = [...liveGroup.buyers.values()].flatMap(b => b.items);
       const totalPrice = allItems.reduce((s, i) => s + (i.finalPrice || 0), 0);
       const isDirect = !liveGroup.liveId;
+      const isGroupDeal = liveGroup.isGroupDeal;
 
-      // 라이브 그룹 헤더
       const groupEl = document.createElement('div');
       groupEl.className = 'sg-group';
 
       const headerEl = document.createElement('div');
       headerEl.className = 'sg-header';
       const dateStr = liveGroup.liveStartedAt ? formatDateShort(liveGroup.liveStartedAt) : (allItems[0]?.soldAt ? formatDateShort(allItems[0].soldAt) : '');
+      let badgeClass = '';
+      let badgeText = 'LIVE';
+      if (isGroupDeal) { badgeClass = 'sg-live-badge--group'; badgeText = '공동판매'; }
+      else if (isDirect) { badgeClass = 'sg-live-badge--direct'; badgeText = '직접구매'; }
       headerEl.innerHTML = `
         <div class="sg-header__left">
-          <span class="sg-live-badge ${isDirect ? 'sg-live-badge--direct' : ''}">${isDirect ? '직접구매' : 'LIVE'}</span>
+          <span class="sg-live-badge ${badgeClass}">${badgeText}</span>
+          ${liveGroup.liveTitle && isGroupDeal ? `<span class="sg-header__title">${escapeHtml(liveGroup.liveTitle)}</span>` : ''}
           <span class="sg-header__date">${dateStr}</span>
         </div>
         <span class="sg-header__summary">${allItems.length}건 · ${formatPrice(totalPrice)}</span>
       `;
+      if (isGroupDeal && liveGroup.dealId) {
+        headerEl.style.cursor = 'pointer';
+        headerEl.addEventListener('click', () => navigate('/app/group-deals/' + liveGroup.dealId));
+      }
       groupEl.appendChild(headerEl);
 
       // 구매자 별 섹션
@@ -223,7 +234,7 @@ export default async function load() {
         buyerEl.appendChild(buyerHeader);
 
         buyerGroup.items.forEach((item) => {
-          const modeLabel = { blind: '블라인드', fcfs: '선착순', giveaway: '나눔', direct: '직접구매' }[item.mode] ?? '경매';
+          const modeLabel = { blind: '블라인드', fcfs: '선착순', giveaway: '나눔', direct: '직접구매', group_deal: '공동판매' }[item.mode] ?? '경매';
           const statusKey = item.deliveryStatus || 'payment_complete';
           const statusLabel = DELIVERY_LABELS[statusKey] || statusKey;
 
@@ -245,7 +256,11 @@ export default async function load() {
             <span class="sg-item__price">${formatPrice(item.finalPrice)}</span>
           `;
           row.style.cursor = 'pointer';
-          row.addEventListener('click', () => navigate('/app/order-detail/' + item.auctionId));
+          if (item.itemType === 'group_deal') {
+            row.addEventListener('click', () => navigate('/app/group-deals/' + item.dealId));
+          } else {
+            row.addEventListener('click', () => navigate('/app/order-detail/' + item.auctionId));
+          }
           buyerEl.appendChild(row);
         });
 

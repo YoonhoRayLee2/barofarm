@@ -227,6 +227,20 @@
   background: var(--color-accent);
 }
 
+.sg-live-badge--group {
+  background: var(--color-info, #3b82f6);
+}
+
+.sg-header__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-ink);
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .sg-header__date {
   font-size: 13px;
   font-weight: 600;

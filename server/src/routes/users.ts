@@ -311,7 +311,7 @@ router.get('/:id', async (req: Request, res: Response) => {
               interests,
               bank_name, bank_account, bank_holder, bank_verified_at, is_nh_member,
               delivery_option, hanaro_mart_name, hanaro_mart_addr,
-              seller_shipping_fee
+              seller_shipping_fee, allow_hanaro_delivery
        FROM users WHERE id = ?`,
       [userId],
     ) as [unknown[], unknown];
@@ -340,6 +340,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       hanaro_mart_name: string | null;
       hanaro_mart_addr: string | null;
       seller_shipping_fee: number;
+      allow_hanaro_delivery: number;
     }>)[0];
 
     if (!user) {
@@ -375,7 +376,8 @@ router.get('/:id', async (req: Request, res: Response) => {
       deliveryOption:  user.delivery_option ?? 'standard',
       hanaroMartName:  user.hanaro_mart_name ?? null,
       hanaroMartAddr:  user.hanaro_mart_addr ?? null,
-      sellerShippingFee: user.seller_shipping_fee ?? 3000,
+      sellerShippingFee:     user.seller_shipping_fee ?? 3000,
+      allowHanaroDelivery:   user.allow_hanaro_delivery !== 0,
     });
   } catch (err) {
     console.error('[users] GET /:id error:', err);
@@ -468,6 +470,14 @@ router.patch('/:id', uploadAvatar.single('avatar'), async (req: Request, res: Re
       await pool.execute(
         'UPDATE users SET seller_shipping_fee = ? WHERE id = ?',
         [Number(sellerShippingFee), userId],
+      );
+    }
+
+    const { allowHanaroDelivery } = req.body as { allowHanaroDelivery?: boolean };
+    if (allowHanaroDelivery !== undefined) {
+      await pool.execute(
+        'UPDATE users SET allow_hanaro_delivery = ? WHERE id = ?',
+        [allowHanaroDelivery ? 1 : 0, userId],
       );
     }
 
@@ -835,7 +845,9 @@ router.get('/:id/sales', async (req: Request, res: Response) => {
       buyer_name: string | null;
       buyer_id: string | null;
     }>).map(r => ({
+      itemType:       'auction' as const,
       auctionId:      r.auction_id,
+      dealId:         null,
       productName:    r.product_name,
       finalPrice:     Number(r.final_price),
       mode:           r.mode,
@@ -849,7 +861,62 @@ router.get('/:id/sales', async (req: Request, res: Response) => {
       buyerId:        r.buyer_id ?? null,
     }));
 
-    res.json(sales);
+    // 공동판매 내역 추가
+    const [gdRows] = await pool.execute(
+      `SELECT
+         gd.id                                             AS deal_id,
+         gd.title                                          AS product_name,
+         gd.price_per_unit * COALESCE(gdp.quantity, 1)    AS final_price,
+         CASE gd.status
+           WHEN 'confirmed'  THEN 'payment_complete'
+           WHEN 'shipped'    THEN 'shipped'
+           WHEN 'completed'  THEN 'purchase_confirmed'
+           ELSE gd.status
+         END                                               AS delivery_status,
+         gd.image_url,
+         gdp.joined_at                                     AS sold_at,
+         gd.created_at                                     AS live_started_at,
+         gd.title                                          AS live_title,
+         b.nickname                                        AS buyer_name,
+         gdp.buyer_id                                      AS buyer_id
+       FROM group_deals gd
+       JOIN group_deal_participants gdp ON gdp.deal_id = gd.id
+       LEFT JOIN users b ON b.id = gdp.buyer_id
+       WHERE gd.seller_id = ?
+         AND gd.status NOT IN ('recruiting', 'cancelled')
+       ORDER BY gdp.joined_at DESC`,
+      [sellerId],
+    ) as [unknown[], unknown];
+
+    const gdSales = (gdRows as Array<{
+      deal_id: number;
+      product_name: string;
+      final_price: number;
+      delivery_status: string;
+      image_url: string | null;
+      sold_at: string;
+      live_started_at: string;
+      live_title: string;
+      buyer_name: string | null;
+      buyer_id: number | null;
+    }>).map(r => ({
+      itemType:       'group_deal' as const,
+      auctionId:      null,
+      dealId:         String(r.deal_id),
+      productName:    r.product_name,
+      finalPrice:     Number(r.final_price),
+      mode:           'group_deal',
+      deliveryStatus: r.delivery_status,
+      imageUrl:       r.image_url ?? null,
+      soldAt:         r.sold_at,
+      liveId:         `gd_${r.deal_id}`,
+      liveTitle:      r.live_title,
+      liveStartedAt:  r.live_started_at,
+      buyerName:      r.buyer_name ?? null,
+      buyerId:        r.buyer_id ? String(r.buyer_id) : null,
+    }));
+
+    res.json([...sales, ...gdSales]);
   } catch (err) {
     console.error('[users] GET /:id/sales error:', err);
     res.status(500).json({ error: 'database error' });

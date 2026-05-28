@@ -20,6 +20,7 @@ interface AuctionRow {
   seller_id: string;
   seller_name: string | null;
   seller_farm_zipcode: string | null;
+  seller_allow_hanaro: number;
   top_bidder_id: string | null;
   buyer_name: string | null;
   delivery_name: string | null;
@@ -46,6 +47,7 @@ const AUCTION_QUERY = `
     a.id, a.product_name, a.start_price, a.current_price, a.mode,
     a.delivery_status, a.status, a.image_url, a.ends_at,
     a.seller_id, s.nickname AS seller_name, s.farm_zipcode AS seller_farm_zipcode,
+    s.allow_hanaro_delivery AS seller_allow_hanaro,
     a.top_bidder_id, b.nickname AS buyer_name,
     b.delivery_name, b.delivery_phone, b.delivery_address, b.delivery_detail, b.delivery_zipcode,
     b.delivery_option, b.hanaro_mart_name, b.hanaro_mart_addr,
@@ -76,16 +78,22 @@ function formatAuction(row: AuctionRow) {
     buyerName:       row.buyer_name ?? null,
     trackingCompany: row.tracking_company ?? null,
     trackingNumber:  row.tracking_number ?? null,
-    buyerDelivery:   row.top_bidder_id ? {
-      name:           row.delivery_name ?? null,
-      phone:          row.delivery_phone ?? null,
-      address:        row.delivery_address ?? null,
-      detail:         row.delivery_detail ?? null,
-      zipcode:        row.delivery_zipcode ?? null,
-      option:         row.delivery_option ?? 'standard',
-      hanaroMartName: row.hanaro_mart_name ?? null,
-      hanaroMartAddr: row.hanaro_mart_addr ?? null,
-    } : null,
+    buyerDelivery:   row.top_bidder_id ? (() => {
+      const sellerAllowsHanaro = row.seller_allow_hanaro !== 0;
+      const rawOption = row.delivery_option ?? 'standard';
+      const effectiveOption = (rawOption === 'hanaro' && !sellerAllowsHanaro) ? 'standard' : rawOption;
+      return {
+        name:           row.delivery_name ?? null,
+        phone:          row.delivery_phone ?? null,
+        address:        row.delivery_address ?? null,
+        detail:         row.delivery_detail ?? null,
+        zipcode:        row.delivery_zipcode ?? null,
+        option:         effectiveOption,
+        hanaroMartName: effectiveOption === 'hanaro' ? (row.hanaro_mart_name ?? null) : null,
+        hanaroMartAddr: effectiveOption === 'hanaro' ? (row.hanaro_mart_addr ?? null) : null,
+        sellerAllowsHanaro,
+      };
+    })() : null,
     buyerTier:          row.buyer_tier,
     buyerDiscountRate:  Number(row.buyer_discount_rate),
     buyerDiscountAmt:   Number(row.buyer_discount_amt),
