@@ -63,7 +63,7 @@ export function createSlideBid({ amount, onConfirm }) {
     const { clamped, pct } = setHandlePosition(delta);
     handleLeft = clamped;
 
-    if (pct >= 70) {
+    if (pct >= 100) {
       isDragging = false;
       locked = true;
       el.classList.add('slide-bid--confirmed');
