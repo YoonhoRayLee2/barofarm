@@ -83,6 +83,10 @@ export default async function load() {
           로그인
         </button>
 
+        <div class="login-links">
+          <button type="button" class="login-links__item" id="forgot-pw-btn">비밀번호 찾기</button>
+        </div>
+
         <p class="login-signup-link">
           아직 계정이 없으신가요?
           <a href="/app/signup" data-link class="login-signup-anchor">회원가입</a>
@@ -98,6 +102,11 @@ export default async function load() {
   const passwordError  = page.querySelector('#login-password-error');
   const globalError    = page.querySelector('#login-global-error');
   const submitBtn      = page.querySelector('#login-submit');
+  const forgotPwBtn    = page.querySelector('#forgot-pw-btn');
+
+  forgotPwBtn.addEventListener('click', () => {
+    navigate('/app/forgot-password');
+  });
 
   function clearErrors() {
     usernameError.textContent = '';

@@ -202,6 +202,7 @@ function escapeHtml(s) {
 const AUTH_EXEMPT = [
   '/app/login',
   '/app/signup',
+  '/app/forgot-password',
   '/app/_storybook',
   '/app/terms',
   '/app/privacy',
@@ -250,6 +251,7 @@ register('/app/',             async ()       => import('/app/pages/home.js').the
 register('/app',              async ()       => import('/app/pages/home.js').then(m => m.default()));
 register('/app/login',        async ()       => import('/app/pages/login.js').then(m => m.default()));
 register('/app/signup',       async ()       => import('/app/pages/signup.js').then(m => m.default()));
+register('/app/forgot-password', async ()    => import('/app/pages/forgot-password.js').then(m => m.default()));
 register('/app/home',         async ()       => import('/app/pages/home.js').then(m => m.default()));
 register('/app/profile',      async ()       => import('/app/pages/profile.js').then(m => m.default()));
 register('/app/chat',         async ()       => import('/app/pages/chat.js').then(m => m.default()));

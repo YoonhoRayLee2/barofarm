@@ -200,6 +200,29 @@
   font-weight: 500;
 }
 
+.login-links {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-2);
+}
+
+.login-links__item {
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--color-ink-soft);
+  cursor: pointer;
+  padding: 4px 8px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.login-links__item:hover {
+  color: var(--color-accent);
+}
+
 .login-signup-link {
   font-family: var(--font-body);
   font-size: 13px;
