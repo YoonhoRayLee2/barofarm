@@ -225,21 +225,27 @@
 
 /* ── Chip grid (구성품/속성) ───────────────────────────────── */
 .pr-chip-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  flex-wrap: nowrap;
   gap: var(--space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
 }
+.pr-chip-grid::-webkit-scrollbar { display: none; }
 
 .pr-chip {
+  flex-shrink: 0;
   border: 1.5px solid var(--color-line);
   border-radius: var(--radius-md);
-  padding: 10px;
+  padding: 10px 14px;
   font-size: 13px;
   cursor: pointer;
   text-align: center;
   background: transparent;
   color: var(--color-ink);
   font-family: var(--font-body);
+  white-space: nowrap;
   transition: background var(--dur-fast) var(--ease-in-out),
               border-color var(--dur-fast) var(--ease-in-out),
               color var(--dur-fast) var(--ease-in-out);

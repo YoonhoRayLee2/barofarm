@@ -59,6 +59,14 @@ function mount() {
       </span>
     </button>
 
+    <button class="fab-option" id="fab-opt-group-deal">
+      <span class="fab-option__icon">🤝</span>
+      <span class="fab-option__text">
+        <span class="fab-option__label">공동판매 등록</span>
+        <span class="fab-option__desc">목표 인원을 모집하고 확정되면 일괄 발송하세요</span>
+      </span>
+    </button>
+
     <div class="fab-divider"></div>
 
     <button class="fab-option fab-option--cancel" id="fab-opt-cancel">
@@ -83,6 +91,11 @@ function mount() {
   _sheet.querySelector('#fab-opt-product').addEventListener('click', () => {
     closeFabModal();
     navigate('/app/product-register');
+  });
+
+  _sheet.querySelector('#fab-opt-group-deal').addEventListener('click', () => {
+    closeFabModal();
+    navigate('/app/group-deals/create');
   });
 
   _sheet.querySelector('#fab-opt-cancel').addEventListener('click', closeFabModal);
