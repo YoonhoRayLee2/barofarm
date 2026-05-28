@@ -162,6 +162,10 @@ export default async function load() {
         ${renderAvatar(group.sellerAvatar, group.sellerName)}
         <span class="orders-group__seller-name">${escapeHtml(group.sellerName)}</span>
       `;
+      if (group.sellerId != null) {
+        sellerRow.style.cursor = 'pointer';
+        sellerRow.addEventListener('click', () => navigate('/app/user/' + group.sellerId));
+      }
       groupEl.appendChild(sellerRow);
 
       // 3) 아이템 목록

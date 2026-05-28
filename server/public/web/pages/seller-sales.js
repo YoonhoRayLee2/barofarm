@@ -149,6 +149,10 @@ export default async function load() {
           <span class="sg-buyer__name">${escapeHtml(buyerGroup.buyerName || '알 수 없음')}</span>
           <span class="sg-buyer__count">${buyerGroup.items.length}건</span>
         `;
+        if (buyerGroup.buyerId) {
+          buyerHeader.style.cursor = 'pointer';
+          buyerHeader.addEventListener('click', () => navigate('/app/user/' + buyerGroup.buyerId));
+        }
         buyerEl.appendChild(buyerHeader);
 
         buyerGroup.items.forEach((item) => {
