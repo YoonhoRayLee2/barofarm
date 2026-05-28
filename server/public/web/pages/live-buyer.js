@@ -341,6 +341,7 @@ export default async function load(params) {
     giveawayWrap.style.display = isGiveaway ? '' : 'none';
 
     if (mode !== 'normal' && slideBidComp) { slideBidComp.destroy(); slideBidComp = null; }
+    if (!isBlind && blindBidComp) { blindBidComp.destroy(); blindBidComp = null; }
 
     // 모드 전환 시 giveaway 상태 초기화 (다른 모드로 가면)
     if (!isGiveaway) {

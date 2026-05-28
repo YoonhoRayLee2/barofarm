@@ -16,6 +16,10 @@ if (!document.getElementById(_cssId)) {
   document.head.appendChild(link);
 }
 
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
 /**
  * @param {{ onSubmit: (price: number) => void }} options
  */
@@ -25,11 +29,16 @@ export function createBlindBid({ onSubmit }) {
 
   el.innerHTML = `
     <div class="blind-bid__header">
-      <span class="blind-bid__label">🔒 비공개 입찰</span>
-      <span class="blind-bid__count" id="bb-count">참여자 <strong>0</strong>명</span>
+      <div class="blind-bid__title">
+        <span class="blind-bid__lock">🔒</span>
+        비공개 입찰
+      </div>
+      <span class="blind-bid__count-badge" id="bb-count">0명 참여</span>
     </div>
     <div class="blind-bid__last" id="bb-last" style="display:none">
-      직전 입찰: <span id="bb-last-price">0</span>원 — 더 높은 금액으로 재입찰 가능
+      <span class="blind-bid__last-label">직전 입찰</span>
+      <span class="blind-bid__last-price" id="bb-last-price">0</span>원
+      <span class="blind-bid__last-hint">보다 높게 입력하세요</span>
     </div>
     <div class="blind-bid__row">
       <input
@@ -47,14 +56,14 @@ export function createBlindBid({ onSubmit }) {
     <div class="blind-bid__msg" id="bb-msg"></div>
   `;
 
-  const inputEl  = el.querySelector('#bb-price-input');
+  const inputEl   = el.querySelector('#bb-price-input');
   const submitBtn = el.querySelector('#bb-submit-btn');
-  const msgEl    = el.querySelector('#bb-msg');
-  const countEl  = el.querySelector('#bb-count strong');
-  const lastRow  = el.querySelector('#bb-last');
+  const msgEl     = el.querySelector('#bb-msg');
+  const countEl   = el.querySelector('#bb-count');
+  const lastRow   = el.querySelector('#bb-last');
   const lastPriceEl = el.querySelector('#bb-last-price');
 
-  let myLastPrice = 0;  // 내가 마지막에 제출한 금액
+  let myLastPrice = 0;
   let _ackTimer = null;
 
   function showMsg(text, isError = false) {
@@ -71,7 +80,7 @@ export function createBlindBid({ onSubmit }) {
       return;
     }
     if (price <= myLastPrice) {
-      showMsg(`직전 입찰(${myLastPrice.toLocaleString()}원)보다 높은 금액이어야 합니다`, true);
+      showMsg(`${myLastPrice.toLocaleString()}원보다 높아야 합니다`, true);
       return;
     }
     if (typeof onSubmit === 'function') onSubmit(price);
@@ -81,7 +90,7 @@ export function createBlindBid({ onSubmit }) {
     if (e.key === 'Enter' && !e.isComposing) submitBtn.click();
   });
 
-  /** 서버 ack 수신 시 — 입력 잠금 없이 피드백만 */
+  /** 서버 ack 수신 시 */
   function ack(price) {
     if (price && price > 0) {
       myLastPrice = price;
@@ -90,19 +99,16 @@ export function createBlindBid({ onSubmit }) {
     }
     inputEl.value = '';
     showMsg(`${myLastPrice.toLocaleString()}원 입찰 완료`);
-    // iOS WebView에서 programmatic clear 후 포커스 복원
     requestAnimationFrame(() => inputEl.focus());
   }
 
-  /** 룸 브로드캐스트 참여자 수 갱신 */
+  /** 참여자 수 갱신 */
   function updateCount(n) {
-    if (countEl) countEl.textContent = String(n);
+    if (countEl) countEl.textContent = `${n}명 참여`;
   }
 
   /**
    * 경매 종료 결과 모달
-   * @param {object} auction
-   * @param {() => Promise<Array>} getBlindBids
    */
   function showResult(auction, getBlindBids) {
     inputEl.disabled = true;
@@ -113,7 +119,7 @@ export function createBlindBid({ onSubmit }) {
     modal.dataset.theme = 'light';
     const winnerDisplay = escapeHtml(auction.winnerName || auction.winner || auction.winnerId || '-');
     const priceDisplay  = (auction.price || auction.finalPrice || auction.currentPrice || 0).toLocaleString();
-    const isVoid = auction.void === true || (!auction.winner && !auction.winnerId);
+    const isVoid = auction.void === true || (!auction.winner && !auction.winnerId && !auction.winnerName);
 
     modal.innerHTML = `
       <div class="blind-bid-result__card">
@@ -192,11 +198,4 @@ export function createBlindBid({ onSubmit }) {
   }
 
   return { el, ack, updateCount, showResult, reset, destroy };
-}
-
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
 }
