@@ -37,11 +37,29 @@ export default async function load() {
   page.className = 'sales-page';
   page.dataset.theme = 'light';
 
+  const _toDefault   = new Date();
+  const _fromDefault = new Date();
+  _fromDefault.setMonth(_fromDefault.getMonth() - 3);
+  const _fmt = (d) => d.toISOString().slice(0, 10);
+
   page.innerHTML = `
     <header class="sales-header">
       <button class="sales-header__back" aria-label="뒤로 가기">‹</button>
       <h1 class="sales-header__title">판매내역</h1>
+      <select class="sales-status-filter" id="sales-status-filter" aria-label="상태 필터">
+        <option value="">전체</option>
+        <option value="payment_complete">결제완료</option>
+        <option value="shipped">발송완료</option>
+        <option value="purchase_confirmed">정산대기</option>
+        <option value="settlement_complete">정산완료</option>
+      </select>
     </header>
+    <div class="sales-date-bar">
+      <input type="date" class="sales-date-input" id="sales-date-from" value="${_fmt(_fromDefault)}" max="${_fmt(_toDefault)}" />
+      <span class="sales-date-sep">~</span>
+      <input type="date" class="sales-date-input" id="sales-date-to" value="${_fmt(_toDefault)}" max="${_fmt(_toDefault)}" />
+      <span class="sales-date-hint" id="sales-date-hint"></span>
+    </div>
     <div class="sales-content" id="sales-content">
       <div class="sales-loading">
         <div class="sales-loading__dot"></div>
@@ -52,8 +70,57 @@ export default async function load() {
 
   page.querySelector('.sales-header__back').addEventListener('click', () => window.history.back());
 
+  const contentEl = page.querySelector('#sales-content');
+  const filterEl  = page.querySelector('#sales-status-filter');
+  const fromEl    = page.querySelector('#sales-date-from');
+  const toEl      = page.querySelector('#sales-date-to');
+  const hintEl    = page.querySelector('#sales-date-hint');
+  let _allSales   = [];
+
+  function applyFilter() {
+    const status  = filterEl.value;
+    const fromVal = fromEl.value;
+    const toVal   = toEl.value;
+
+    if (fromVal && toVal) {
+      const from    = new Date(fromVal);
+      const to      = new Date(toVal);
+      const maxFrom = new Date(toVal);
+      maxFrom.setMonth(maxFrom.getMonth() - 3);
+
+      if (from > to) {
+        hintEl.textContent = '시작일이 종료일보다 늦습니다';
+        hintEl.className = 'sales-date-hint sales-date-hint--error';
+        return;
+      }
+      if (from < maxFrom) {
+        hintEl.textContent = '최대 3개월 범위까지 조회 가능합니다';
+        hintEl.className = 'sales-date-hint sales-date-hint--error';
+        fromEl.value = maxFrom.toISOString().slice(0, 10);
+        return;
+      }
+      hintEl.textContent = '';
+      hintEl.className = 'sales-date-hint';
+    }
+
+    const fromTs = fromVal ? new Date(fromVal).getTime() : 0;
+    const toTs   = toVal   ? new Date(toVal + 'T23:59:59').getTime() : Infinity;
+
+    let filtered = _allSales.filter(o => {
+      const t = o.soldAt || o.liveStartedAt ? new Date(o.soldAt || o.liveStartedAt).getTime() : 0;
+      return t >= fromTs && t <= toTs;
+    });
+    if (status) {
+      filtered = filtered.filter(o => (o.deliveryStatus || 'payment_complete') === status);
+    }
+    renderSales(contentEl, filtered);
+  }
+
+  filterEl.addEventListener('change', applyFilter);
+  fromEl.addEventListener('change', applyFilter);
+  toEl.addEventListener('change', applyFilter);
+
   async function loadSales() {
-    const contentEl = page.querySelector('#sales-content');
     contentEl.innerHTML = `
       <div class="sales-loading">
         <div class="sales-loading__dot"></div>
@@ -63,8 +130,8 @@ export default async function load() {
     try {
       const res = await fetch(`/api/users/${encodeURIComponent(user.id)}/sales`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const sales = await res.json();
-      renderSales(contentEl, sales);
+      _allSales = await res.json();
+      applyFilter();
     } catch (err) {
       contentEl.innerHTML = `
         <div class="sales-empty">
