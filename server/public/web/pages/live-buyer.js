@@ -1139,7 +1139,7 @@ export default async function load(params) {
       } else {
         showWonOverlay(auction);
       }
-    } else {
+    } else if (mode !== 'fcfs') {
       showWonOverlay(auction);
     }
     updateAuctionUI(null);
