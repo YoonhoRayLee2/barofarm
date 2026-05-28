@@ -46,6 +46,12 @@ export default async function load() {
   page.className = 'orders-page';
   page.dataset.theme = 'light';
 
+  // 기본 날짜 범위: 최근 3개월
+  const _toDefault = new Date();
+  const _fromDefault = new Date();
+  _fromDefault.setMonth(_fromDefault.getMonth() - 3);
+  const _fmt = (d) => d.toISOString().slice(0, 10);
+
   page.innerHTML = `
     <header class="orders-header">
       <button class="orders-header__back" aria-label="뒤로 가기">‹</button>
@@ -58,6 +64,12 @@ export default async function load() {
         <option value="settlement_complete">정산완료</option>
       </select>
     </header>
+    <div class="orders-date-bar" id="orders-date-bar">
+      <input type="date" class="orders-date-input" id="orders-date-from" value="${_fmt(_fromDefault)}" max="${_fmt(_toDefault)}" />
+      <span class="orders-date-sep">~</span>
+      <input type="date" class="orders-date-input" id="orders-date-to" value="${_fmt(_toDefault)}" max="${_fmt(_toDefault)}" />
+      <span class="orders-date-hint" id="orders-date-hint"></span>
+    </div>
     <div class="orders-content" id="orders-content">
       <div class="orders-loading">
         <div class="orders-loading__dot"></div>
@@ -69,18 +81,56 @@ export default async function load() {
   page.querySelector('.orders-header__back').addEventListener('click', () => window.history.back());
 
   const contentEl = page.querySelector('#orders-content');
-  const filterEl = page.querySelector('#orders-status-filter');
-  let _allOrders = [];
+  const filterEl  = page.querySelector('#orders-status-filter');
+  const fromEl    = page.querySelector('#orders-date-from');
+  const toEl      = page.querySelector('#orders-date-to');
+  const hintEl    = page.querySelector('#orders-date-hint');
+  let _allOrders  = [];
 
   function applyFilter() {
     const status = filterEl.value;
-    const filtered = status
-      ? _allOrders.filter(o => (o.deliveryStatus || 'payment_complete') === status)
-      : _allOrders;
+    const fromVal = fromEl.value;
+    const toVal   = toEl.value;
+
+    // 날짜 범위 검증
+    if (fromVal && toVal) {
+      const from = new Date(fromVal);
+      const to   = new Date(toVal);
+      const maxFrom = new Date(toVal);
+      maxFrom.setMonth(maxFrom.getMonth() - 3);
+
+      if (from > to) {
+        hintEl.textContent = '시작일이 종료일보다 늦습니다';
+        hintEl.className = 'orders-date-hint orders-date-hint--error';
+        return;
+      }
+      if (from < maxFrom) {
+        hintEl.textContent = '최대 3개월 범위까지 조회 가능합니다';
+        hintEl.className = 'orders-date-hint orders-date-hint--error';
+        // 시작일을 자동 조정
+        fromEl.value = maxFrom.toISOString().slice(0, 10);
+        return;
+      }
+      hintEl.textContent = '';
+      hintEl.className = 'orders-date-hint';
+    }
+
+    const fromTs = fromVal ? new Date(fromVal).getTime() : 0;
+    const toTs   = toVal   ? new Date(toVal + 'T23:59:59').getTime() : Infinity;
+
+    let filtered = _allOrders.filter(o => {
+      const t = o.orderAt ? new Date(o.orderAt).getTime() : 0;
+      return t >= fromTs && t <= toTs;
+    });
+    if (status) {
+      filtered = filtered.filter(o => (o.deliveryStatus || 'payment_complete') === status);
+    }
     renderOrders(contentEl, filtered);
   }
 
   filterEl.addEventListener('change', applyFilter);
+  fromEl.addEventListener('change', applyFilter);
+  toEl.addEventListener('change', applyFilter);
 
   async function loadOrders() {
     contentEl.innerHTML = `
