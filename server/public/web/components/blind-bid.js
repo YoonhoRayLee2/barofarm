@@ -45,7 +45,8 @@ export function createBlindBid({ onSubmit }) {
         class="blind-bid__input"
         id="bb-price-input"
         type="number"
-        min="0"
+        min="100"
+        max="100000000"
         step="100"
         placeholder="입찰가 입력"
         autocomplete="off"
@@ -73,10 +74,22 @@ export function createBlindBid({ onSubmit }) {
     _ackTimer = setTimeout(() => { msgEl.textContent = ''; msgEl.className = 'blind-bid__msg'; }, 3000);
   }
 
+  inputEl.addEventListener('input', () => {
+    inputEl.value = inputEl.value.replace(/[^0-9]/g, '');
+  });
+
   submitBtn.addEventListener('click', () => {
     const price = parseInt(inputEl.value, 10);
     if (isNaN(price) || price <= 0) {
       showMsg('금액을 입력해 주세요', true);
+      return;
+    }
+    if (price < 100) {
+      showMsg('최소 100원 이상 입력하세요', true);
+      return;
+    }
+    if (price > 100000000) {
+      showMsg('최대 1억원까지 입력 가능합니다', true);
       return;
     }
     if (price <= myLastPrice) {
