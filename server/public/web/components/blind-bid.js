@@ -90,6 +90,8 @@ export function createBlindBid({ onSubmit }) {
     }
     inputEl.value = '';
     showMsg(`${myLastPrice.toLocaleString()}원 입찰 완료`);
+    // iOS WebView에서 programmatic clear 후 포커스 복원
+    requestAnimationFrame(() => inputEl.focus());
   }
 
   /** 룸 브로드캐스트 참여자 수 갱신 */

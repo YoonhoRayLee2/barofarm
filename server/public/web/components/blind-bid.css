@@ -71,7 +71,7 @@
   font-family: var(--font-body);
   font-size: 14px;
   font-weight: 800;
-  color: var(--color-bg);
+  color: #fff;
   background: var(--grad-accent);
   border: none;
   border-radius: var(--radius-md);

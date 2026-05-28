@@ -25,6 +25,9 @@ export default function registerAuctionSocket(io: Server): void {
       const viewers = Array.from(room.values());
       io.to(liveId).emit('viewer:count', { count: room.size });
       io.to(liveId).emit('viewer:list', { viewers });
+      if (!isSeller && userName) {
+        io.to(liveId).emit('viewer:join', { userName });
+      }
 
       // 현재 진행 중인 경매 상태 즉시 전송
       if (live?.currentAuctionId) {

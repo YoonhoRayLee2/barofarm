@@ -598,22 +598,21 @@ export default async function load(params) {
       backdrop.innerHTML = `
         <div class="won-card">
           <div class="won-card__emoji">📭</div>
-          <div class="won-card__title">유찰</div>
-          <div class="won-card__price">입찰자가 없습니다</div>
+          <div class="won-card__title">유찰 — 입찰자가 없습니다</div>
           <button class="won-card__confirm-btn" id="won-confirm-btn">확인</button>
         </div>
       `;
     } else {
+      const price = (auction.finalPrice || auction.price || auction.currentPrice || 0).toLocaleString();
       backdrop.innerHTML = `
         <div class="won-card">
           <div class="won-card__emoji">🏆</div>
-          <div class="won-card__title">낙찰 완료!</div>
-          <div class="won-card__price">${(auction.finalPrice || auction.price || auction.currentPrice || 0).toLocaleString()}원</div>
-          <div class="won-card__winner">${escapeHtml(auction.winnerName || '-')}</div>
+          <div class="won-card__winner-name">${escapeHtml(auction.winnerName)}님 낙찰!</div>
+          <div class="won-card__price">${price}원</div>
+          <div class="won-card__title">${escapeHtml(auction.productName || '')}</div>
           <button class="won-card__confirm-btn" id="won-confirm-btn">확인</button>
         </div>
       `;
-      // Spawn confetti for actual win
       spawnConfetti(backdrop);
     }
     page.appendChild(backdrop);
@@ -1028,6 +1027,17 @@ export default async function load(params) {
   const unsubAuctionEnded = Sock.onAuctionEnded(socket, (auction) => {
     endedAuctions.push({ ...auction, endedAt: auction.endedAt || Date.now() });
 
+    // 낙찰 시 채팅에 시스템 메시지
+    if (!auction.void && auction.winnerName) {
+      const price = (auction.finalPrice || auction.currentPrice || 0).toLocaleString();
+      chatOverlay.push({
+        userId: 'system',
+        userName: '시스템',
+        message: `🏆 ${auction.productName ? auction.productName + ' · ' : ''}${auction.winnerName}님 ${price}원 낙찰`,
+        system: true,
+      });
+    }
+
     // 내가 낙찰자이면 구매내역에도 추가
     const myDisplayName = user.nickname || user.username;
     const winnerId = String(auction.winnerId || auction.winner || '');
@@ -1077,6 +1087,16 @@ export default async function load(params) {
 
   const unsubBlindBidCount = Sock.onBlindBidCount(socket, ({ count }) => {
     if (blindBidComp) blindBidComp.updateCount(count);
+  });
+
+  const unsubViewerJoin = Sock.onViewerJoin(socket, ({ userName }) => {
+    if (!userName) return;
+    chatOverlay.push({
+      userId: 'system',
+      userName: '시스템',
+      message: `${userName}님이 입장했습니다.`,
+      system: true,
+    });
   });
 
   const unsubGiveawayCount = Sock.onGiveawayCount(socket, ({ auctionId, count, participants }) => {
@@ -1208,7 +1228,7 @@ export default async function load(params) {
 
   unsubFns.push(
     unsubAuctionUpdate, unsubAuctionNew, unsubAuctionEnded, unsubChat, unsubViewers, unsubViewerList,
-    unsubBlindBidCount, unsubGiveawayCount, unsubGiveawayJoinAck,
+    unsubBlindBidCount, unsubGiveawayCount, unsubGiveawayJoinAck, unsubViewerJoin,
     unsubPurchaseMade, unsubBidBlindAck, unsubBidRejected, unsubLiveEnded,
     unsubEmoji,
   );

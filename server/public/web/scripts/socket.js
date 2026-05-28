@@ -246,6 +246,11 @@ export function onViewerList(socket, cb) {
   return () => socket.off('viewer:list', cb);
 }
 
+export function onViewerJoin(socket, cb) {
+  socket.on('viewer:join', cb);
+  return () => socket.off('viewer:join', cb);
+}
+
 /**
  * Request the current viewer list for a live room (server responds with viewer:list).
  * @param {Socket} socket

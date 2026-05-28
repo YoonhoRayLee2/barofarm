@@ -181,6 +181,18 @@
 @keyframes spin { to { transform: rotate(360deg); } }
 .live-seller__overlay-text { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.85); }
 
+/* Won overlay — full-screen centered */
+.won-overlay {
+  position: absolute; inset: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.55);
+  animation: won-overlay-in 0.25s var(--ease-out) both;
+}
+@keyframes won-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 /* Won/Giveaway result card (shown after auction ends) */
 .won-card {
   background: rgba(255,255,255,0.1); backdrop-filter: blur(14px);
@@ -189,11 +201,18 @@
   display: flex; flex-direction: column; gap: 6px; align-items: center;
 }
 .won-card--giveaway { border-color: rgba(147,198,108,0.4); }
-.won-card__emoji { font-size: 36px; line-height: 1; }
-.won-card__title { font-size: 18px; font-weight: 800; color: #fff; }
-.won-card__price { font-family: var(--font-display); font-size: 28px; font-weight: 900; color: #fff; }
+.won-card__emoji { font-size: 40px; line-height: 1; }
+.won-card__winner-name { font-size: 26px; font-weight: 900; color: #fff; letter-spacing: -0.5px; }
+.won-card__title { font-size: 15px; font-weight: 700; color: rgba(255,255,255,0.7); }
+.won-card__price { font-family: var(--font-display); font-size: 22px; font-weight: 900; color: #FFD87A; }
 .won-card__winner { font-size: 13px; color: #93c66c; font-weight: 600; }
 .won-card__winner-msg { font-size: 12px; color: rgba(237,241,226,0.8); }
+.won-card__confirm-btn {
+  margin-top: 4px; padding: 10px 28px;
+  background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 999px; color: #fff; font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: var(--font-body);
+}
 
 /* Blind bids table */
 .ps-blind-bids-empty { font-size: 13px; color: rgba(255,255,255,0.5); text-align: center; padding: 16px; }
