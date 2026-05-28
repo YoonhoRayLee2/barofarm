@@ -477,6 +477,18 @@ export default async function load(params) {
       if (productPriceEl) productPriceEl.textContent = '🎁 무료나눔';
     }
 
+    // 현재 최고 응찰자
+    const bidderEl = page.querySelector('#lb-product-bidder');
+    if (bidderEl) {
+      const name = auction.topBidderName || '';
+      if (name && mode === 'normal') {
+        bidderEl.style.display = '';
+        bidderEl.textContent = `👤 ${name} 응찰 중`;
+      } else {
+        bidderEl.style.display = 'none';
+      }
+    }
+
     // Timer
     const remaining = auction.timeLeft != null ? auction.timeLeft : auction.remaining;
     if (remaining != null) {

@@ -96,10 +96,10 @@
 
 /* ---- 말풍선 ---- */
 .chat-overlay__bubble {
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.72);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid var(--glass-line);
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 14px;
   padding: 5px 11px;
   max-width: calc(100% - 38px);
@@ -109,7 +109,7 @@
   font-family: var(--font-body);
   font-size: 11px;
   font-weight: 700;
-  color: var(--color-accent);
+  color: #F5A455;
   margin-bottom: 1px;
   white-space: nowrap;
   overflow: hidden;
@@ -120,7 +120,7 @@
 .chat-overlay__text {
   font-family: var(--font-body);
   font-size: 13px;
-  color: var(--color-ink);
+  color: rgba(255, 255, 255, 0.95);
   line-height: var(--lh-normal);
   word-break: break-word;
 }

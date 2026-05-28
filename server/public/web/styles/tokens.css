@@ -9,28 +9,28 @@
 /* ─── Dark theme (opt-in) ──────────────────────────────────── */
 :root[data-theme="dark"] {
   /* Background Layers */
-  --color-bg:          #0E1A12;
-  --color-bg-alt:      #142220;
-  --color-surface:     #1A2A22;
-  --color-surface-alt: #22372D;
+  --color-bg:          #160E08;
+  --color-bg-alt:      #1E1208;
+  --color-surface:     #241808;
+  --color-surface-alt: #2E1E0E;
 
   /* Ink (Text) */
-  --color-ink:         #EDF1E2;
-  --color-ink-soft:    #B7C4A6;
-  --color-ink-mute:    #7E8675;
+  --color-ink:         #F5EDE0;
+  --color-ink-soft:    #C4A888;
+  --color-ink-mute:    #8A7060;
 
   /* Lines / Dividers */
-  --color-line:        #28392F;
+  --color-line:        #3A2618;
 
   /* Brand Accents */
-  --color-accent:      #7AA53F;
-  --color-accent-soft: #5B7A35;
+  --color-accent:      #E8802E;
+  --color-accent-soft: #C86820;
 
   /* Call To Action */
   --color-cta:         #D6473A;
 
   /* Semantic */
-  --color-success:     #7AA53F;
+  --color-success:     #4CAF72;
   --color-warn:        #D4A017;
   --color-danger:      #D6473A;
   --color-info:        #5C8BAE;
@@ -52,16 +52,16 @@
   /* Overlays / Tints */
   --color-overlay-dim:    rgba(0, 0, 0, 0.55);
   --color-overlay-dark:   rgba(0, 0, 0, 0.25);
-  --color-accent-tint:    rgba(122, 165, 63, 0.12);
+  --color-accent-tint:    rgba(232, 128, 46, 0.14);
   --color-warn-tint:      rgba(212, 160, 23, 0.12);
-  --color-bg-overlay:     rgba(14, 26, 18, 0.82);
-  --color-surface-tint:   rgba(26, 42, 34, 0.4);
+  --color-bg-overlay:     rgba(22, 14, 8, 0.85);
+  --color-surface-tint:   rgba(36, 24, 8, 0.5);
   --color-white-tint-20:  rgba(255, 255, 255, 0.2);
   --color-white-tint-30:  rgba(255, 255, 255, 0.3);
 
   /* Skeleton shimmer gradient stops */
-  --color-skeleton-base:  #1A2A22;
-  --color-skeleton-shine: #22372D;
+  --color-skeleton-base:  #241808;
+  --color-skeleton-shine: #2E1E0E;
 
   /* ── DS-1: Spacing scale ──────────────────────────────────── */
   --space-0: 0;
@@ -112,15 +112,15 @@
   --fs-timer:      32px;
 
   /* ── Fresh Field gradients ────────────────────────────────── */
-  --grad-accent: linear-gradient(135deg, #7AA53F 0%, #5B7A35 100%);
+  --grad-accent: linear-gradient(135deg, #E8802E 0%, #C86820 100%);
   --grad-cta:    linear-gradient(135deg, #E25346 0%, #D6473A 60%, #B83830 100%);
-  --grad-bg:     linear-gradient(180deg, #0E1A12 0%, #142220 100%);
-  --grad-hero:   radial-gradient(ellipse at top, rgba(122,165,63,0.18) 0%, transparent 60%);
+  --grad-bg:     linear-gradient(180deg, #160E08 0%, #1E1208 100%);
+  --grad-hero:   radial-gradient(ellipse at top, rgba(232,128,46,0.18) 0%, transparent 60%);
 
   /* ── Glass / blur surfaces ────────────────────────────────── */
   --glass-blur: blur(12px) saturate(1.2);
-  --glass-bg:   rgba(26, 42, 34, 0.65);
-  --glass-line: rgba(237, 241, 226, 0.08);
+  --glass-bg:   rgba(36, 24, 8, 0.70);
+  --glass-line: rgba(245, 237, 224, 0.08);
 }
 
 /* ─── Light theme (default) ────────────────────────────────── */
@@ -128,22 +128,22 @@
 :root[data-theme="light"],
 [data-theme="light"] {
   /* Background Layers */
-  --color-bg:          #FAFAF5;
-  --color-bg-alt:      #F0F2EA;
+  --color-bg:          #FAFAF8;
+  --color-bg-alt:      #F5EFE6;
   --color-surface:     #FFFFFF;
-  --color-surface-alt: #F0F2EA;
+  --color-surface-alt: #F5EFE6;
 
   /* Ink (Text) */
-  --color-ink:         #1A1F14;
-  --color-ink-soft:    #3D4533;
-  --color-ink-mute:    #6B7560;
+  --color-ink:         #1C1208;
+  --color-ink-soft:    #4A3420;
+  --color-ink-mute:    #7A6450;
 
   /* Lines / Dividers */
-  --color-line:        #E2E5D6;
+  --color-line:        #EAE0D4;
 
   /* Brand Accents */
-  --color-accent:      #2D8A3E;
-  --color-accent-soft: #1F6A2A;
+  --color-accent:      #C96018;
+  --color-accent-soft: #A84E10;
 
   /* Call To Action */
   --color-cta:         #E5564A;
@@ -169,23 +169,23 @@
   --color-shadow: rgba(20, 30, 15, 0.08);
 
   /* Glass */
-  --glass-bg:   rgba(255, 255, 255, 0.82);
-  --glass-line: rgba(20, 30, 15, 0.10);
+  --glass-bg:   rgba(255, 255, 255, 0.85);
+  --glass-line: rgba(28, 18, 8, 0.10);
   --glass-blur: blur(14px) saturate(1.1);
 
   /* Overlays / Tints */
   --color-overlay-dim:    rgba(0, 0, 0, 0.45);
   --color-overlay-dark:   rgba(0, 0, 0, 0.15);
-  --color-accent-tint:    rgba(45, 138, 62, 0.10);
+  --color-accent-tint:    rgba(201, 96, 24, 0.10);
   --color-warn-tint:      rgba(181, 138, 43, 0.10);
-  --color-bg-overlay:     rgba(250, 250, 245, 0.90);
+  --color-bg-overlay:     rgba(250, 250, 248, 0.92);
   --color-surface-tint:   rgba(255, 255, 255, 0.6);
   --color-white-tint-20:  rgba(255, 255, 255, 0.2);
   --color-white-tint-30:  rgba(255, 255, 255, 0.3);
 
   /* Skeleton shimmer gradient stops */
-  --color-skeleton-base:  #F0F2EA;
-  --color-skeleton-shine: #FAFAF5;
+  --color-skeleton-base:  #F5EFE6;
+  --color-skeleton-shine: #FAFAF8;
 
   /* Spacing scale */
   --space-0: 0;
@@ -236,10 +236,10 @@
   --fs-timer:      32px;
 
   /* Fresh Field gradients */
-  --grad-accent: linear-gradient(135deg, #2D8A3E 0%, #1F6A2A 100%);
+  --grad-accent: linear-gradient(135deg, #C96018 0%, #A84E10 100%);
   --grad-cta:    linear-gradient(135deg, #E85A4E 0%, #E5564A 60%, #C7403A 100%);
-  --grad-bg:     linear-gradient(180deg, #FAFAF5 0%, #F0F2EA 100%);
-  --grad-hero:   radial-gradient(ellipse at top, rgba(45,138,62,0.10) 0%, transparent 60%);
+  --grad-bg:     linear-gradient(180deg, #FAFAF8 0%, #F5EFE6 100%);
+  --grad-hero:   radial-gradient(ellipse at top, rgba(201,96,24,0.10) 0%, transparent 60%);
 
   /* NH 농협 */
   --color-nh-blue: #004A96;
