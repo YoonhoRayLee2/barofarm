@@ -38,24 +38,24 @@ export function showWelcomeModal(nickname) {
     const icon = document.createElement('div');
     icon.className = 'wnm-icon';
     icon.setAttribute('aria-hidden', 'true');
-    icon.textContent = '&#127881;'; // party popper — rendered as text so lint passes
+    icon.textContent = '🎉';
 
     const title = document.createElement('p');
     title.className = 'wnm-title';
-    title.textContent = '환영합니다!';
+    title.textContent = '바로팜에 오신 것을 환영해요!';
 
     const body = document.createElement('p');
     body.className = 'wnm-body';
-    body.innerHTML = `닉네임이 부여되었어요:<br><strong class="wnm-nickname">${escapeHtml(nickname)}</strong>`;
+    body.innerHTML = `앞으로 <strong class="wnm-nickname">${escapeHtml(nickname)}</strong>(으)로 활동하게 돼요.`;
 
     const hint = document.createElement('p');
     hint.className = 'wnm-hint';
-    hint.textContent = '닉네임은 마이페이지에서 변경할 수 있어요.';
+    hint.textContent = '닉네임은 마이페이지 → 프로필 수정에서 언제든 바꿀 수 있어요.';
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'wnm-close-btn';
     closeBtn.type = 'button';
-    closeBtn.textContent = '홈으로 이동';
+    closeBtn.textContent = '시작하기';
 
     dialog.appendChild(icon);
     dialog.appendChild(title);

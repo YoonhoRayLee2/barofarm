@@ -316,7 +316,12 @@
   gap: 6px;
   padding: 4px 16px 4px;
   align-items: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  flex-wrap: nowrap;
 }
+.lb-emoji-bar::-webkit-scrollbar { display: none; }
 
 .lb-emoji-btn {
   background: rgba(255, 255, 255, 0.13);

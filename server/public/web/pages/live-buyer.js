@@ -712,36 +712,49 @@ export default async function load(params) {
     }
   })();
 
-  // ---- Vertical swipe navigation ----
-  let _touchStartY = 0;
+  // ---- Swipe navigation ----
+  // 규칙: 채팅영역 → 횡스크롤 허용(내비게이션 무시)
+  //       그 외 영역 → 수직 스와이프만, 다음/이전 라이브 이동
+  let _tsX = 0, _tsY = 0;
+  let _tsTarget = null;
+  let _swipeDir = null; // 'h' | 'v' | null
 
   function _onTouchStart(e) {
-    _touchStartY = e.touches[0].clientY;
+    _tsX = e.touches[0].clientX;
+    _tsY = e.touches[0].clientY;
+    _tsTarget = e.target;
+    _swipeDir = null;
+  }
+
+  function _onTouchMove(e) {
+    if (_swipeDir) return;
+    const dx = Math.abs(e.touches[0].clientX - _tsX);
+    const dy = Math.abs(e.touches[0].clientY - _tsY);
+    if (dx > 6 || dy > 6) _swipeDir = dx > dy ? 'h' : 'v';
   }
 
   function _onTouchEnd(e) {
-    // Ignore touches originating inside the bid controls panel
-    if (e.target.closest('#lb-bid-controls') || e.target.closest('.lb-product-panel')) return;
+    // 채팅 영역: 횡스크롤만 허용, 내비게이션 무시
+    if (_tsTarget && _tsTarget.closest('.live-buyer__chat-wrap')) return;
 
-    const deltaY = e.changedTouches[0].clientY - _touchStartY;
-    if (deltaY < -80) {
-      // Swipe up → next live
+    // 바텀 패널(상품정보·입찰·채팅입력·이모지) 무시
+    if (_tsTarget && _tsTarget.closest('.lb-bottom')) return;
+
+    // 수평 스와이프는 내비게이션 무시
+    if (_swipeDir !== 'v') return;
+
+    const deltaY = e.changedTouches[0].clientY - _tsY;
+    if (deltaY < -100) {
       const next = _liveList[_liveIndex + 1];
-      if (next) {
-        navigate(`/app/live-buyer/${next.id}`);
-      }
-    } else if (deltaY > 80) {
-      // Swipe down → previous live or go back
+      if (next) navigate(`/app/live-buyer/${next.id}`);
+    } else if (deltaY > 100) {
       const prev = _liveList[_liveIndex - 1];
-      if (prev) {
-        navigate(`/app/live-buyer/${prev.id}`);
-      } else {
-        window.history.back();
-      }
+      if (prev) navigate(`/app/live-buyer/${prev.id}`);
     }
   }
 
   page.addEventListener('touchstart', _onTouchStart, { passive: true });
+  page.addEventListener('touchmove', _onTouchMove, { passive: true });
   page.addEventListener('touchend', _onTouchEnd, { passive: true });
 
   // ---- Product sheet ----
@@ -1286,6 +1299,7 @@ export default async function load(params) {
   setCleanup(async () => {
     unsubFns.forEach((fn) => typeof fn === 'function' && fn());
     page.removeEventListener('touchstart', _onTouchStart);
+    page.removeEventListener('touchmove', _onTouchMove);
     page.removeEventListener('touchend', _onTouchEnd);
     if (socket) socket.disconnect();
     if (room && livekitMod) await livekitMod.disconnect(room, []).catch(() => {});
