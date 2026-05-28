@@ -76,6 +76,9 @@ export function createBlindBid({ onSubmit }) {
 
   inputEl.addEventListener('input', () => {
     inputEl.value = inputEl.value.replace(/[^0-9]/g, '');
+    if (inputEl.value !== '' && parseInt(inputEl.value, 10) > 100000000) {
+      inputEl.value = '100000000';
+    }
   });
 
   submitBtn.addEventListener('click', () => {
