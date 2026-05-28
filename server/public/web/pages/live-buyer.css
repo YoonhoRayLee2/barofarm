@@ -39,8 +39,9 @@
   font-weight: 800; font-size: 14px; color: #fff;
   flex-shrink: 0;
 }
-.lb-host-name { font-size: 13px; font-weight: 700; color: #fff; }
-.lb-host-sub { font-size: 11px; color: rgba(237,241,226,0.7); margin-top: 1px; }
+.lb-host-info { display: flex; flex-direction: column; gap: 1px; }
+.lb-host-sub  { font-size: 14px; font-weight: 700; color: #fff; letter-spacing: -0.2px; }
+.lb-host-name { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.6); }
 
 /* ── Follow button (in-room) ─────────────────────────── */
 .lb-follow-btn {
@@ -403,4 +404,101 @@
   0%   { transform: translateY(0)      scale(1);   opacity: 1; }
   60%  { transform: translateY(-200px) scale(1.15); opacity: 0.95; }
   100% { transform: translateY(-320px) scale(0.7);  opacity: 0; }
+}
+
+/* ── Auction help button ─────────────────────────────── */
+.lb-help-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-ink-mute);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.lb-bid-controls {
+  position: relative;
+}
+
+/* ── Auction help modal ──────────────────────────────── */
+.lb-help-modal {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: flex-end;
+  z-index: 60;
+  animation: lb-help-in 0.2s ease-out;
+}
+
+@keyframes lb-help-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.lb-help-modal__card {
+  width: 100%;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: 24px 20px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: lb-help-slide 0.25s cubic-bezier(0.32,0.72,0,1);
+}
+
+@keyframes lb-help-slide {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.lb-help-modal__icon {
+  font-size: 32px;
+  text-align: center;
+}
+
+.lb-help-modal__title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-ink);
+  text-align: center;
+}
+
+.lb-help-modal__steps {
+  margin: 0;
+  padding: 0 0 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lb-help-modal__steps li {
+  font-size: 14px;
+  color: var(--color-ink-soft);
+  line-height: 1.55;
+}
+
+.lb-help-modal__close {
+  margin-top: 4px;
+  width: 100%;
+  padding: 14px 0;
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
 }

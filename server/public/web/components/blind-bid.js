@@ -71,19 +71,19 @@ export function createBlindBid({ onSubmit }) {
     _ackTimer = setTimeout(() => { msgEl.textContent = ''; msgEl.className = 'blind-bid__msg'; }, 3000);
   }
 
+  function toComma(str) {
+    return str.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+
   inputEl.addEventListener('input', () => {
-    const cursor = inputEl.selectionStart;
-    const prevLen = inputEl.value.length;
     let raw = inputEl.value.replace(/[^0-9]/g, '');
-    if (raw !== '' && parseInt(raw, 10) > 100000000) raw = '100000000';
-    const formatted = raw === '' ? '' : parseInt(raw, 10).toLocaleString('ko-KR');
-    inputEl.value = formatted;
-    const diff = formatted.length - prevLen;
-    inputEl.setSelectionRange(cursor + diff, cursor + diff);
+    if (raw.length > 1 && raw[0] === '0') raw = raw.replace(/^0+/, '') || '0';
+    if (raw !== '' && Number(raw) > 100000000) raw = '100000000';
+    inputEl.value = raw === '' ? '' : toComma(raw);
   });
 
   submitBtn.addEventListener('click', () => {
-    const raw = inputEl.value.replace(/,/g, '');
+    const raw = inputEl.value.replace(/[^0-9]/g, '');
     const price = parseInt(raw, 10);
     if (isNaN(price) || price <= 0) {
       showMsg('금액을 입력해 주세요', true);

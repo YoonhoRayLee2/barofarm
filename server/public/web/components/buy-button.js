@@ -30,7 +30,7 @@ export function createBuyButton({ productName = '', productSub = '', price = 0, 
   el.className = 'buy-button';
   el.innerHTML = `
     <div class="buy-button__tag-row">
-      <span class="buy-button__tag">라이브 즉촉 상품</span>
+      <span class="buy-button__tag">선착순 구매</span>
       <span class="buy-button__remaining" data-role="remaining">0개 남음</span>
     </div>
     <div class="buy-button__product">

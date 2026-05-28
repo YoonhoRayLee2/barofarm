@@ -97,9 +97,9 @@ export default async function load(params) {
   topBar.innerHTML = `
     <div class="lb-host">
       <div class="lb-avatar" id="lb-seller-avatar"></div>
-      <div>
-        <div class="lb-host-name" id="lb-seller-name">판매자</div>
+      <div class="lb-host-info">
         <div class="lb-host-sub" id="lb-seller-sub">라이브 방송 중</div>
+        <div class="lb-host-name" id="lb-seller-name">판매자</div>
       </div>
     </div>
     <div class="lb-meta">
@@ -321,6 +321,68 @@ export default async function load(params) {
     showToast(`${price.toLocaleString()}원 입찰 전송!`, { variant: 'info' });
   }
 
+  const AUCTION_HELP = {
+    normal: {
+      title: '일반 경매',
+      icon: '🔨',
+      steps: [
+        '현재 최고 입찰가보다 높은 금액을 슬라이드해서 입찰하세요.',
+        '누군가 더 높은 금액을 입찰하면 알림 없이 갱신됩니다.',
+        '경매 시간이 끝나면 최고 입찰자가 낙찰됩니다.',
+        '유찰 시 아무도 낙찰되지 않습니다.',
+      ],
+    },
+    blind: {
+      title: '블라인드 경매',
+      icon: '🔒',
+      steps: [
+        '다른 입찰자의 금액이 공개되지 않는 비공개 입찰입니다.',
+        '입찰가를 입력하고 입찰 버튼을 누르세요.',
+        '같은 경매에서 직전 입찰가보다 높게만 재입찰 가능합니다.',
+        '경매 종료 후 가장 높은 금액을 입력한 분이 낙찰됩니다.',
+      ],
+    },
+    fcfs: {
+      title: '선착순 구매',
+      icon: '⚡',
+      steps: [
+        '수량이 제한된 상품을 먼저 버튼을 누른 순서대로 구매합니다.',
+        '재고가 소진되면 즉시 마감됩니다.',
+        '구매 완료 후 주문 내역에서 확인할 수 있습니다.',
+      ],
+    },
+    giveaway: {
+      title: '무료 나눔',
+      icon: '🎁',
+      steps: [
+        '참여 버튼을 누르면 추첨 대상이 됩니다.',
+        '한 번만 참여할 수 있으며 취소는 불가합니다.',
+        '경매 종료 후 판매자가 추첨하여 당첨자를 발표합니다.',
+        '당첨자는 채팅창으로 공지됩니다.',
+      ],
+    },
+  };
+
+  function showAuctionHelp(mode) {
+    if (page.querySelector('.lb-help-modal')) return;
+    const info = AUCTION_HELP[mode] || AUCTION_HELP.normal;
+    const modal = document.createElement('div');
+    modal.className = 'lb-help-modal';
+    modal.innerHTML = `
+      <div class="lb-help-modal__card">
+        <div class="lb-help-modal__icon">${info.icon}</div>
+        <div class="lb-help-modal__title">${info.title} 안내</div>
+        <ol class="lb-help-modal__steps">
+          ${info.steps.map(s => `<li>${s}</li>`).join('')}
+        </ol>
+        <button class="lb-help-modal__close">확인</button>
+      </div>
+    `;
+    modal.querySelector('.lb-help-modal__close').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    page.appendChild(modal);
+  }
+
   function modeBadgeText(mode) {
     if (mode === 'fcfs') return '선착순';
     if (mode === 'blind') return '블라인드';
@@ -355,6 +417,17 @@ export default async function load(params) {
       const countEl = page.querySelector('#lb-giveaway-count');
       if (countEl) countEl.textContent = '0명 참여 중';
     }
+
+    // 도움말 버튼 — bid-controls 우상단 고정
+    let helpBtn = bidControls.querySelector('.lb-help-btn');
+    if (!helpBtn) {
+      helpBtn = document.createElement('button');
+      helpBtn.className = 'lb-help-btn';
+      helpBtn.setAttribute('aria-label', '경매 방식 안내');
+      helpBtn.textContent = '?';
+      bidControls.appendChild(helpBtn);
+    }
+    helpBtn.onclick = () => showAuctionHelp(mode);
   }
 
   function setupFcfsMode(auction) {
@@ -1262,7 +1335,7 @@ export default async function load(params) {
   if (shareBtnBottom) shareBtnBottom.addEventListener('click', doShare);
 
   // Products button
-  page.querySelector('#lb-products-btn').addEventListener('click', openProductSheet);
+  page.querySelector('#lb-products-btn').addEventListener('click', () => openProductSheet('history'));
 
   // Emoji reaction bar
   page.querySelector('#lb-emoji-bar').addEventListener('click', (e) => {
