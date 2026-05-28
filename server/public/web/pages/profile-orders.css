@@ -25,6 +25,8 @@
 }
 
 .orders-status-filter {
+  width: 96px;
+  flex-shrink: 0;
   margin-left: auto;
   height: 34px;
   padding: 0 28px 0 12px;
@@ -69,6 +71,9 @@
   color: var(--color-ink);
   letter-spacing: -0.3px;
   flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .orders-content {
