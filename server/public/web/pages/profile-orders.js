@@ -50,6 +50,13 @@ export default async function load() {
     <header class="orders-header">
       <button class="orders-header__back" aria-label="뒤로 가기">‹</button>
       <h1 class="orders-header__title">${sellerIdFilter ? '판매자별 구매 내역' : '주문 목록'}</h1>
+      <select class="orders-status-filter" id="orders-status-filter" aria-label="상태 필터">
+        <option value="">전체</option>
+        <option value="payment_complete">결제완료</option>
+        <option value="shipped">발송완료</option>
+        <option value="purchase_confirmed">구매확정</option>
+        <option value="settlement_complete">정산완료</option>
+      </select>
     </header>
     <div class="orders-content" id="orders-content">
       <div class="orders-loading">
@@ -62,6 +69,18 @@ export default async function load() {
   page.querySelector('.orders-header__back').addEventListener('click', () => window.history.back());
 
   const contentEl = page.querySelector('#orders-content');
+  const filterEl = page.querySelector('#orders-status-filter');
+  let _allOrders = [];
+
+  function applyFilter() {
+    const status = filterEl.value;
+    const filtered = status
+      ? _allOrders.filter(o => (o.deliveryStatus || 'payment_complete') === status)
+      : _allOrders;
+    renderOrders(contentEl, filtered);
+  }
+
+  filterEl.addEventListener('change', applyFilter);
 
   async function loadOrders() {
     contentEl.innerHTML = `
@@ -74,11 +93,11 @@ export default async function load() {
       const res = await fetch(`/api/users/${encodeURIComponent(user.id)}/orders`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       let orders = await res.json();
-      // sellerId URL param 필터링
       if (sellerIdFilter) {
         orders = orders.filter(o => String(o.sellerId) === String(sellerIdFilter));
       }
-      renderOrders(contentEl, orders);
+      _allOrders = orders;
+      applyFilter();
     } catch (err) {
       contentEl.innerHTML = `
         <div class="orders-empty">

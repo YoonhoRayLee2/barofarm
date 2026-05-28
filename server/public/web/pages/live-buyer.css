@@ -410,16 +410,17 @@
 .lb-help-btn {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1.5px dashed var(--color-line);
-  background: transparent;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-line);
+  background: var(--color-surface);
   color: var(--color-ink-mute);
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 800;
   cursor: pointer;
-  letter-spacing: 0.02em;
+  flex-shrink: 0;
 }
 
 /* ── Auction help modal ──────────────────────────────── */

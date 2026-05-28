@@ -86,7 +86,6 @@ export default async function load(params) {
   // Chat overlay wrapper — positioned above bottom panel (set dynamically via JS)
   const chatWrap = document.createElement('div');
   chatWrap.className = 'live-seller__chat-wrap';
-  chatWrap.style.bottom = '220px'; // approximate above bottom panel
   page.appendChild(chatWrap);
 
   // Bottom panel
@@ -95,6 +94,9 @@ export default async function load(params) {
   bottomPanel.innerHTML = `
     <div class="live-seller__auction-card" id="ls-auction-info">
       <div class="live-seller__no-auction" id="ls-no-auction">경매를 등록하세요</div>
+      <div class="ls-mode-row is-hidden" id="ls-mode-row">
+        <span class="ls-mode-chip" id="ls-mode-chip"></span>
+      </div>
       <div class="live-seller__product-block is-hidden" id="ls-product-block">
         <img class="ls-product-thumb is-hidden" id="ls-product-thumb" src="" alt="" />
         <div class="ls-product-text">
@@ -354,8 +356,10 @@ export default async function load(params) {
 
   // ---- Socket connection ----
   socket = Sock.connect();
-
-  Sock.joinRoom(socket, liveId, String(user.id), user.nickname || user.username || '판매자', 'seller');
+  const _sellerName = user.nickname || user.username || '판매자';
+  socket.on('connect', () => {
+    Sock.joinRoom(socket, liveId, String(user.id), _sellerName, 'seller');
+  });
 
   const unsubAuctionUpdate = Sock.onAuctionUpdate(socket, (auction) => {
     updateAuctionUI(auction);
@@ -388,7 +392,7 @@ export default async function load(params) {
     if (currentAuction.id != null && String(currentAuction.id) !== String(auctionId)) return;
     currentAuction.giveawayCount = count;
     const currentPrice = page.querySelector('#ls-current-price');
-    if (currentPrice) currentPrice.textContent = `[무료나눔] ${count}명 참여 중`;
+    if (currentPrice) currentPrice.textContent = `${count}명 참여 중`;
   });
 
   const unsubEmoji = Sock.onEmojiReaction(socket, ({ emoji }) => {
@@ -403,6 +407,33 @@ export default async function load(params) {
 
   // End-fcfs button (dynamically inserted)
   let endFcfsBtn = null;
+
+  const LS_AUCTION_HELP = {
+    normal:   { title: '일반 경매', icon: '🔨', steps: ['현재 최고 입찰가보다 높은 금액으로 자동 갱신됩니다.', '경매 시간이 끝나면 최고 입찰자가 낙찰됩니다.', '입찰자가 없으면 유찰 처리됩니다.'] },
+    blind:    { title: '블라인드 경매', icon: '🔒', steps: ['구매자들이 서로의 입찰가를 볼 수 없습니다.', '구매자는 자신의 직전 입찰가보다 높게만 재입찰 가능합니다.', '경매 종료 후 가장 높은 금액을 입력한 분이 낙찰됩니다.'] },
+    fcfs:     { title: '선착순 구매', icon: '⚡', steps: ['구매 버튼을 먼저 누른 순서대로 구매가 확정됩니다.', '재고가 소진되면 자동 마감됩니다.', '조기 종료 버튼으로 남은 재고를 유찰 처리할 수 있습니다.'] },
+    giveaway: { title: '무료 나눔', icon: '🎁', steps: ['구매자들이 참여 버튼을 눌러 추첨 대상이 됩니다.', '경매 시간 종료 후 자동 추첨됩니다.', '당첨자에게 채팅으로 공지됩니다.'] },
+  };
+
+  function showSellerHelp(mode) {
+    if (page.querySelector('.lb-help-modal')) return;
+    const info = LS_AUCTION_HELP[mode] || LS_AUCTION_HELP.normal;
+    const modal = document.createElement('div');
+    modal.className = 'lb-help-modal';
+    modal.innerHTML = `
+      <div class="lb-help-modal__card">
+        <div class="lb-help-modal__icon">${info.icon}</div>
+        <div class="lb-help-modal__title">${info.title} 안내</div>
+        <ol class="lb-help-modal__steps">
+          ${info.steps.map(s => `<li>${s}</li>`).join('')}
+        </ol>
+        <button class="lb-help-modal__close">확인</button>
+      </div>
+    `;
+    modal.querySelector('.lb-help-modal__close').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    page.appendChild(modal);
+  }
 
   function updateAuctionUI(auction) {
     currentAuction = auction;
@@ -437,33 +468,52 @@ export default async function load(params) {
     }
 
     const mode = auction.mode || 'normal';
-    const modeLabel = mode === 'fcfs' ? '[선착순] '
-      : mode === 'blind' ? '[블라인드] '
-      : mode === 'giveaway' ? '[무료나눔] '
-      : '';
+
+    // 모드칩 업데이트
+    const modeRow = page.querySelector('#ls-mode-row');
+    const modeChip = page.querySelector('#ls-mode-chip');
+    const MODE_CHIP = {
+      normal:   { icon: '🔨', label: '일반 경매',  cls: '' },
+      blind:    { icon: '🔒', label: '블라인드',    cls: 'ls-mode-chip--blind' },
+      fcfs:     { icon: '⚡', label: '선착순 구매', cls: 'ls-mode-chip--cta' },
+      giveaway: { icon: '🎁', label: '무료 나눔',   cls: 'ls-mode-chip--info' },
+    };
+    if (modeRow && modeChip) {
+      modeRow.classList.remove('is-hidden');
+      const meta = MODE_CHIP[mode] || MODE_CHIP.normal;
+      modeChip.textContent = `${meta.icon} ${meta.label}`;
+      modeChip.className = `ls-mode-chip ${meta.cls}`;
+      // 도움말 버튼 (한번만 생성)
+      if (!modeRow.querySelector('.lb-help-btn')) {
+        const helpBtn = document.createElement('button');
+        helpBtn.className = 'lb-help-btn';
+        helpBtn.setAttribute('aria-label', '경매 방식 안내');
+        helpBtn.textContent = '?';
+        modeRow.appendChild(helpBtn);
+      }
+      modeRow.querySelector('.lb-help-btn').onclick = () => showSellerHelp(mode);
+    }
 
     if (currentPrice) {
-      if (mode === 'fcfs') {
-        const sold = auction.stockSold || 0;
-        const total = auction.stockTotal || 0;
-        currentPrice.textContent = `${modeLabel}${(total - sold)}/${total}개 남음`;
-      } else if (mode === 'blind') {
-        currentPrice.textContent = '[블라인드] 비공개 입찰';
-      } else if (mode === 'giveaway') {
+      if (mode === 'giveaway') {
         const cnt = auction.giveawayCount != null ? auction.giveawayCount : 0;
-        currentPrice.textContent = `[무료나눔] ${cnt}명 참여 중`;
+        currentPrice.textContent = `${cnt}명 참여 중`;
+      } else if (mode === 'blind') {
+        currentPrice.textContent = '비공개 입찰';
       } else {
-        currentPrice.textContent = modeLabel + (auction.currentPrice || auction.startPrice || 0).toLocaleString() + '원';
+        currentPrice.textContent = (auction.currentPrice || auction.startPrice || 0).toLocaleString() + '원';
       }
     }
 
     if (bidder) {
-      if (mode === 'normal') {
+      if (mode === 'fcfs') {
+        const sold = auction.stockSold || 0;
+        const total = auction.stockTotal || 0;
+        bidder.textContent = `재고 ${total - sold}/${total}개 남음`;
+      } else if (mode === 'normal') {
         bidder.textContent = auction.currentBidder ? `최고 입찰자: ${auction.currentBidder}` : '입찰 없음';
-      } else if (mode === 'fcfs') {
-        bidder.textContent = `판매 수: ${auction.stockSold || 0}`;
       } else if (mode === 'giveaway') {
-        bidder.textContent = '추첨 대기 중';
+        bidder.textContent = '추첨 진행 예정';
       } else {
         bidder.textContent = '비공개 입찰 진행 중';
       }
@@ -636,18 +686,22 @@ export default async function load(params) {
           <div class="auction-modal__modes" id="am-modes">
             <label class="auction-modal__mode-opt">
               <input type="radio" name="am-mode" value="normal" checked />
+              <span class="am-mode-icon">🔨</span>
               <span>일반</span>
             </label>
             <label class="auction-modal__mode-opt">
               <input type="radio" name="am-mode" value="fcfs" />
+              <span class="am-mode-icon">⚡</span>
               <span>선착순</span>
             </label>
             <label class="auction-modal__mode-opt">
               <input type="radio" name="am-mode" value="blind" />
+              <span class="am-mode-icon">🔒</span>
               <span>블라인드</span>
             </label>
             <label class="auction-modal__mode-opt">
               <input type="radio" name="am-mode" value="giveaway" />
+              <span class="am-mode-icon">🎁</span>
               <span>무료나눔</span>
             </label>
           </div>

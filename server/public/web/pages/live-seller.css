@@ -74,12 +74,32 @@
 
 /* Auction card */
 .live-seller__auction-card {
-  display: flex; align-items: center; gap: 12px;
+  display: flex; flex-direction: column; gap: 8px;
   padding: 12px 14px;
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: 14px;
   box-shadow: var(--elev-1);
+}
+
+/* Mode chip row */
+.ls-mode-row {
+  display: flex; align-items: center; gap: 6px;
+}
+.ls-mode-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 800; letter-spacing: 0.06em;
+  padding: 3px 9px; border-radius: 999px;
+  background: var(--color-accent-tint); color: var(--color-accent);
+  border: 1px solid rgba(45,138,62,0.25);
+}
+.ls-mode-chip--cta   { background: rgba(229,86,74,0.10); color: var(--color-cta); border-color: rgba(229,86,74,0.3); }
+.ls-mode-chip--blind { background: rgba(60,108,158,0.10); color: var(--color-info); border-color: rgba(60,108,158,0.25); }
+.ls-mode-chip--info  { background: var(--color-surface-alt); color: var(--color-ink-mute); border-color: var(--color-line); }
+
+/* Product block row — horizontal inside card */
+.live-seller__product-block-row {
+  display: flex; align-items: center; gap: 10px;
 }
 .live-seller__no-auction {
   flex: 1; font-size: 14px; color: var(--color-ink-mute);
@@ -373,15 +393,25 @@
 }
 .auction-modal__input:focus { border-color: var(--color-accent); }
 .auction-modal__modes {
-  display: flex; gap: 8px; flex-wrap: wrap;
+  display: flex; gap: 8px;
 }
 .auction-modal__mode-opt {
-  display: flex; align-items: center; gap: 6px;
-  padding: 8px 14px; border-radius: 8px;
-  border: 1px solid var(--color-line);
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 4px; border-radius: 10px;
+  border: 1.5px solid var(--color-line);
   background: var(--color-surface-alt);
-  cursor: pointer; font-size: 13px; font-weight: 600; color: var(--color-ink);
+  cursor: pointer; font-size: 12px; font-weight: 700; color: var(--color-ink);
+  white-space: nowrap; text-align: center;
+  transition: border-color 0.15s, background 0.15s;
 }
+.auction-modal__mode-opt:has(input:checked) {
+  border-color: var(--color-accent);
+  background: var(--color-accent-tint);
+  color: var(--color-accent);
+}
+.auction-modal__mode-opt input[type="radio"] { display: none; }
+.am-mode-icon { font-size: 20px; line-height: 1; }
 .auction-modal__mode-opt input[type="radio"] { accent-color: var(--color-accent); }
 .auction-modal__mode-opts { display: flex; flex-direction: column; gap: 8px; }
 .auction-modal__radio-row { display: flex; gap: 16px; }
@@ -413,3 +443,32 @@
   60%  { transform: translateY(-200px) scale(1.15); opacity: 0.95; }
   100% { transform: translateY(-320px) scale(0.7);  opacity: 0; }
 }
+
+/* ── Seller help button & modal (shared with lb-help styles) ── */
+.lb-help-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 1.5px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-ink-mute);
+  font-size: 11px; font-weight: 800; cursor: pointer; flex-shrink: 0;
+}
+.lb-help-modal {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex; align-items: flex-end;
+  z-index: 60;
+}
+.lb-help-modal__card {
+  width: 100%; background: var(--color-surface);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: 24px 20px 32px;
+  display: flex; flex-direction: column; gap: 12px;
+  animation: lb-help-slide 0.25s cubic-bezier(0.32,0.72,0,1);
+}
+@keyframes lb-help-slide { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.lb-help-modal__icon { font-size: 32px; text-align: center; }
+.lb-help-modal__title { font-family: var(--font-display); font-size: 18px; font-weight: 800; color: var(--color-ink); text-align: center; }
+.lb-help-modal__steps { margin: 0; padding: 0 0 0 18px; display: flex; flex-direction: column; gap: 8px; }
+.lb-help-modal__steps li { font-size: 14px; color: var(--color-ink-soft); line-height: 1.55; }
+.lb-help-modal__close { margin-top: 4px; width: 100%; padding: 14px 0; background: var(--color-accent); color: #fff; border: none; border-radius: var(--radius-pill); font-size: 15px; font-weight: 800; cursor: pointer; }

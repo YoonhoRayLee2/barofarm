@@ -430,7 +430,7 @@ export default async function load(params) {
     if (chipsEl) {
       chipsEl.innerHTML = `
         <span class="lb-mode-chip ${meta.cls}">${meta.icon} ${meta.label}</span>
-        <button class="lb-help-btn" aria-label="경매 방식 안내">이게 뭐야?</button>
+        <button class="lb-help-btn" aria-label="경매 방식 안내">?</button>
       `;
       chipsEl.querySelector('.lb-help-btn').addEventListener('click', () => showAuctionHelp(mode));
     }
@@ -1094,8 +1094,12 @@ export default async function load(params) {
 
   // ---- Socket connection ----
   socket = Sock.connect();
-  Sock.identifyUser(socket, user.id);
-  Sock.joinRoom(socket, liveId, String(user.id), user.nickname || user.username || '시청자');
+  const _buyerName = user.nickname || user.username || '시청자';
+  // 초기 연결 + 재연결 시 모두 룸 재입장
+  socket.on('connect', () => {
+    Sock.identifyUser(socket, user.id);
+    Sock.joinRoom(socket, liveId, String(user.id), _buyerName);
+  });
 
   const unsubAuctionUpdate = Sock.onAuctionUpdate(socket, (auction) => {
     updateAuctionUI(auction);

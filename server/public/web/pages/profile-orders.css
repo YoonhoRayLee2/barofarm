@@ -24,6 +24,22 @@
   z-index: var(--z-sticky);
 }
 
+.orders-status-filter {
+  margin-left: auto;
+  height: 34px;
+  padding: 0 28px 0 12px;
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23999'/%3E%3C/svg%3E") no-repeat right 10px center;
+  -webkit-appearance: none;
+  appearance: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 .orders-header__back {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
