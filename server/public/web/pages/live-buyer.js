@@ -745,7 +745,8 @@ export default async function load(params) {
   page.addEventListener('touchend', _onTouchEnd, { passive: true });
 
   // ---- Product sheet ----
-  function openProductSheet() {
+  function openProductSheet(initialTab = 'history') {
+    if (page.querySelector('.product-sheet-backdrop')) return; // 중복 방지
     const backdrop = document.createElement('div');
     backdrop.className = 'product-sheet-backdrop';
     backdrop.dataset.theme = 'light';
@@ -776,8 +777,6 @@ export default async function load(params) {
         <button class="product-sheet__close-btn">닫기</button>
       </div>
     `;
-
-    document.body.appendChild(backdrop);
 
     const sheet = backdrop.querySelector('.product-sheet');
     const content = backdrop.querySelector('#ps-content');
@@ -920,14 +919,14 @@ export default async function load(params) {
       }
     }
 
-    renderTab('products');
+    renderTab(initialTab);
 
     backdrop.querySelectorAll('.product-sheet__tab').forEach(btn => {
       btn.addEventListener('click', () => renderTab(btn.dataset.tab));
     });
 
     function closeSheet() {
-      backdrop.classList.add('is-leaving');
+      backdrop.classList.remove('is-open');
       setTimeout(() => backdrop.remove(), 220);
     }
 
@@ -936,6 +935,10 @@ export default async function load(params) {
     backdrop.addEventListener('click', (e) => {
       if (e.target === backdrop) closeSheet();
     });
+
+    // page에 append해야 body reflow 없이 화면 밀림 방지
+    page.appendChild(backdrop);
+    requestAnimationFrame(() => backdrop.classList.add('is-open'));
   }
 
   // ---- Delivery address gate — deferred until page is in DOM ----

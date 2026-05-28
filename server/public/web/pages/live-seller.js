@@ -932,7 +932,9 @@ export default async function load(params) {
     const soldContent = backdrop.querySelector('#ps-sold-content');
     rowEls.forEach(el => soldContent.appendChild(el));
 
-    document.body.appendChild(backdrop);
+    if (page.querySelector('.product-sheet-backdrop')) return; // 중복 방지
+    page.appendChild(backdrop);
+    requestAnimationFrame(() => backdrop.classList.add('is-open'));
 
     // 블라인드 입찰 내역 버튼
     soldContent.addEventListener('click', async (e) => {
@@ -967,7 +969,7 @@ export default async function load(params) {
     });
 
     function close() {
-      backdrop.classList.add('is-leaving');
+      backdrop.classList.remove('is-open');
       setTimeout(() => backdrop.remove(), 220);
     }
     backdrop.querySelector('.product-sheet__close-x').addEventListener('click', close);

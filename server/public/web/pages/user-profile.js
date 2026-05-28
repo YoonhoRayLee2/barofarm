@@ -98,7 +98,8 @@ export default async function load(params) {
       if (profile.avatarUrl) {
         avatarEl.innerHTML = `<img class="up-avatar__img" src="${escapeAttr(profile.avatarUrl)}" alt="">`;
       } else {
-        avatarEl.innerHTML = personIconSVG(36);
+        const initial = (profile.displayName || '?').charAt(0).toUpperCase();
+        avatarEl.textContent = initial;
       }
 
       isFollowing = !!profile.isFollowing;
