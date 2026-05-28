@@ -19,8 +19,7 @@ if (!document.getElementById(_cssId)) {
 }
 
 const SHIPPING_FEE_LABEL = {
-  pending: '📦 배송비 대기',
-  paid:    '✅ 배송비완료',
+  paid: '✅ 배송비포함',
 };
 
 export default async function load() {
@@ -184,7 +183,7 @@ export default async function load() {
         throw new Error(err.error || `HTTP ${res.status}`);
       }
       const data = await res.json();
-      showToast(`합배송 처리 완료! 배송비 ${Number(data.shippingFee || 0).toLocaleString('ko-KR')}원 청구`, { variant: 'success', duration: 2400 });
+      showToast(`합배송 처리 완료! 배송비 ${Number(data.shippingFee || 0).toLocaleString('ko-KR')}원 자동 포함`, { variant: 'success', duration: 2400 });
       loadList();
     } catch (err) {
       btn.disabled = false;

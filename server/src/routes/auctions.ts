@@ -104,7 +104,7 @@ function formatAuction(row: AuctionRow) {
   };
 }
 
-// POST /api/auctions/batch-ship — 합배송 처리 (판매자: 구매자별 payment_complete 주문 일괄 shipping_fee_pending 전환)
+// POST /api/auctions/batch-ship — 합배송 처리 (판매자: 구매자별 payment_complete 주문 일괄 배송비 자동 결제완료 처리)
 router.post('/batch-ship', async (req: Request, res: Response) => {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
@@ -159,7 +159,7 @@ router.post('/batch-ship', async (req: Request, res: Response) => {
     const shippingFee: number = (userRows as Array<{ seller_shipping_fee: number }>)[0]?.seller_shipping_fee ?? 3000;
 
     await pool.execute(
-      `UPDATE auctions SET shipping_fee_status='pending', shipping_fee=? WHERE id IN (${placeholders})`,
+      `UPDATE auctions SET shipping_fee_status='paid', shipping_fee=? WHERE id IN (${placeholders})`,
       [shippingFee, ...auctionIds],
     );
 

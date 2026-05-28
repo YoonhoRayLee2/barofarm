@@ -224,7 +224,6 @@ export default async function load(params) {
         const shippingFeeStatus = data.shippingFeeStatus || 'none';
         const shippingFee = Number(data.shippingFee || 0);
         const shippingFeePaid = shippingFeeStatus === 'paid';
-        const shippingFeePending = shippingFeeStatus === 'pending';
         const netPay = Math.max(0, finalPrice - discountAmt) + (shippingFeePaid ? shippingFee : 0);
         feeHtml = `
           <section class="od-fee">
@@ -245,11 +244,6 @@ export default async function load(params) {
               <div class="od-fee__row">
                 <span class="od-fee__label">배송비 (합배송)</span>
                 <span class="od-fee__value od-fee__value--plus">+${shippingFee.toLocaleString('ko-KR')}원</span>
-              </div>` : ''}
-            ${shippingFeePending ? `
-              <div class="od-fee__row">
-                <span class="od-fee__label">배송비 (합배송)</span>
-                <span class="od-fee__value od-fee__value--pending">${shippingFee.toLocaleString('ko-KR')}원 결제 대기</span>
               </div>` : ''}
             <div class="od-fee__row od-fee__row--total">
               <span class="od-fee__label">실결제액</span>
@@ -286,26 +280,10 @@ export default async function load(params) {
     const shippingFeeStatus = data.shippingFeeStatus || 'none';
     const shippingFee = Number(data.shippingFee || 0);
     let shippingFeeHtml = '';
-    if (shippingFeeStatus === 'pending') {
-      shippingFeeHtml = isSeller
-        ? `<section class="od-shipping-fee-card od-shipping-fee-card--pending">
-            <div>
-              <span style="font-size:13px;color:var(--color-ink-soft)">배송비 결제 대기 중</span><br>
-              <strong>₩${shippingFee.toLocaleString('ko-KR')}</strong>
-            </div>
-            <span style="font-size:12px;color:var(--color-ink-soft)">구매자 결제 대기</span>
-          </section>`
-        : `<section class="od-shipping-fee-card od-shipping-fee-card--pending">
-            <div>
-              <span style="font-size:13px;color:var(--color-ink-soft)">배송비 결제 대기</span><br>
-              <strong>₩${shippingFee.toLocaleString('ko-KR')}</strong>
-            </div>
-            <button id="od-pay-shipping-btn">배송비 결제하기</button>
-          </section>`;
-    } else if (shippingFeeStatus === 'paid') {
+    if (shippingFeeStatus === 'paid') {
       shippingFeeHtml = `
         <section class="od-shipping-fee-card od-shipping-fee-card--paid">
-          <span>✅ 배송비결제완료(합배송)</span>
+          <span>✅ 배송비 포함 결제완료</span>
           <strong>₩${shippingFee.toLocaleString('ko-KR')}</strong>
         </section>
       `;
@@ -397,8 +375,6 @@ export default async function load(params) {
     if (isSeller && status === 'payment_complete') {
       if (shippingFeeStatus === 'none') {
         actionHtml = `<p class="od-batch-ship-hint">발송 처리는 미발송 주문 페이지에서 합배송으로 진행해주세요.</p>`;
-      } else if (shippingFeeStatus === 'pending') {
-        actionHtml = `<p class="od-batch-ship-hint">구매자가 배송비를 결제하면 발송 처리가 가능합니다.</p>`;
       } else if (shippingFeeStatus === 'paid') {
         actionHtml = `
           <section class="od-ship-form" id="od-ship-form">
@@ -427,27 +403,6 @@ export default async function load(params) {
     }
 
     container.innerHTML = card + stepperHtml + feeHtml + shippingFeeHtml + trackingHtml + deliveryHtml + carbonHtml + actionHtml;
-
-    /* Bind shipping fee payment button */
-    const payShippingBtn = container.querySelector('#od-pay-shipping-btn');
-    if (payShippingBtn) {
-      payShippingBtn.addEventListener('click', async () => {
-        payShippingBtn.disabled = true;
-        try {
-          const res = await fetch(`/api/auctions/${encodeURIComponent(data.auctionId)}/pay-shipping-fee`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: user.id }),
-          });
-          if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || `HTTP ${res.status}`); }
-          showToast('배송비 결제가 완료되었습니다', { variant: 'success', duration: 1800 });
-          await loadDetail();
-        } catch (err) {
-          payShippingBtn.disabled = false;
-          showToast(err.message || '배송비 결제에 실패했습니다', { duration: 2000 });
-        }
-      });
-    }
 
     /* Bind fee help button */
     const feeHelpBtn = container.querySelector('.od-fee__help');
