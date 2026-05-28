@@ -471,6 +471,18 @@ router.patch('/:id', uploadAvatar.single('avatar'), async (req: Request, res: Re
       );
     }
 
+    // 5. 배송지
+    const { deliveryName, deliveryPhone, deliveryZipcode, deliveryAddress, deliveryDetail } = req.body as {
+      deliveryName?: string; deliveryPhone?: string; deliveryZipcode?: string;
+      deliveryAddress?: string; deliveryDetail?: string;
+    };
+    if (deliveryAddress !== undefined) {
+      await pool.execute(
+        'UPDATE users SET delivery_name = ?, delivery_phone = ?, delivery_zipcode = ?, delivery_address = ?, delivery_detail = ? WHERE id = ?',
+        [deliveryName ?? null, deliveryPhone ?? null, deliveryZipcode ?? null, deliveryAddress ?? null, deliveryDetail ?? null, userId],
+      );
+    }
+
     // 최신 row 조회 후 GET과 동일한 형태로 응답
     const [rows] = await pool.execute(
       `SELECT id, name, nickname, avatar_url, role,

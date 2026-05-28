@@ -103,7 +103,7 @@
 
 /* Chat overlay */
 .lb-chat-overlay {
-  position: absolute; left: 0; bottom: var(--lb-bottom-h, 280px); top: 140px;
+  position: absolute; left: 0; bottom: var(--lb-bottom-h, 55dvh); top: 140px;
   width: 66%; z-index: 5; pointer-events: none;
   padding: 0 12px;
   display: flex; flex-direction: column-reverse; gap: 6px;
