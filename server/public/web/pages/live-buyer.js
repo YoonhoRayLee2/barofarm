@@ -160,13 +160,6 @@ export default async function load(params) {
   `;
   page.appendChild(productPanel);
 
-  // 채팅 오버레이 bottom을 바텀시트 높이에 맞게 실시간 유지
-  const _bottomRO = new ResizeObserver(entries => {
-    const h = entries[0]?.contentRect.height ?? 0;
-    if (h > 0) page.style.setProperty('--lb-bottom-h', (h + 20) + 'px');
-  });
-  _bottomRO.observe(productPanel);
-
   // Timer component — will be appended into #lb-timer-slot
   const timer = createTimer({ initialRemaining: 30 });
   timer.el.style.display = 'none';

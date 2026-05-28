@@ -101,20 +101,16 @@
 }
 .lb-mute-row .divider { width: 1px; height: 10px; background: rgba(255,255,255,0.18); }
 
-/* Chat overlay */
-.lb-chat-overlay {
-  position: absolute; left: 0; bottom: var(--lb-bottom-h, 55dvh); top: 140px;
-  width: 66%; z-index: 5; pointer-events: none;
-  padding: 0 12px;
-  display: flex; flex-direction: column-reverse; gap: 6px;
-  overflow: hidden;
-  mask-image: linear-gradient(to top, black 80%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to top, black 80%, transparent 100%);
+/* Chat wrap — flex:1 사이 공간 차지, 채팅은 이 안에서 bottom:0 기준 */
+.live-buyer__chat-wrap {
+  flex: 1; min-height: 0;
+  position: relative;
+  pointer-events: none;
 }
 
-/* Bottom product panel — light glass card */
+/* Bottom product panel — flex item, 절대위치 제거 */
 .lb-bottom {
-  position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;
+  flex-shrink: 0; z-index: 10;
   padding: 14px 14px 10px;
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
