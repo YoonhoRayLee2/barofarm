@@ -139,6 +139,11 @@ export default async function load(params) {
   const productPanel = document.createElement('div');
   productPanel.className = 'lb-bottom';
   productPanel.id = 'lb-product-panel';
+  const _bottomRO = new ResizeObserver(entries => {
+    const h = entries[0]?.contentRect.height ?? 0;
+    page.style.setProperty('--lb-bottom-h', (h + 16) + 'px');
+  });
+  _bottomRO.observe(productPanel);
   productPanel.innerHTML = `
     <div class="lb-mode-chips" id="lb-mode-chips"></div>
     <div class="lb-product" id="lb-product">

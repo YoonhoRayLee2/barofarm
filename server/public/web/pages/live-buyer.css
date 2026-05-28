@@ -10,6 +10,8 @@
 .live-buyer__video {
   position: absolute; inset: 0;
   background: linear-gradient(135deg, #1f3526 0%, #4a6b3d 50%, #2a4a30 100%);
+  width: 100%; height: 100%;
+  object-fit: contain;
 }
 .live-buyer__video::after {
   content: '📦'; position: absolute;
@@ -101,7 +103,7 @@
 
 /* Chat overlay */
 .lb-chat-overlay {
-  position: absolute; left: 0; bottom: 280px; top: 140px;
+  position: absolute; left: 0; bottom: var(--lb-bottom-h, 280px); top: 140px;
   width: 66%; z-index: 5; pointer-events: none;
   padding: 0 12px;
   display: flex; flex-direction: column-reverse; gap: 6px;
