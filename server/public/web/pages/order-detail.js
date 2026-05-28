@@ -182,7 +182,7 @@ export default async function load(params) {
             <span class="od-card__date">${dateStr}</span>
           </div>
           ${isSeller && data.buyerName
-            ? `<div class="od-card__party">구매자 <span class="od-card__party-name">${escapeHtml(data.buyerName)}</span></div>`
+            ? `<div class="od-card__party">구매자 <span class="od-card__party-name">${escapeHtml(data.buyerName)}</span>${data.buyerDelivery?.option === 'hanaro' ? '<span class="od-hanaro-tag">🏬 반값택배</span>' : ''}</div>`
             : !isSeller && data.sellerName
             ? `<div class="od-card__party">판매자 <span class="od-card__party-name">${escapeHtml(data.sellerName)}</span></div>`
             : ''}
@@ -336,7 +336,7 @@ export default async function load(params) {
 
     /* Delivery info — buyer side */
     let deliveryHtml = '';
-    if (!isSeller && data.buyerDelivery) {
+    if (data.buyerDelivery) {
       const d = data.buyerDelivery;
       if (d.option === 'hanaro') {
         deliveryHtml = `
@@ -348,10 +348,10 @@ export default async function load(params) {
               ${d.hanaroMartName ? `<div class="od-delivery-info__row"><dt>수령 마트</dt><dd>${escapeHtml(d.hanaroMartName)}</dd></div>` : ''}
               ${d.hanaroMartAddr ? `<div class="od-delivery-info__row"><dt>마트 주소</dt><dd>${escapeHtml(d.hanaroMartAddr)}</dd></div>` : ''}
             </dl>
-            <p class="od-hanaro-note">판매자가 인근 하나로마트에 발송하면 위 매장에서 수령하세요.</p>
+            <p class="od-hanaro-note">${isSeller ? '구매자가 지정한 하나로마트로 발송해주세요.' : '판매자가 인근 하나로마트에 발송하면 위 매장에서 수령하세요.'}</p>
           </section>
         `;
-      } else {
+      } else if (!isSeller) {
         deliveryHtml = `
           <section class="od-delivery-info">
             <h2 class="od-delivery-info__title">배송지 정보</h2>
@@ -400,12 +400,8 @@ export default async function load(params) {
       } else if (shippingFeeStatus === 'pending') {
         actionHtml = `<p class="od-batch-ship-hint">구매자가 배송비를 결제하면 발송 처리가 가능합니다.</p>`;
       } else if (shippingFeeStatus === 'paid') {
-        const hanaroNotice = data.buyerDelivery?.option === 'hanaro'
-          ? `<div class="od-hanaro-seller-notice">🏬 <strong>하나로마트 반값택배</strong> — 인근 하나로마트로 발송해주세요.<br><small>${escapeHtml(data.buyerDelivery.hanaroMartName || '')} · ${escapeHtml(data.buyerDelivery.hanaroMartAddr || '')}</small></div>`
-          : '';
         actionHtml = `
           <section class="od-ship-form" id="od-ship-form">
-            ${hanaroNotice}
             <h2 class="od-ship-form__title">발송 처리</h2>
             <label class="od-ship-form__label">택배사 <span class="od-ship-form__required">*</span></label>
             <select class="od-ship-form__select" id="od-courier">
