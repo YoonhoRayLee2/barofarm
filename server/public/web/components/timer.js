@@ -49,7 +49,7 @@ export function createTimer({ initialRemaining = 30 } = {}) {
     }
 
     el.classList.remove('timer--warn', 'timer--danger');
-    if (secs <= 3) {
+    if (secs <= 5) {
       el.classList.add('timer--danger');
     } else if (secs <= 10) {
       el.classList.add('timer--warn');

@@ -47,21 +47,30 @@
   border-color: var(--color-warn);
 }
 
-/* State: danger (≤3s) + shake */
+/* State: danger (≤5s) + shake */
 .timer--danger .timer__number {
   color: var(--color-danger);
-  animation: timer-shake 0.3s ease-in-out infinite;
+  animation: timer-shake 0.15s linear infinite;
 }
 
 .timer--danger {
   border-color: var(--color-danger);
-  background: rgba(214,71,58,0.12);
+  background: rgba(214,71,58,0.15);
+  animation: timer-pulse 0.5s ease-in-out infinite;
 }
 
 @keyframes timer-shake {
-  0%, 100% { transform: translateX(0); }
-  20%       { transform: translateX(-2px); }
-  40%       { transform: translateX(2px); }
-  60%       { transform: translateX(-2px); }
-  80%       { transform: translateX(2px); }
+  0%   { transform: translateX(0) rotate(0deg); }
+  15%  { transform: translateX(-6px) rotate(-3deg); }
+  30%  { transform: translateX(6px) rotate(3deg); }
+  45%  { transform: translateX(-5px) rotate(-2deg); }
+  60%  { transform: translateX(5px) rotate(2deg); }
+  75%  { transform: translateX(-4px) rotate(-1deg); }
+  90%  { transform: translateX(4px) rotate(1deg); }
+  100% { transform: translateX(0) rotate(0deg); }
+}
+
+@keyframes timer-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(214,71,58,0); background: rgba(214,71,58,0.15); }
+  50%       { box-shadow: 0 0 0 6px rgba(214,71,58,0.25); background: rgba(214,71,58,0.28); }
 }

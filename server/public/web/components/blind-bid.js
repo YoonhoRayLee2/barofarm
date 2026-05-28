@@ -44,10 +44,7 @@ export function createBlindBid({ onSubmit }) {
       <input
         class="blind-bid__input"
         id="bb-price-input"
-        type="number"
-        min="100"
-        max="100000000"
-        step="100"
+        type="text"
         placeholder="입찰가 입력"
         autocomplete="off"
         inputmode="numeric"
@@ -75,14 +72,19 @@ export function createBlindBid({ onSubmit }) {
   }
 
   inputEl.addEventListener('input', () => {
-    inputEl.value = inputEl.value.replace(/[^0-9]/g, '');
-    if (inputEl.value !== '' && parseInt(inputEl.value, 10) > 100000000) {
-      inputEl.value = '100000000';
-    }
+    const cursor = inputEl.selectionStart;
+    const prevLen = inputEl.value.length;
+    let raw = inputEl.value.replace(/[^0-9]/g, '');
+    if (raw !== '' && parseInt(raw, 10) > 100000000) raw = '100000000';
+    const formatted = raw === '' ? '' : parseInt(raw, 10).toLocaleString('ko-KR');
+    inputEl.value = formatted;
+    const diff = formatted.length - prevLen;
+    inputEl.setSelectionRange(cursor + diff, cursor + diff);
   });
 
   submitBtn.addEventListener('click', () => {
-    const price = parseInt(inputEl.value, 10);
+    const raw = inputEl.value.replace(/,/g, '');
+    const price = parseInt(raw, 10);
     if (isNaN(price) || price <= 0) {
       showMsg('금액을 입력해 주세요', true);
       return;
