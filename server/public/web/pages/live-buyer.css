@@ -408,27 +408,18 @@
 
 /* ── Auction help button ─────────────────────────────── */
 .lb-help-btn {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 1.5px solid var(--color-line);
-  background: var(--color-surface);
-  color: var(--color-ink-mute);
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  z-index: 2;
-}
-
-.lb-bid-controls {
-  position: relative;
+  gap: 3px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1.5px dashed var(--color-line);
+  background: transparent;
+  color: var(--color-ink-mute);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.02em;
 }
 
 /* ── Auction help modal ──────────────────────────────── */

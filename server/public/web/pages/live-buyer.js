@@ -418,16 +418,22 @@ export default async function load(params) {
       if (countEl) countEl.textContent = '0명 참여 중';
     }
 
-    // 도움말 버튼 — bid-controls 우상단 고정
-    let helpBtn = bidControls.querySelector('.lb-help-btn');
-    if (!helpBtn) {
-      helpBtn = document.createElement('button');
-      helpBtn.className = 'lb-help-btn';
-      helpBtn.setAttribute('aria-label', '경매 방식 안내');
-      helpBtn.textContent = '?';
-      bidControls.appendChild(helpBtn);
+    // 모드 칩 + 도움말 버튼 — lb-mode-chips 영역
+    const CHIP_META = {
+      normal:   { icon: '🔨', label: '일반 경매',   cls: '' },
+      blind:    { icon: '🔒', label: '블라인드',     cls: 'lb-mode-chip--blind' },
+      fcfs:     { icon: '⚡', label: '선착순 구매',  cls: 'lb-mode-chip--cta' },
+      giveaway: { icon: '🎁', label: '무료 나눔',    cls: 'lb-mode-chip--info' },
+    };
+    const meta = CHIP_META[mode] || CHIP_META.normal;
+    const chipsEl = page.querySelector('#lb-mode-chips');
+    if (chipsEl) {
+      chipsEl.innerHTML = `
+        <span class="lb-mode-chip ${meta.cls}">${meta.icon} ${meta.label}</span>
+        <button class="lb-help-btn" aria-label="경매 방식 안내">이게 뭐야?</button>
+      `;
+      chipsEl.querySelector('.lb-help-btn').addEventListener('click', () => showAuctionHelp(mode));
     }
-    helpBtn.onclick = () => showAuctionHelp(mode);
   }
 
   function setupFcfsMode(auction) {
