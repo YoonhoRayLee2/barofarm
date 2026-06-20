@@ -19,6 +19,7 @@ import marketPricesRouter from './routes/market-prices';
 import hanaroStoresRouter from './routes/hanaro-stores';
 import adminRouter from './routes/admin';
 import { createGroupDealsRouter } from './routes/group-deals';
+import recommendationsRouter from './routes/recommendations';
 import registerAuctionSocket from './socket/auction';
 import registerChatSocket from './socket/chat';
 import pool from './db/mysql';
@@ -101,6 +102,7 @@ app.use('/api/market-prices', marketPricesRouter);
 app.use('/api/hanaro-stores', hanaroStoresRouter);
 app.use('/admin', adminRouter);
 app.use('/api/group-deals', createGroupDealsRouter(io));
+app.use('/api/recommendations', recommendationsRouter);
 
 registerAuctionSocket(io);
 registerChatSocket(io);

@@ -197,3 +197,179 @@ ol {
   width: min(100vw, calc(100dvh * 390 / 844));
   max-width: 480px;
 }
+
+/* ──────────────────────────────────────────────────────────────
+   Desktop brand panel — PC 접속 시 좌측 여백을 브랜딩으로 채움
+   모바일/WebView(≤1023px)에서는 완전히 숨김.
+   ────────────────────────────────────────────────────────────── */
+#desktop-brand {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  html {
+    /* 좌우 끝까지 배경 그라데이션이 채워지도록 html에도 동일 배경 */
+    background:
+      radial-gradient(ellipse 90% 70% at 20% 15%, rgba(232, 128, 46, 0.22), transparent 60%),
+      radial-gradient(ellipse 80% 60% at 10% 95%, rgba(45, 138, 62, 0.20), transparent 60%),
+      linear-gradient(160deg, #1A150D 0%, #12100A 55%, #0C0A06 100%);
+  }
+  body {
+    /* 앱을 중앙 우측으로, 좌측 여백은 브랜드 패널이 차지 */
+    justify-content: center;
+    align-items: center;
+    gap: clamp(40px, 6vw, 110px);
+    background: transparent;
+  }
+
+  #app-root {
+    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255,255,255,0.04);
+    border-radius: 30px;
+    overflow: hidden;
+  }
+
+  /* 내부 페이지 루트가 100dvh(뷰포트 전체)를 쓰면 카드보다 길어져 탭바가 잘림.
+     데스크탑에서는 #app-root 카드 높이(100%)에 맞춘다. */
+  #app-root > * {
+    height: 100% !important;
+    max-height: 100%;
+  }
+
+  #desktop-brand {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 26px;
+    width: min(36vw, 420px);
+    flex-shrink: 0;
+    color: #F3EFE8;
+    font-family: var(--font-body);
+    animation: db-fade-in 0.6s var(--ease-out) both;
+  }
+
+  .db-logo {
+    height: 48px;
+    width: auto;
+    max-width: 260px;
+    object-fit: contain;
+    object-position: left center;
+    align-self: flex-start;
+    /* 선명한 초록 로고 → 미묘한 그림자로 입체감만 */
+    filter: drop-shadow(0 2px 10px rgba(0,0,0,0.35));
+  }
+
+  .db-tagline {
+    font-family: var(--font-display);
+    font-size: clamp(24px, 2.4vw, 34px);
+    font-weight: 700;
+    line-height: 1.32;
+    letter-spacing: -0.5px;
+    color: #FFFFFF;
+    margin: 0;
+  }
+
+  .db-tagline em {
+    font-style: normal;
+    color: #F4A24E;
+  }
+
+  .db-sub {
+    font-size: 15px;
+    line-height: 1.7;
+    color: rgba(243, 239, 232, 0.66);
+    margin: -10px 0 0;
+    max-width: 30ch;
+  }
+
+  .db-download {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-top: 4px;
+  }
+
+  .db-qr {
+    width: 104px;
+    height: 104px;
+    border-radius: 16px;
+    background: #fff;
+    padding: 9px;
+    flex-shrink: 0;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+  .db-qr img, .db-qr svg { width: 100%; height: 100%; display: block; }
+
+  .db-download__col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .db-download__hint {
+    font-size: 12px;
+    color: rgba(243, 239, 232, 0.5);
+    margin: 0 0 2px;
+  }
+
+  .db-store {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 12px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background var(--dur-fast) var(--ease-out),
+                border-color var(--dur-fast) var(--ease-out),
+                transform var(--dur-fast) var(--ease-out);
+  }
+  .db-store:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.28);
+    transform: translateY(-1px);
+    color: #fff;
+  }
+  .db-store svg { width: 20px; height: 20px; flex-shrink: 0; }
+  .db-store small {
+    display: block;
+    font-size: 10px;
+    font-weight: 500;
+    opacity: 0.6;
+    line-height: 1.1;
+  }
+  .db-store strong { font-size: 14px; font-weight: 700; line-height: 1.15; }
+
+  .db-social {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .db-social a {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(243, 239, 232, 0.85);
+    transition: background var(--dur-fast) var(--ease-out),
+                transform var(--dur-fast) var(--ease-out),
+                color var(--dur-fast) var(--ease-out);
+  }
+  .db-social a:hover {
+    background: rgba(255, 255, 255, 0.14);
+    transform: translateY(-2px);
+    color: #fff;
+  }
+  .db-social svg { width: 20px; height: 20px; }
+}
+
+@keyframes db-fade-in {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}

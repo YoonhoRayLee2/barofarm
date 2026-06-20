@@ -43,6 +43,47 @@ function sellerTierFromRate(rate) {
   return SELLER_TIER_INFO.find(t => rate <= t.maxRate) || SELLER_TIER_INFO[3];
 }
 
+function showCarbonHelp() {
+  const overlay = document.createElement('div');
+  overlay.className = 'od-help-overlay';
+  overlay.innerHTML = `
+    <div class="od-help-sheet">
+      <div class="od-help-handle"></div>
+      <h3 class="od-help-title">🌍 절감량은 어떻게 계산되나요?</h3>
+      <p class="od-help-note" style="margin-bottom:16px">일반 마트 농산물은 <b>농장 → 도매시장 → 마트 → 우리집</b>까지 여러 번 트럭으로 옮겨집니다. 바로팜 산지직송은 <b>농장 → 우리집</b>으로 곧장 와서 그만큼 트럭 이동이 줄고, 줄어든 거리만큼 배기가스(CO₂)도 줄어듭니다.</p>
+
+      <div class="od-carbon-help-steps">
+        <div class="od-carbon-help-step">
+          <span class="od-carbon-help-step__num">1</span>
+          <div class="od-carbon-help-step__body">
+            <b>이동 거리를 비교해요</b>
+            <span>판매 농장과 우리집 배송지 사이 거리를, 일반 마트 유통 경로(약 800km)와 비교합니다.</span>
+          </div>
+        </div>
+        <div class="od-carbon-help-step">
+          <span class="od-carbon-help-step__num">2</span>
+          <div class="od-carbon-help-step__body">
+            <b>줄어든 거리를 구해요</b>
+            <span>마트 경로보다 짧아진 만큼이 '절감 거리'예요. 농장이 가까울수록 더 많이 절감됩니다.</span>
+          </div>
+        </div>
+        <div class="od-carbon-help-step">
+          <span class="od-carbon-help-step__num">3</span>
+          <div class="od-carbon-help-step__body">
+            <b>CO₂로 환산해요</b>
+            <span>줄어든 거리 × 상품 무게(평균 3kg) × 배출 계수(1km·1kg당 0.166g)로 절감된 CO₂를 계산합니다.</span>
+          </div>
+        </div>
+      </div>
+
+      <p class="od-help-note" style="margin-top:14px">* 직선 거리 기반 추정치예요. 실제 배출량과는 차이가 있을 수 있습니다.</p>
+    </div>
+  `;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('is-open'));
+}
+
 function showFeeHelp(isSeller) {
   const overlay = document.createElement('div');
   overlay.className = 'od-help-overlay';
@@ -353,19 +394,28 @@ export default async function load(params) {
     if (carbon) {
       carbonHtml = `
         <section class="od-carbon">
-          <div class="od-carbon__head">
-            <span class="od-carbon__leaf">🌱</span>
-            <span class="od-carbon__title">이 주문의 탄소발자국</span>
+          <div class="od-carbon__hero">
+            <div class="od-carbon__head">
+              <span class="od-carbon__title">🌍 이 주문의 탄소발자국</span>
+              <button class="od-carbon__help" id="od-carbon-help" aria-label="탄소발자국 절감량 계산 방법">?</button>
+            </div>
+            <div class="od-carbon__big">
+              <span class="od-carbon__big-value">${carbon.savedKm.toLocaleString('ko-KR')}<small>km</small></span>
+              <span class="od-carbon__big-unit">단축</span>
+            </div>
+            <p class="od-carbon__trip">🚚 마트 물류 경로보다 그만큼 덜 달렸어요</p>
           </div>
-          <div class="od-carbon__row">
-            <span class="od-carbon__label">마트 대비</span>
-            <span class="od-carbon__value">${carbon.savedKm.toLocaleString('ko-KR')}km 단축</span>
+          <div class="od-carbon__foot">
+            <div class="od-carbon__stat">
+              <span class="od-carbon__stat-label">CO₂ 절감</span>
+              <span class="od-carbon__stat-value">${carbon.savedCo2g.toLocaleString('ko-KR')}g</span>
+            </div>
+            <div class="od-carbon__divider"></div>
+            <div class="od-carbon__stat">
+              <span class="od-carbon__stat-label">마트 대비</span>
+              <span class="od-carbon__stat-value">${carbon.savedPct}% 절감</span>
+            </div>
           </div>
-          <div class="od-carbon__row">
-            <span class="od-carbon__label">CO2 약</span>
-            <span class="od-carbon__value">${carbon.savedCo2g.toLocaleString('ko-KR')}g 절감 (${carbon.savedPct}%)</span>
-          </div>
-          <p class="od-carbon__caption">산지직송으로 지구를 지켰어요</p>
         </section>
       `;
     }
@@ -402,11 +452,26 @@ export default async function load(params) {
       actionHtml = `<button class="od-action-btn" id="od-action">정산 완료 처리</button>`;
     }
 
-    container.innerHTML = card + stepperHtml + feeHtml + shippingFeeHtml + trackingHtml + deliveryHtml + carbonHtml + actionHtml;
+    /* Recommendations section (구매자용) */
+    let recommendationsHtml = '';
+    if (!isSeller) {
+      recommendationsHtml = `
+        <section class="od-recommendations" id="od-recommendations">
+          <h2 class="od-recommendations__title">비슷한 상품</h2>
+          <div class="od-recommendations__loading">로드 중...</div>
+        </section>
+      `;
+    }
+
+    container.innerHTML = card + stepperHtml + feeHtml + shippingFeeHtml + trackingHtml + deliveryHtml + carbonHtml + actionHtml + recommendationsHtml;
 
     /* Bind fee help button */
     const feeHelpBtn = container.querySelector('.od-fee__help');
     if (feeHelpBtn) feeHelpBtn.addEventListener('click', () => showFeeHelp(isSeller));
+
+    /* Bind carbon help button */
+    const carbonHelpBtn = container.querySelector('#od-carbon-help');
+    if (carbonHelpBtn) carbonHelpBtn.addEventListener('click', showCarbonHelp);
 
     /* Bind tracking button — opens carrier site directly */
     const trackingBtn = container.querySelector('#od-tracking-btn');
@@ -419,6 +484,11 @@ export default async function load(params) {
           showToast('해당 택배사의 조회 링크를 지원하지 않습니다', { duration: 2000 });
         }
       });
+    }
+
+    /* Load recommendations (구매자용) */
+    if (!isSeller) {
+      loadRecommendations(container, auctionId);
     }
 
     /* Bind action */
@@ -506,6 +576,7 @@ const ZIPCODE_COORDS = {
   '42':[36.11,128.73],'43':[36.57,128.21],'44':[35.54,129.31],
   '45':[35.18,129.08],'46':[35.15,128.10],'47':[35.22,128.68],
   '48':[35.13,128.99],'49':[35.34,128.70],
+  '50':[35.19,128.08],'51':[35.23,128.68],'52':[35.18,128.11],'53':[35.51,128.74],
   '54':[35.82,127.15],'55':[35.57,127.17],'56':[35.69,126.85],
   '57':[34.77,126.46],'58':[34.81,127.66],'59':[34.95,127.49],
   '60':[35.16,126.85],'61':[34.74,126.71],'62':[35.02,126.72],
@@ -527,4 +598,87 @@ function calcCarbon(farmZip, buyerZip) {
   const savedCo2g = Math.round(savedKm * 0.000166 * 3 * 1000);
   const savedPct = Math.round(savedKm / 800 * 100);
   return { dist, savedKm, savedCo2g, savedPct };
+}
+
+async function loadRecommendations(container, auctionId) {
+  const section = container.querySelector('#od-recommendations');
+  if (!section) return;
+
+  try {
+    const res = await fetch(`/api/auctions/${encodeURIComponent(auctionId)}/recommendations`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const { recommendations } = await res.json();
+
+    if (!recommendations || recommendations.length === 0) {
+      section.querySelector('.od-recommendations__loading').textContent = '추천 상품이 없습니다';
+      return;
+    }
+
+    const grid = recommendations.map((p) => {
+      const hasDiscount = p.discountRate > 0;
+      const discountBadge = hasDiscount
+        ? `<span class="od-rec-card__discount-badge">${p.discountRate}%</span>`
+        : '';
+      const priceHtml = hasDiscount
+        ? `<div class="od-rec-card__price-wrap">
+             <span class="od-rec-card__list-price">${p.listPrice.toLocaleString('ko-KR')}원</span>
+             <span class="od-rec-card__price od-rec-card__price--sale">${formatPrice(p.price)}</span>
+           </div>`
+        : `<div class="od-rec-card__price-wrap">
+             <span class="od-rec-card__price">${formatPrice(p.price)}</span>
+           </div>`;
+      return `
+        <div class="od-rec-card" role="button" tabindex="0" data-product-url="${escapeAttr(p.detailUrl || '#')}">
+          <div class="od-rec-card__thumb">
+            ${discountBadge}
+            ${p.imgUrl ? `<img src="${escapeAttr(p.imgUrl)}" alt="${escapeHtml(p.name)}" loading="lazy">` : '<span class="od-rec-card__no-img">🌿</span>'}
+          </div>
+          <div class="od-rec-card__body">
+            <div class="od-rec-card__name">${escapeHtml(p.name)}</div>
+            ${priceHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const nhmallLogo = `<img src="/app/images/chunsim_logo_v3.png" alt="농협몰" class="od-recommendations__logo" role="button" tabindex="0" aria-label="농협몰 바로가기">`;
+
+    section.innerHTML = `
+      <h2 class="od-recommendations__title">${nhmallLogo}추천 상품</h2>
+      <div class="od-recommendations__scroll">${grid}</div>
+    `;
+
+    const logoEl = section.querySelector('.od-recommendations__logo');
+    if (logoEl) {
+      const openNhmall = () => window.open('https://www.nonghyupmall.com/', '_blank', 'noopener');
+      logoEl.addEventListener('click', openNhmall);
+      logoEl.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openNhmall(); }
+      });
+    }
+
+    section.querySelectorAll('.od-rec-card').forEach(card => {
+      const url = card.dataset.productUrl;
+      card.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (url && url !== '#') {
+          window.open(url, '_blank', 'noopener');
+        } else {
+          console.warn('[order-detail] No URL available');
+        }
+      });
+      card.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (url && url !== '#') {
+            window.open(url, '_blank', 'noopener');
+          }
+        }
+      });
+    });
+  } catch (err) {
+    console.error('[order-detail] loadRecommendations error:', err);
+    section.querySelector('.od-recommendations__loading').textContent = '추천 상품 로드 실패';
+  }
 }

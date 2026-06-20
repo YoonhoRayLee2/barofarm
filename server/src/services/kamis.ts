@@ -166,6 +166,67 @@ export async function getPriceHistory(
 }
 
 
+// '무'처럼 1글자 품목은 단어 경계(공백 or 문자열 끝/시작)만 허용
+function itemMatches(productName: string, itemName: string): boolean {
+  if (itemName.length === 1) {
+    return new RegExp(`(^|\\s)${itemName}(\\s|$)`).test(productName);
+  }
+  return productName.includes(itemName);
+}
+
+export async function matchMarketPrice(
+  productName: string,
+  category?: string,
+): Promise<MarketPriceRow | null> {
+  const prices = await getTodayPrices();
+
+  // 매칭 후보: productName에 itemName이 포함되는 TRACKED_ITEMS 항목
+  const candidates = TRACKED_ITEMS.filter((t) => itemMatches(productName, t.itemName));
+  if (candidates.length === 0) return null;
+
+  // category 우선, 그 다음 itemName 길이 내림차순
+  candidates.sort((a, b) => {
+    const aCat = category && a.category === category ? 1 : 0;
+    const bCat = category && b.category === category ? 1 : 0;
+    if (bCat !== aCat) return bCat - aCat;
+    return b.itemName.length - a.itemName.length;
+  });
+
+  const best = candidates[0];
+  return prices.find((p) => p.itemCode === best.itemCode) ?? null;
+}
+
+export interface PriceTrend {
+  direction: 'up' | 'down' | 'flat';
+  changePct: number;
+  recentHigh: number;
+  recentLow: number;
+  current: number;
+  sampleDays: number;
+}
+
+export async function getPriceTrend(
+  itemCode: string,
+  kindName: string,
+): Promise<PriceTrend | null> {
+  const history = await getPriceHistory(itemCode, kindName, 90);
+  if (history.length < 2) return null;
+
+  const current = history[history.length - 1].price;
+  // 30일 전 기준점: 30일 이상 데이터가 있으면 30일 전 값, 없으면 가장 오래된 값
+  const pastIdx = history.length >= 30 ? history.length - 30 : 0;
+  const past = history[pastIdx].price;
+
+  const changePct = Math.round(((current - past) / past) * 100);
+  const direction = Math.abs(changePct) < 3 ? 'flat' : changePct > 0 ? 'up' : 'down';
+
+  const prices = history.map((h) => h.price);
+  const recentHigh = Math.max(...prices);
+  const recentLow = Math.min(...prices);
+
+  return { direction, changePct, recentHigh, recentLow, current, sampleDays: history.length };
+}
+
 function toRow(r: any): MarketPriceRow {
   return {
     itemCode: r.item_code,

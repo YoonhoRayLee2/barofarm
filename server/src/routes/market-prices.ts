@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getTodayPrices, getPriceHistory } from '../services/kamis';
+import { getTodayPrices, getPriceHistory, matchMarketPrice, getPriceTrend } from '../services/kamis';
 
 const router = Router();
 
@@ -7,6 +7,19 @@ const router = Router();
 router.get('/', async (req, res) => {
   const rows = await getTodayPrices();
   res.json(rows);
+});
+
+// GET /api/market-prices/match?name=...&category=...
+router.get('/match', async (req, res) => {
+  const name = String(req.query.name || '').trim();
+  const category = req.query.category ? String(req.query.category) : undefined;
+  if (!name) return res.status(400).json({ error: 'name query param required' });
+
+  const price = await matchMarketPrice(name, category);
+  if (!price) return res.json({ matched: false });
+
+  const trend = await getPriceTrend(price.itemCode, price.kindName);
+  return res.json({ matched: true, price, ...(trend ? { trend } : {}) });
 });
 
 // GET /api/market-prices/:itemCode/history?kindName=후지&days=30

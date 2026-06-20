@@ -287,6 +287,54 @@
   pointer-events: none;
 }
 
+/* ── 참고 시세 가이드 (KAMIS) ─────────────────────────────── */
+.pr-market {
+  margin-top: var(--space-2);
+  background: var(--color-accent-tint);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pr-market.is-hidden {
+  display: none;
+}
+.pr-market__base {
+  font-size: var(--fs-sm);
+  color: var(--color-ink);
+  line-height: var(--lh-normal);
+}
+.pr-market__base strong {
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--color-accent);
+  margin-left: 4px;
+}
+.pr-market__src {
+  color: var(--color-ink-mute);
+  font-size: var(--fs-xs);
+}
+.pr-market__trend {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  line-height: var(--lh-normal);
+}
+.pr-market__trend--up {
+  color: var(--color-cta);
+}
+.pr-market__trend--down {
+  color: var(--color-info);
+}
+.pr-market__trend--flat {
+  color: var(--color-ink-mute);
+}
+.pr-market__hint {
+  font-size: var(--fs-xs);
+  color: var(--color-ink-soft);
+}
+
 /* ── Info banner ─────────────────────────────────────────── */
 .pr-info {
   background: var(--color-accent-tint);

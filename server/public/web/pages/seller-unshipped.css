@@ -113,5 +113,5 @@
   border-bottom: none;
 }
 
-.unshipped-status-badge--pending { color: #f59e0b; font-size: 12px; font-weight: 600; }
-.unshipped-status-badge--paid    { color: #22c55e; font-size: 12px; font-weight: 600; }
+.unshipped-status-badge--pending { color: var(--color-warn); font-size: 12px; font-weight: 600; }
+.unshipped-status-badge--paid    { color: var(--color-success); font-size: 12px; font-weight: 600; }

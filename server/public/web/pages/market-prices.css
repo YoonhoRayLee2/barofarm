@@ -125,12 +125,12 @@
   color: #fff;
   margin-bottom: 4px;
 }
-.mp-summary__cat--과일 { background: #E5564A; }
-.mp-summary__cat--채소 { background: #4CAF50; }
-.mp-summary__cat--곡물 { background: #FF9800; }
-.mp-summary__cat--축산 { background: #9C27B0; }
-.mp-summary__cat--수산 { background: #2196F3; }
-.mp-summary__cat--기타 { background: #607D8B; }
+.mp-summary__cat--과일 { background: var(--cat-과일); }
+.mp-summary__cat--채소 { background: var(--cat-채소); }
+.mp-summary__cat--곡물 { background: var(--cat-곡물); }
+.mp-summary__cat--축산 { background: var(--cat-축산); }
+.mp-summary__cat--수산 { background: var(--cat-수산); }
+.mp-summary__cat--기타 { background: var(--cat-기타); }
 
 .mp-summary__name {
   font-size: 22px;

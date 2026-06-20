@@ -11,6 +11,7 @@
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
+import { showConfirmDialog } from '/app/components/confirm-dialog.js';
 
 /* CSS lazy-load */
 const _cssId = 'page-css-delivery-addresses';
@@ -129,7 +130,14 @@ export default async function load() {
 
   /* ───────────────────── Actions ───────────────────── */
   async function onDelete(addr) {
-    if (!window.confirm(`'${addr.name}' 배송지를 삭제하시겠습니까?`)) return;
+    const ok = await showConfirmDialog({
+      title: '배송지 삭제',
+      message: `'${addr.name}' 배송지를 삭제할까요?`,
+      confirmLabel: '삭제',
+      cancelLabel: '취소',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       const res = await fetch(`/api/delivery-addresses/${addr.id}?userId=${encodeURIComponent(user.id)}`, {
         method: 'DELETE',

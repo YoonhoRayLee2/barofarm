@@ -156,6 +156,7 @@ export default async function load(params = {}) {
             <span class="pr-price-input__suffix">개</span>
           </div>
         </div>
+        <div class="pr-market is-hidden" id="pr-market"></div>
       </div>
 
       <!-- 안내 -->
@@ -181,6 +182,84 @@ export default async function load(params = {}) {
   const submitTopBtn  = page.querySelector('#pr-submit-top');
   const submitBotBtn  = page.querySelector('#pr-submit-bottom');
   const backBtn       = page.querySelector('#pr-back');
+  const marketBox     = page.querySelector('#pr-market');
+
+  /* ── Market reference price (KAMIS, debounced) ───────────── */
+  let marketTimer = null;
+  let marketReqSeq = 0;
+
+  function scheduleMarketLookup() {
+    if (marketTimer) clearTimeout(marketTimer);
+    marketTimer = setTimeout(fetchMarketReference, 700);
+  }
+
+  async function fetchMarketReference() {
+    const name = nameInput.value.trim();
+    const category = categorySel.value || '';
+    if (!name) {
+      marketBox.classList.add('is-hidden');
+      marketBox.innerHTML = '';
+      return;
+    }
+    const seq = ++marketReqSeq;
+    try {
+      const params = new URLSearchParams({ name });
+      if (category) params.set('category', category);
+      const res = await fetch(`/api/market-prices/match?${params.toString()}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (seq !== marketReqSeq) return; // stale response
+      renderMarketBox(data);
+    } catch {
+      if (seq !== marketReqSeq) return;
+      marketBox.classList.add('is-hidden');
+      marketBox.innerHTML = '';
+    }
+  }
+
+  function renderMarketBox(data) {
+    if (!data || !data.matched || !data.price) {
+      marketBox.classList.add('is-hidden');
+      marketBox.innerHTML = '';
+      return;
+    }
+    const p = data.price;
+    const itemLabel = p.kindName
+      ? `${escapeHtml(p.itemName)}(${escapeHtml(p.kindName)})`
+      : escapeHtml(p.itemName);
+    const priceStr = Number(p.price).toLocaleString('ko-KR');
+    const unit = escapeHtml(p.unit || '');
+
+    let trendHtml = '';
+    const t = data.trend;
+    if (t) {
+      const cls = t.direction === 'up' ? 'pr-market__trend--up'
+        : t.direction === 'down' ? 'pr-market__trend--down'
+        : 'pr-market__trend--flat';
+      const arrow = t.direction === 'up' ? '▲' : t.direction === 'down' ? '▼' : '―';
+      const high = Number(t.recentHigh).toLocaleString('ko-KR');
+      const low  = Number(t.recentLow).toLocaleString('ko-KR');
+      trendHtml = `
+        <p class="pr-market__trend ${cls}">
+          ${arrow} 최근 ${t.sampleDays}일 추세 ${t.changePct}% ·
+          기간 최고 ${high}~최저 ${low}원
+        </p>`;
+    }
+
+    marketBox.innerHTML = `
+      <p class="pr-market__base">
+        오늘 ${itemLabel} 소매시세
+        <strong>${priceStr}원/${unit}</strong>
+        <span class="pr-market__src">(KAMIS ${escapeHtml(p.priceDate || '')})</span>
+      </p>
+      ${trendHtml}
+      <p class="pr-market__hint">출하 타이밍/적정가 참고</p>
+    `;
+    marketBox.classList.remove('is-hidden');
+  }
+
+  nameInput.addEventListener('input', scheduleMarketLookup);
+  categorySel.addEventListener('change', scheduleMarketLookup);
 
   /* ── Image rendering ─────────────────────────────────────── */
 
@@ -426,6 +505,7 @@ export default async function load(params = {}) {
         });
 
         renderImageSlots();
+        fetchMarketReference();
       }
     } catch (err) {
       showToast('상품 정보를 불러오지 못했습니다: ' + (err.message || String(err)), { variant: 'error' });
@@ -506,6 +586,7 @@ export default async function load(params = {}) {
   // ---- Cleanup ----
   setCleanup(() => {
     revokeAllOwnedBlobs();
+    if (marketTimer) clearTimeout(marketTimer);
   });
 
   return page;

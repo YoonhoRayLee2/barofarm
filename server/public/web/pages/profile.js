@@ -5,8 +5,8 @@
  * Sections:
  *   PROF-1  Hero header (avatar + stats 3-up + edit buttons)
  *   PROF-2  Collector / Dealer tab toggle
- *   PROF-3  Interest pills (mock)
- *   PROF-4  Badge grid 6-up (mock)
+ *   PROF-3  Interest pills
+ *   PROF-4  Badge grid 6-up (미구현)
  *   PROF-5  Average delivery widget
  *   PROF-6  Collector tab content (icon actions + menu)
  *   PROF-7  Dealer tab content (revenue + menu)
@@ -65,20 +65,6 @@ function svgPersonSilhouette(size = 52) {
   </svg>`;
 }
 
-function svgMegaphone() {
-  return `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <path d="M19 3L5 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2l14 5V3z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M8 15.5V19a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-  </svg>`;
-}
-
-function svgBell() {
-  return `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>`;
-}
-
 function svgGear() {
   return `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
@@ -94,24 +80,9 @@ function svgQuestionCircle() {
   </svg>`;
 }
 
-function svgClock() {
-  return `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
-    <polyline points="12 7 12 12 15 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-  </svg>`;
-}
-
 function svgPlay() {
   return `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <polygon points="5 3 19 12 5 21 5 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>`;
-}
-
-function svgPercent() {
-  return `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <line x1="19" y1="5" x2="5" y2="19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-    <circle cx="6.5" cy="6.5" r="2.5" stroke="currentColor" stroke-width="1.8"/>
-    <circle cx="17.5" cy="17.5" r="2.5" stroke="currentColor" stroke-width="1.8"/>
   </svg>`;
 }
 
@@ -158,12 +129,6 @@ function buildTopbar(nickname) {
     return btn;
   }
 
-  actions.appendChild(iconBtn(svgMegaphone(), '공지', () => {
-    showToast('공지사항 — 준비 중', { duration: 1800 });
-  }));
-  actions.appendChild(iconBtn(svgBell(), '알림', () => {
-    showToast('알림 — 준비 중', { duration: 1800 });
-  }));
   actions.appendChild(iconBtn(svgGear(), '설정', () => {
     navigate('/app/settings');
   }));
@@ -668,17 +633,39 @@ function showCarbonHelp() {
   overlay.innerHTML = `
     <div class="tier-help-sheet">
       <div class="tier-help-handle"></div>
-      <h3 class="tier-help-title">🌍 탄소발자국 절감이란?</h3>
-      <p class="tier-help-note" style="margin-bottom:12px">산지직송은 마트 물류(생산지 → 도매시장 → 마트 → 집)를 생략해 이동거리를 크게 줄입니다. 그 차이만큼 CO₂ 배출이 적어집니다.</p>
-      <table class="tier-help-table">
-        <thead><tr><th>항목</th><th>내용</th></tr></thead>
-        <tbody>
-          <tr><td>거리 계산</td><td>농장 우편번호 → 배송지 직선 거리</td></tr>
-          <tr><td>마트 경로</td><td>동일 경로 + 약 800 km 물류 추가</td></tr>
-          <tr><td>CO₂ 계수</td><td>0.166 g / km · kg × 평균 3 kg</td></tr>
-        </tbody>
-      </table>
-      <p class="tier-help-note" style="margin-top:12px">추정치이며 실제 배출량과 차이가 있을 수 있습니다.</p>
+      <h3 class="tier-help-title">🌍 절감량은 어떻게 계산되나요?</h3>
+      <p class="tier-help-note" style="margin-bottom:16px">일반 마트 농산물은 <b>농장 → 도매시장 → 마트 → 우리집</b>까지 여러 번 트럭으로 옮겨집니다. 바로팜 산지직송은 <b>농장 → 우리집</b>으로 곧장 와서 그만큼 트럭 이동이 줄고, 줄어든 거리만큼 배기가스(CO₂)도 줄어듭니다.</p>
+
+      <div class="carbon-help-steps">
+        <div class="carbon-help-step">
+          <span class="carbon-help-step__num">1</span>
+          <div class="carbon-help-step__body">
+            <b>이동 거리를 비교해요</b>
+            <span>판매 농장과 우리집 배송지 사이 거리를, 일반 마트 유통 경로(약 800km)와 비교합니다.</span>
+          </div>
+        </div>
+        <div class="carbon-help-step">
+          <span class="carbon-help-step__num">2</span>
+          <div class="carbon-help-step__body">
+            <b>줄어든 거리를 구해요</b>
+            <span>마트 경로보다 짧아진 만큼이 '절감 거리'예요. 농장이 가까울수록 더 많이 절감됩니다.</span>
+          </div>
+        </div>
+        <div class="carbon-help-step">
+          <span class="carbon-help-step__num">3</span>
+          <div class="carbon-help-step__body">
+            <b>CO₂로 환산해요</b>
+            <span>줄어든 거리 × 상품 무게(평균 3kg) × 배출 계수(1km·1kg당 0.166g)로 절감된 CO₂를 계산합니다.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="carbon-help-example">
+        <span class="carbon-help-example__label">예시</span>
+        <span class="carbon-help-example__text">우리집과 가까운 농장에서 받으면 마트 경로보다 <b>약 500km</b>를 덜 달린 셈 → CO₂ <b>약 250g</b> 절감</span>
+      </div>
+
+      <p class="tier-help-note" style="margin-top:14px">* 직선 거리 기반 추정치예요. 실제 배출량과는 차이가 있을 수 있습니다.</p>
     </div>
   `;
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
@@ -692,41 +679,49 @@ function buildCarbonStats() {
   wrap.className = 'profile-carbon';
   wrap.hidden = true;
   wrap.innerHTML = `
-    <div class="profile-carbon__head">
-      <span class="profile-carbon__icon">🌍</span>
-      <span class="profile-carbon__title">나의 탄소발자국 절감</span>
-      <button class="profile-tier__help" data-carbon-help aria-label="탄소발자국 안내">ⓘ</button>
-    </div>
-    <div class="profile-carbon__row">
-      <div class="profile-carbon__metric">
-        <span class="profile-carbon__metric-label">총</span>
-        <span class="profile-carbon__metric-value" data-field="km">—</span>
+    <div class="profile-carbon__hero">
+      <div class="profile-carbon__head">
+        <span class="profile-carbon__title">🌍 나의 탄소발자국 절감</span>
+        <button class="profile-carbon__help" data-carbon-help aria-label="탄소발자국 절감량 계산 방법">?</button>
       </div>
-      <div class="profile-carbon__metric">
-        <span class="profile-carbon__metric-label">CO2</span>
-        <span class="profile-carbon__metric-value" data-field="co2">—</span>
+      <div class="profile-carbon__big">
+        <span class="profile-carbon__big-value" data-field="km">—</span>
+        <span class="profile-carbon__big-unit">단축</span>
+      </div>
+      <p class="profile-carbon__trip" data-field="avg">—</p>
+    </div>
+    <div class="profile-carbon__foot">
+      <div class="profile-carbon__stat">
+        <span class="profile-carbon__stat-label">CO₂ 절감</span>
+        <span class="profile-carbon__stat-value" data-field="co2">—</span>
+      </div>
+      <div class="profile-carbon__divider"></div>
+      <div class="profile-carbon__stat">
+        <span class="profile-carbon__stat-label">산지직송</span>
+        <span class="profile-carbon__stat-value" data-field="orders">—</span>
       </div>
     </div>
-    <p class="profile-carbon__sub" data-field="avg">마트 대비 평균 — 단축</p>
-    <p class="profile-carbon__caption" data-field="orders">주문 — · 산지직송의 힘</p>
   `;
   return wrap;
 }
 
 async function loadCarbonStats(userId, wrap) {
   try {
-    const res = await fetch(`/api/users/${encodeURIComponent(userId)}/carbon-stats`);
+    const res = await fetch(`/api/users/${encodeURIComponent(userId)}/carbon-summary`);
     if (!res.ok) return;
     const s = await res.json();
-    if (!s || !s.totalOrders) return;
-    wrap.querySelector('[data-field="km"]').textContent =
-      `${Number(s.totalSavedKm || 0).toLocaleString('ko-KR')} km`;
+    if (!s || !s.orderCount) return;
+    const km = Number(s.totalSavedKm || 0);
+    const co2 = Number(s.totalSavedCo2g || 0);
+    const trips = Math.max(1, Math.round(km / 325));
+    wrap.querySelector('[data-field="km"]').innerHTML =
+      `${km.toLocaleString('ko-KR')}<small>km</small>`;
     wrap.querySelector('[data-field="co2"]').textContent =
-      `${Number(s.totalSavedCo2g || 0).toLocaleString('ko-KR')} g 절감`;
+      `${co2.toLocaleString('ko-KR')}g`;
     wrap.querySelector('[data-field="avg"]').textContent =
-      `마트 대비 평균 ${s.avgSavedPct || 0}% 단축`;
+      `🚗 승용차로 서울↔부산 약 ${trips}회 안 달린 셈이에요`;
     wrap.querySelector('[data-field="orders"]').textContent =
-      `주문 ${s.totalOrders}건 · 산지직송의 힘`;
+      `주문 ${s.orderCount}건`;
     wrap.hidden = false;
   } catch { /* hide on error */ }
 }
@@ -742,9 +737,7 @@ function buildCollectorPanel(profileUser, scrollEl, isMe) {
   iconRow.className = 'profile-icon-row';
 
   [
-    { svg: svgClock(),   label: '리스팅 경매 현황',  action: () => showToast('리스팅 경매 현황 — 준비 중', { duration: 1800 }) },
     { svg: svgPlay(),    label: '상품 문의 채팅',    action: () => navigate('/app/dm') },
-    { svg: svgPercent(), label: '가격 제안 내역',    action: () => showToast('가격 제안 내역 — 준비 중', { duration: 1800 }) },
   ].forEach(({ svg, label, action }) => {
     const btn = document.createElement('button');
     btn.className = 'profile-icon-action';
@@ -765,9 +758,8 @@ function buildCollectorPanel(profileUser, scrollEl, isMe) {
     { icon: '📋', label: '딜러 위탁 신청하기', path: '/app/consignment/apply' },
     { icon: '🛍️', label: '주문 목록',       path: '/app/profile/orders' },
     { icon: '🛒', label: '공동구매 참여 현황', path: '/app/group-deals?mine=true' },
-    { icon: '💳', label: '결제 수단 관리',   path: null },
     { icon: '🏠', label: '배송지 관리',      path: '/app/delivery-addresses' },
-    { icon: '📦', label: '박스 공구 현황',   path: null },
+    { icon: '🚪', label: '로그아웃',        path: '__logout__' },
   ].forEach(({ icon, label, path }) => {
     const btn = document.createElement('button');
     btn.className = 'profile-menu-item';
@@ -788,6 +780,16 @@ function buildCollectorPanel(profileUser, scrollEl, isMe) {
           } catch {
             showToast('저장에 실패했습니다');
           }
+        });
+      } else if (path === '__logout__') {
+        Promise.all([
+          setSecureItem('user', ''),
+          setSecureItem('barofarm_token', ''),
+        ]).then(() => {
+          showToast('로그아웃되었습니다', { variant: 'success', duration: 1500 });
+          return replace('/app/login');
+        }).catch(() => {
+          showToast('로그아웃에 실패했습니다');
         });
       } else {
         go(path, label);
@@ -952,8 +954,8 @@ function buildDealerPanel(profileUser, isMe) {
     { icon: '💬', label: '상품 문의 채팅',           path: '/app/dm' },
     { icon: '🔍', label: '판매 대행 상품 찾기',     path: '/app/consignment/find' },
     { icon: '⏱️', label: '리스팅 경매 시작하기',   path: '/app/live-create' },
-    { icon: '💸', label: '받은 가격 제안',          path: null },
     { icon: '✏️', label: '내 상품 수정 · 관리',    path: '/app/my-products' },
+    { icon: '🚪', label: '로그아웃',                path: '__logout__' },
   ].forEach(({ icon, label, path }) => {
     const btn = document.createElement('button');
     btn.className = 'profile-menu-item';
@@ -961,7 +963,21 @@ function buildDealerPanel(profileUser, isMe) {
       <span class="profile-menu-item__icon">${icon}</span>
       <span class="profile-menu-item__label">${esc(label)}</span>
     `;
-    btn.addEventListener('click', () => go(path, label));
+    btn.addEventListener('click', () => {
+      if (path === '__logout__') {
+        Promise.all([
+          setSecureItem('user', ''),
+          setSecureItem('barofarm_token', ''),
+        ]).then(() => {
+          showToast('로그아웃되었습니다', { variant: 'success', duration: 1500 });
+          return replace('/app/login');
+        }).catch(() => {
+          showToast('로그아웃에 실패했습니다');
+        });
+      } else {
+        go(path, label);
+      }
+    });
     menuGroup.appendChild(btn);
   });
 

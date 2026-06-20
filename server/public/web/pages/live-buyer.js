@@ -255,6 +255,7 @@ export default async function load(params) {
   chatWrap.appendChild(chatOverlay.el);
 
   let buyButtonComp = null;
+  let buyReenableTimer = null;
   let blindBidComp = null;
   let slideBidComp = null;
 
@@ -450,6 +451,15 @@ export default async function load(params) {
       thumbUrl: auction.thumbUrl || '',
       onBuy() {
         if (!currentAuctionId) return;
+        // 연타 중복 전송 방지: 클릭 즉시 비활성화. 구매 결과(onPurchaseMade)에서
+        // update()로 재활성(매진이면 비활성 유지), 결과 미수신 대비 3초 폴백 타이머.
+        buyButtonComp.disable('구매 중…');
+        clearTimeout(buyReenableTimer);
+        buyReenableTimer = setTimeout(() => {
+          if (buyButtonComp && currentAuction) {
+            buyButtonComp.update(currentAuction.stockTotal || 0, currentAuction.stockSold || 0);
+          }
+        }, 3000);
         Sock.purchase(socket, {
           liveId,
           auctionId: currentAuctionId,
@@ -1254,6 +1264,7 @@ export default async function load(params) {
       system: true,
     });
     if (buyButtonComp && currentAuction) {
+      clearTimeout(buyReenableTimer);
       currentAuction.stockSold = (currentAuction.stockSold || 0) + 1;
       buyButtonComp.update(currentAuction.stockTotal || 0, currentAuction.stockSold);
     }
@@ -1395,10 +1406,6 @@ export default async function load(params) {
     Sock.sendChat(socket, liveId, String(user.id), text, user.nickname || user.username || '시청자');
   });
 
-  // Coin button (placeholder — future feature)
-  const coinBtn = page.querySelector('#lb-coin-btn');
-  if (coinBtn) coinBtn.addEventListener('click', () => showToast('코인 기능 준비 중입니다', { variant: 'info' }));
-
   // ---- Cleanup ----
   setCleanup(async () => {
     unsubFns.forEach((fn) => typeof fn === 'function' && fn());
@@ -1411,6 +1418,7 @@ export default async function load(params) {
       videoEl.srcObject.getTracks().forEach((t) => t.stop());
       videoEl.srcObject = null;
     }
+    clearTimeout(buyReenableTimer);
     timer.destroy();
     chatOverlay.destroy();
     if (slideBidComp) { slideBidComp.destroy(); slideBidComp = null; }

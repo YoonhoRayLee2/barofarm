@@ -46,12 +46,41 @@ const live_1 = __importStar(require("./routes/live"));
 const users_1 = __importDefault(require("./routes/users"));
 const auth_1 = __importDefault(require("./routes/auth"));
 const favorites_1 = require("./routes/favorites");
+const products_1 = __importDefault(require("./routes/products"));
+const auctions_1 = __importDefault(require("./routes/auctions"));
+const tracking_1 = __importDefault(require("./routes/tracking"));
+const chat_rooms_1 = __importDefault(require("./routes/chat-rooms"));
+const consignments_1 = __importDefault(require("./routes/consignments"));
+const delivery_addresses_1 = __importDefault(require("./routes/delivery-addresses"));
+const market_prices_1 = __importDefault(require("./routes/market-prices"));
+const hanaro_stores_1 = __importDefault(require("./routes/hanaro-stores"));
+const admin_1 = __importDefault(require("./routes/admin"));
+const group_deals_1 = require("./routes/group-deals");
+const recommendations_1 = __importDefault(require("./routes/recommendations"));
 const auction_1 = __importDefault(require("./socket/auction"));
+const chat_1 = __importDefault(require("./socket/chat"));
 const mysql_1 = __importDefault(require("./db/mysql"));
+if (!process.env.JWT_SECRET) {
+    console.error('FATAL: JWT_SECRET environment variable is not set');
+    process.exit(1);
+}
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
-const io = new socket_io_1.Server(server, { cors: { origin: '*' } });
-app.use((0, cors_1.default)());
+const allowedOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
+    : null; // null = 모든 origin 허용 (미설정 시 개방)
+const corsOrigin = allowedOrigins
+    ? (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin))
+            callback(null, true);
+        else
+            callback(null, false);
+    }
+    : true;
+const io = new socket_io_1.Server(server, {
+    cors: { origin: corsOrigin, credentials: true },
+});
+app.use((0, cors_1.default)({ origin: corsOrigin, credentials: true }));
 app.use(express_1.default.json());
 // LiveKit WebView HTML (live-seller.html / live-buyer.html) 정적 서빙
 app.use('/live', express_1.default.static(path_1.default.join(__dirname, '..', 'public')));
@@ -66,6 +95,9 @@ app.use('/app', express_1.default.static(path_1.default.join(__dirname, '..', 'p
         res.setHeader('Expires', '0');
     },
 }));
+app.get('/', (req, res) => {
+    res.redirect('/app/home');
+});
 // SPA history fallback — 파일 확장자가 없는 /app/* 경로는 index.html 반환
 app.get('/app/*', (req, res, next) => {
     if (req.path.includes('.'))
@@ -83,10 +115,19 @@ app.use('/api/users', users_1.default);
 // JWT 기반 인증 라우트
 app.use('/api/auth', auth_1.default);
 app.use('/api/favorites', (0, favorites_1.createFavoritesRouter)(io, mysql_1.default));
+app.use('/api/products', products_1.default);
+app.use('/api/auctions', auctions_1.default);
+app.use('/api/tracking', tracking_1.default);
+app.use('/api/chat-rooms', chat_rooms_1.default);
+app.use('/api/consignments', consignments_1.default);
+app.use('/api/delivery-addresses', delivery_addresses_1.default);
+app.use('/api/market-prices', market_prices_1.default);
+app.use('/api/hanaro-stores', hanaro_stores_1.default);
+app.use('/admin', admin_1.default);
+app.use('/api/group-deals', (0, group_deals_1.createGroupDealsRouter)(io));
+app.use('/api/recommendations', recommendations_1.default);
 (0, auction_1.default)(io);
-if (!process.env.JWT_SECRET) {
-    console.warn('[auth] JWT_SECRET not set — using insecure default');
-}
+(0, chat_1.default)(io);
 const PORT = Number(process.env.PORT ?? 3000);
 const HOST = process.env.HOST ?? '0.0.0.0';
 server.listen(PORT, HOST, () => {

@@ -1,7 +1,7 @@
 /* Toast Component — Fresh Field Renewal */
 
 #toast-container {
-  position: fixed;
+  position: absolute;
   bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
@@ -11,13 +11,13 @@
   align-items: center;
   gap: var(--space-2);
   pointer-events: none;
-  width: min(360px, calc(100vw - 32px));
+  width: min(360px, calc(100% - 32px));
 }
 
 .toast {
   width: 100%;
-  padding: 12px var(--space-4);
-  border-radius: var(--radius-md);
+  padding: 13px 16px;
+  border-radius: 14px;
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
@@ -26,50 +26,46 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--color-ink);
-  line-height: var(--lh-normal);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  line-height: 1.4;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   pointer-events: auto;
   animation: toast-in var(--dur-base) var(--ease-out) both;
+}
+
+/* status 아이콘을 원형 칩으로 — 컬러 도트 느낌 */
+.toast::before {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 900;
+  color: #fff;
 }
 
 .toast.is-leaving {
   animation: toast-out var(--dur-fast) var(--ease-out) both;
 }
 
-.toast--success {
-  border-left: 3px solid var(--color-success);
-}
-
 .toast--success::before {
   content: '✓';
-  color: var(--color-success);
-  font-weight: 800;
-  font-size: 16px;
-}
-
-.toast--error {
-  border-left: 3px solid var(--color-danger);
+  background: var(--color-success);
 }
 
 .toast--error::before {
   content: '✕';
-  color: var(--color-danger);
-  font-weight: 800;
-  font-size: 16px;
-}
-
-.toast--info {
-  border-left: 3px solid var(--color-info);
+  background: var(--color-danger);
 }
 
 .toast--info::before {
   content: 'ⓘ';
-  color: var(--color-info);
-  font-weight: 800;
-  font-size: 16px;
+  background: var(--color-info);
 }
 
 .toast__icon {

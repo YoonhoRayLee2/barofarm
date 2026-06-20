@@ -1031,6 +1031,61 @@ router.get('/:id/carbon-stats', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/users/:id/carbon-summary — 누적 탄소 절감량 집계
+router.get('/:id/carbon-summary', async (req: Request, res: Response) => {
+  const userId = req.params.id;
+  if (!userId) {
+    res.status(400).json({ error: 'user id is required' });
+    return;
+  }
+
+  try {
+    const { calcCarbon, TREE_CO2G } = await import('../utils/carbon');
+
+    const [rows] = await pool.execute(
+      `SELECT a.id,
+              s.farm_zipcode     AS seller_farm_zipcode,
+              b.delivery_zipcode AS buyer_zipcode
+       FROM auctions a
+       JOIN users s ON s.id = a.seller_id
+       JOIN users b ON b.id = a.top_bidder_id
+       WHERE a.top_bidder_id = ?
+         AND a.status = 'ended'`,
+      [userId],
+    ) as [unknown[], unknown];
+
+    const orders = rows as Array<{
+      id: number;
+      seller_farm_zipcode: string | null;
+      buyer_zipcode: string | null;
+    }>;
+
+    let totalSavedKm = 0;
+    let totalSavedCo2g = 0;
+    let savedCount = 0;
+
+    for (const order of orders) {
+      if (!order.seller_farm_zipcode || !order.buyer_zipcode) continue;
+      const result = calcCarbon(order.seller_farm_zipcode, order.buyer_zipcode);
+      if (!result) continue;
+      totalSavedKm  += result.savedKm;
+      totalSavedCo2g += result.savedCo2g;
+      savedCount++;
+    }
+
+    res.json({
+      orderCount:     orders.length,
+      savedCount,
+      totalSavedKm,
+      totalSavedCo2g,
+      treeEquiv:      Math.round(totalSavedCo2g / TREE_CO2G),
+    });
+  } catch (err) {
+    console.error('[users] GET /:id/carbon-summary error:', err);
+    res.status(500).json({ error: 'database error' });
+  }
+});
+
 // POST /api/users/:id/bank/request — 1원 인증 요청
 router.post('/:id/bank/request', requireAuth, async (req, res) => {
   const userId = Number(req.params.id);

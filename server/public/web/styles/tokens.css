@@ -31,9 +31,18 @@
 
   /* Semantic */
   --color-success:     #4CAF72;
+  --color-success-tint: rgba(76, 175, 114, 0.12);
   --color-warn:        #D4A017;
   --color-danger:      #D6473A;
   --color-info:        #5C8BAE;
+
+  /* Category colors (theme-agnostic semantic) */
+  --cat-과일: #E5564A;
+  --cat-채소: #4CAF50;
+  --cat-곡물: #FF9800;
+  --cat-축산: #9C27B0;
+  --cat-수산: #2196F3;
+  --cat-기타: #607D8B;
 
   /* Typography Families */
   --font-display: 'Gowun Dodum', 'Pretendard', sans-serif;
@@ -114,6 +123,7 @@
   /* ── Fresh Field gradients ────────────────────────────────── */
   --grad-accent: linear-gradient(135deg, #E8802E 0%, #C86820 100%);
   --grad-cta:    linear-gradient(135deg, #E25346 0%, #D6473A 60%, #B83830 100%);
+  --grad-success: linear-gradient(135deg, #4CAF72 0%, #2D8A3E 100%);
   --grad-bg:     linear-gradient(180deg, #160E08 0%, #1E1208 100%);
   --grad-hero:   radial-gradient(ellipse at top, rgba(232,128,46,0.18) 0%, transparent 60%);
 
@@ -150,9 +160,18 @@
 
   /* Semantic */
   --color-success:     #2D8A3E;
+  --color-success-tint: rgba(45, 138, 62, 0.08);
   --color-warn:        #B58A2B;
   --color-danger:      #D63031;
   --color-info:        #3D6C9E;
+
+  /* Category colors (theme-agnostic semantic) */
+  --cat-과일: #E5564A;
+  --cat-채소: #4CAF50;
+  --cat-곡물: #FF9800;
+  --cat-축산: #9C27B0;
+  --cat-수산: #2196F3;
+  --cat-기타: #607D8B;
 
   /* Typography Families */
   --font-display: 'Gowun Dodum', 'Pretendard', sans-serif;
@@ -238,6 +257,7 @@
   /* Fresh Field gradients */
   --grad-accent: linear-gradient(135deg, #C96018 0%, #A84E10 100%);
   --grad-cta:    linear-gradient(135deg, #E85A4E 0%, #E5564A 60%, #C7403A 100%);
+  --grad-success: linear-gradient(135deg, #34A853 0%, #2D8A3E 100%);
   --grad-bg:     linear-gradient(180deg, #FAFAF8 0%, #F5EFE6 100%);
   --grad-hero:   radial-gradient(ellipse at top, rgba(201,96,24,0.10) 0%, transparent 60%);
 

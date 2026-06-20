@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import pool from '../db/mysql';
+import { getRecommendations } from '../utils/productRecommender';
 
 const router = Router();
 
@@ -47,7 +48,7 @@ const AUCTION_QUERY = `
     a.id, a.product_name, a.start_price, a.current_price, a.mode,
     a.delivery_status, a.status, a.image_url, a.ends_at,
     a.seller_id, s.nickname AS seller_name, s.farm_zipcode AS seller_farm_zipcode,
-    s.allow_hanaro_delivery AS seller_allow_hanaro,
+    0 AS seller_allow_hanaro,
     a.top_bidder_id, b.nickname AS buyer_name,
     b.delivery_name, b.delivery_phone, b.delivery_address, b.delivery_detail, b.delivery_zipcode,
     b.delivery_option, b.hanaro_mart_name, b.hanaro_mart_addr,
@@ -201,6 +202,24 @@ router.patch('/:id/pay-shipping-fee', async (req: Request, res: Response) => {
     res.json(formatAuction((updated as AuctionRow[])[0]));
   } catch (err) {
     console.error('[auctions] PATCH /:id/pay-shipping-fee error:', err);
+    res.status(500).json({ error: 'database error' });
+  }
+});
+
+// GET /api/auctions/:id/recommendations
+router.get('/:id/recommendations', async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const [rows] = await pool.execute(AUCTION_QUERY, [id]) as [unknown[], unknown];
+    const row = (rows as AuctionRow[])[0];
+    if (!row) {
+      res.status(404).json({ error: 'auction not found' });
+      return;
+    }
+    const recommendations = getRecommendations(row.product_name);
+    res.json({ recommendations });
+  } catch (err) {
+    console.error('[auctions] GET /:id/recommendations error:', err);
     res.status(500).json({ error: 'database error' });
   }
 });

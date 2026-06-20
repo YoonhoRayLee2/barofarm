@@ -57,12 +57,6 @@ export default async function load() {
           <line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
       </button>
-      <button class="ch-icon-btn" id="ch-bell-btn" aria-label="알림">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
-          <path d="M13.7 21a2 2 0 01-3.4 0"/>
-        </svg>
-      </button>
     </div>
   `;
   page.appendChild(header);
@@ -108,10 +102,6 @@ export default async function load() {
       await navigate('/app/chat-room/' + newRoom.id);
     });
   });
-  header.querySelector('#ch-bell-btn').addEventListener('click', () => {
-    showToast('알림 설정 — 준비 중', { variant: 'info' });
-  });
-
   /* ---------------- Initial load ---------------- */
   loadTab(activeTab);
 
@@ -195,17 +185,9 @@ async function renderMine(container, user) {
           <span class="ch-room-time">${formatTimeAgo(room.lastMessageAt)}</span>
         </div>
       </div>
-      <button class="ch-room-bell" aria-label="알림 설정">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
-          <path d="M13.7 21a2 2 0 01-3.4 0"/>
-        </svg>
-      </button>
     `;
 
-    item.addEventListener('click', (e) => {
-      // Don't navigate when bell button clicked
-      if (e.target.closest('.ch-room-bell')) return;
+    item.addEventListener('click', () => {
       navigate('/app/chat-room/' + room.id);
     });
     item.addEventListener('keydown', (e) => {
@@ -214,11 +196,6 @@ async function renderMine(container, user) {
         navigate('/app/chat-room/' + room.id);
       }
     });
-    item.querySelector('.ch-room-bell').addEventListener('click', (e) => {
-      e.stopPropagation();
-      showToast('알림 설정 — 준비 중', { variant: 'info' });
-    });
-
     list.appendChild(item);
   });
 

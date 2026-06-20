@@ -237,6 +237,16 @@ export default async function load() {
       <div class="home-section__grid" id="products-grid"></div>
     </section>
 
+    <section class="home-section is-hidden" id="section-recommendations">
+      <div class="home-section__header">
+        <h2 class="home-section__title home-rec__title">
+          <img src="/app/images/chunsim_logo_v3.png" alt="농협몰" class="home-rec__logo">
+          당신을 위한 추천
+        </h2>
+      </div>
+      <div class="home-rec__scroll" id="home-rec-scroll"></div>
+    </section>
+
     <section class="home-section" id="section-upcoming">
       <div class="home-section__header">
         <span class="home-section__badge home-section__badge--upcoming">📅</span>
@@ -671,7 +681,72 @@ export default async function load() {
   // 공동구매 섹션은 백그라운드로 로드 (실패해도 다른 섹션엔 영향 없음)
   fetchAndRenderGroupDeals();
 
+  // 추천 섹션 백그라운드 로드
+  loadHomeRecommendations(feed);
+
   return page;
+}
+
+async function loadHomeRecommendations(feed) {
+  const section = feed.querySelector('#section-recommendations');
+  const scrollEl = feed.querySelector('#home-rec-scroll');
+  if (!section || !scrollEl) return;
+
+  try {
+    const token = await getSecureItem('barofarm_token');
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const res = await fetch('/api/recommendations/by-interests?limit=8', { headers });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const { recommendations } = await res.json();
+
+    if (!recommendations || recommendations.length === 0) return;
+
+    scrollEl.innerHTML = recommendations.map((p) => {
+      const hasDiscount = p.discountRate > 0;
+      const discountBadge = hasDiscount
+        ? `<span class="home-rec-card__discount-badge">${p.discountRate}%</span>`
+        : '';
+      const priceHtml = hasDiscount
+        ? `<div class="home-rec-card__price-wrap">
+             <span class="home-rec-card__list-price">${p.listPrice.toLocaleString('ko-KR')}원</span>
+             <span class="home-rec-card__price home-rec-card__price--sale">${p.price.toLocaleString('ko-KR')}원</span>
+           </div>`
+        : `<div class="home-rec-card__price-wrap">
+             <span class="home-rec-card__price">${p.price.toLocaleString('ko-KR')}원</span>
+           </div>`;
+      return `
+        <div class="home-rec-card" role="button" tabindex="0" data-product-url="${escapeAttr(p.detailUrl || '#')}">
+          <div class="home-rec-card__thumb">
+            ${discountBadge}
+            ${p.imgUrl ? `<img src="${escapeAttr(p.imgUrl)}" alt="${escapeHtml(p.name)}" loading="lazy">` : '<span class="home-rec-card__no-img">🌿</span>'}
+          </div>
+          <div class="home-rec-card__body">
+            <div class="home-rec-card__name">${escapeHtml(p.name)}</div>
+            ${priceHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    scrollEl.querySelectorAll('.home-rec-card').forEach(card => {
+      const url = card.dataset.productUrl;
+      card.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (url && url !== '#') window.open(url, '_blank', 'noopener');
+      });
+      card.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (url && url !== '#') window.open(url, '_blank', 'noopener');
+        }
+      });
+    });
+
+    section.classList.remove('is-hidden');
+  } catch (err) {
+    console.error('[home] loadHomeRecommendations error:', err);
+    // 실패 시 섹션 숨김 유지
+  }
 }
 
 /**

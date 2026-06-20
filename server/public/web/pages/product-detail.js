@@ -132,6 +132,16 @@ export default async function load(params = {}) {
           </div>
         </div>
       </div>
+
+      <section class="pd-market is-hidden" id="pd-market"></section>
+
+      <section class="pd-rec is-hidden" id="pd-rec">
+        <h2 class="pd-rec__title">
+          <img src="/app/images/chunsim_logo_v3.png" alt="농협몰" class="pd-rec__logo">
+          추천 상품
+        </h2>
+        <div class="pd-rec__scroll" id="pd-rec-scroll"></div>
+      </section>
     </div>
 
     <div class="pd-bottom-bar" id="pd-bottom-bar"></div>
@@ -222,6 +232,12 @@ export default async function load(params = {}) {
     })();
   }
 
+  // ---- Market reference price ----
+  loadMarketReference(page, product.name, product.category);
+
+  // ---- Recommendations ----
+  loadProductRecommendations(page, product.category);
+
   // ---- Bottom bar buttons ----
   const bottomBar = page.querySelector('#pd-bottom-bar');
 
@@ -262,14 +278,18 @@ export default async function load(params = {}) {
       <button class="pd-btn pd-btn--cta" id="pd-buy-btn">구매하기</button>
     `;
     page.querySelector('#pd-buy-btn').addEventListener('click', async () => {
-      // 최신 배송지 정보를 서버에서 직접 조회 (캐시된 user 객체는 delivery 필드가 없을 수 있음)
-      let freshUser;
+      // 배송지 조회: delivery-addresses API에서 기본 배송지 가져오기
+      let deliveryAddr = null;
       try {
-        freshUser = await api.getUser(currentUser.id);
-      } catch {
-        freshUser = currentUser;
-      }
-      const deliveryAddr = freshUser.delivery?.address || freshUser.deliveryAddress || null;
+        const res = await fetch(`/api/delivery-addresses?userId=${encodeURIComponent(currentUser.id)}`);
+        if (res.ok) {
+          const addresses = await res.json();
+          const defaultAddr = addresses.find(a => a.isDefault) || addresses[0];
+          if (defaultAddr) {
+            deliveryAddr = `${defaultAddr.address}${defaultAddr.detail ? ' ' + defaultAddr.detail : ''}`;
+          }
+        }
+      } catch { /* ignore */ }
 
       if (!deliveryAddr) {
         showToast('배송지를 먼저 등록해주세요');
@@ -347,6 +367,108 @@ export default async function load(params = {}) {
   }
 
   return page;
+}
+
+/* ─── Market reference price (KAMIS) ──────────────────────── */
+
+async function loadMarketReference(page, name, category) {
+  const section = page.querySelector('#pd-market');
+  if (!section || !name) return;
+
+  try {
+    const params = new URLSearchParams({ name });
+    if (category) params.set('category', category);
+    const res = await fetch(`/api/market-prices/match?${params.toString()}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data || !data.matched || !data.price) return;
+
+    const p = data.price;
+    const itemLabel = p.kindName
+      ? `${escapeHtml(p.itemName)}(${escapeHtml(p.kindName)})`
+      : escapeHtml(p.itemName);
+    const priceStr = Number(p.price).toLocaleString('ko-KR');
+    const unit = escapeHtml(p.unit || '');
+
+    section.innerHTML = `
+      <div class="pd-market__card">
+        <p class="pd-market__line">
+          📊 오늘 ${itemLabel} 소매시세
+          <strong class="pd-market__price">${priceStr}원/${unit}</strong>
+        </p>
+        <p class="pd-market__source">KAMIS 농산물유통정보 · ${escapeHtml(p.priceDate || '')} 기준</p>
+      </div>
+    `;
+    section.classList.remove('is-hidden');
+  } catch (err) {
+    console.error('[product-detail] loadMarketReference error:', err);
+    // 실패 시 섹션 숨김 유지
+  }
+}
+
+/* ─── Recommendations ─────────────────────────────────────── */
+
+async function loadProductRecommendations(page, category) {
+  const section = page.querySelector('#pd-rec');
+  const scrollEl = page.querySelector('#pd-rec-scroll');
+  if (!section || !scrollEl) return;
+
+  try {
+    const params = category
+      ? `categories=${encodeURIComponent(category)}&limit=6`
+      : 'limit=6';
+    const res = await fetch(`/api/recommendations/by-interests?${params}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const { recommendations } = await res.json();
+
+    if (!recommendations || recommendations.length === 0) return;
+
+    scrollEl.innerHTML = recommendations.map((p) => {
+      const hasDiscount = p.discountRate > 0;
+      const discountBadge = hasDiscount
+        ? `<span class="pd-rec-card__discount-badge">${p.discountRate}%</span>`
+        : '';
+      const priceHtml = hasDiscount
+        ? `<div class="pd-rec-card__price-wrap">
+             <span class="pd-rec-card__list-price">${p.listPrice.toLocaleString('ko-KR')}원</span>
+             <span class="pd-rec-card__price pd-rec-card__price--sale">${p.price.toLocaleString('ko-KR')}원</span>
+           </div>`
+        : `<div class="pd-rec-card__price-wrap">
+             <span class="pd-rec-card__price">${p.price.toLocaleString('ko-KR')}원</span>
+           </div>`;
+      return `
+        <div class="pd-rec-card" role="button" tabindex="0" data-product-url="${escapeAttr(p.detailUrl || '#')}">
+          <div class="pd-rec-card__thumb">
+            ${discountBadge}
+            ${p.imgUrl ? `<img src="${escapeAttr(p.imgUrl)}" alt="${escapeHtml(p.name)}" loading="lazy">` : '<span class="pd-rec-card__no-img">🌿</span>'}
+          </div>
+          <div class="pd-rec-card__body">
+            <div class="pd-rec-card__name">${escapeHtml(p.name)}</div>
+            ${priceHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    scrollEl.querySelectorAll('.pd-rec-card').forEach(card => {
+      const url = card.dataset.productUrl;
+      card.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (url && url !== '#') window.open(url, '_blank', 'noopener');
+      });
+      card.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (url && url !== '#') window.open(url, '_blank', 'noopener');
+        }
+      });
+    });
+
+    section.classList.remove('is-hidden');
+  } catch (err) {
+    console.error('[product-detail] loadProductRecommendations error:', err);
+    // 실패 시 섹션 숨김 유지
+  }
 }
 
 /* ─── Helpers ─────────────────────────────────────────────── */

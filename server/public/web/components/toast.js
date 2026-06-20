@@ -27,13 +27,15 @@ const MAX_TOASTS = 3;
 let container = null;
 
 function getContainer() {
-  if (!container || !document.body.contains(container)) {
+  // 앱 카드(#app-root) 안에 붙여 데스크탑에서도 카드 영역 안에 토스트가 뜨도록.
+  const host = document.getElementById('app-root') || document.body;
+  if (!container || !host.contains(container)) {
     container = document.createElement('div');
     container.id = 'toast-container';
     container.dataset.theme = 'light';
     container.setAttribute('aria-live', 'polite');
     container.setAttribute('aria-atomic', 'false');
-    document.body.appendChild(container);
+    host.appendChild(container);
   }
   return container;
 }

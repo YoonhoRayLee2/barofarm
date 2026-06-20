@@ -47,20 +47,14 @@ export default async function load(params) {
     </div>
     <div class="up-actions">
       ${!isMe ? `<button class="up-action-btn" id="up-msg">메시지 보내기</button>` : ''}
-      <button class="up-action-btn up-action-btn--outline" id="up-badges">힛 · 배지 현황</button>
     </div>
     <div class="up-section-title">판매 완료</div>
     <div class="up-grid" id="up-grid">
       <div class="up-loading"><div class="up-loading__dot"></div><span>불러오는 중...</span></div>
     </div>
-    <div class="up-cta">
-      <button class="up-cta-btn" id="up-alert">이 딜러의 다음 라이브 알림받기</button>
-    </div>
   `;
 
   page.querySelector('.up-back').addEventListener('click', () => window.history.back());
-  page.querySelector('#up-badges').addEventListener('click', () => showToast('힛 · 배지 현황 — 준비 중', { duration: 1800 }));
-  page.querySelector('#up-alert').addEventListener('click', () => showToast('알림 설정 — 준비 중', { duration: 1800 }));
 
   // 메시지 보내기
   const msgBtn = page.querySelector('#up-msg');
