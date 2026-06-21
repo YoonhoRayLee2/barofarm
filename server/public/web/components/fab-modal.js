@@ -25,7 +25,16 @@ let _mounted = false;
 let _previousFocus = null;
 
 function mount() {
-  if (_mounted) return;
+  const root = document.getElementById('app-root') || document.body;
+
+  // 이미 만들어진 요소가 DOM에서 떨어졌으면 재append만 하고 종료
+  if (_mounted && _sheet) {
+    if (!_sheet.isConnected) {
+      root.appendChild(_overlay);
+      root.appendChild(_sheet);
+    }
+    return;
+  }
   _mounted = true;
 
   _overlay = document.createElement('div');
@@ -77,7 +86,6 @@ function mount() {
     </button>
   `;
 
-  const root = document.getElementById('app-root') || document.body;
   root.appendChild(_overlay);
   root.appendChild(_sheet);
 
