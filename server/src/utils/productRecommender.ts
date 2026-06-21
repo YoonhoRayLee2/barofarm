@@ -41,10 +41,34 @@ function loadProducts(): void {
 
 loadProducts();
 
-// 상품명에서 의미있는 키워드 추출 (2자 이상 한글 단어)
+// 상품 정체성과 무관한 노이즈 키워드 (마케팅 수식어·유통·포장·원산지·등급 등).
+// products.json 상품명 빈도 분석 기반 — 매칭 정확도를 크게 떨어뜨리는 고빈도 일반어.
+const STOPWORDS = new Set([
+  // 마케팅/수식
+  '선물세트', '세트', '프리미엄', '명품', '특가', '입점특가', '쿠폰', '특대', '대용량',
+  '가정용', '실속', '실속형', '혼합', '모음', '골라담기', '기획', '행사', '최대',
+  // 원산지/품질/인증 (카테고리로 이미 커버됨)
+  '국내산', '국산', '제주', '완도', '산지직송', '직송', '유기농', '무항생제', '친환경',
+  '무농약', '내외', '엄선', '농가',
+  // 유통/보관/포장
+  '냉장', '냉동', '손질', '반건조', '건조', '생물', '활', '진공', '포장', '박스',
+  '출고', '당일', '도정', '택배', '무료배송', '배송',
+  // 유통사/브랜드 노이즈
+  '농협', '온도씨', '해맑은푸드', '바다원', '자연애', '바로바로팜', '푸른들',
+  '농협안심한우',
+  // 연도/등급
+  '년산', '상등급', '특품', '대품', '중품', '등급',
+]);
+
+// 상품명에서 의미있는 키워드 추출 (2자 이상 한글 단어, 노이즈/단위 제외)
 function extractKeywords(name: string): string[] {
-  const tokens = name.split(/[\s,()[\]\/·★]+/);
-  return tokens.filter((t) => /^[가-힣]{2,}$/.test(t));
+  const tokens = name.split(/[\s,()[\]\/·★+]+/);
+  return tokens.filter((t) => {
+    if (!/^[가-힣]{2,}$/.test(t)) return false;     // 2자 이상 순수 한글
+    if (STOPWORDS.has(t)) return false;             // 노이즈 제거
+    if (/^\d/.test(t)) return false;                // 숫자 시작 (한글 정규식상 거의 없음)
+    return true;
+  });
 }
 
 export function getRecommendationsByCategories(
@@ -89,9 +113,10 @@ function toResult(p: Product): RecResult {
 
 /**
  * 개인화 추천 — 구매내역(상품명 키워드 매칭) + 관심 카테고리 혼합.
- * 구매 상품명 키워드와 매칭되는 농협몰 상품을 고득점으로 우선,
- * 관심 카테고리에 속하면 가산점을 주어 종합 점수순으로 정렬한다.
- * 구매내역이 없으면 관심 카테고리만으로 동작한다.
+ *
+ * 구매 상품명 키워드를 최근 구매일수록 높은 가중치로 반영한다.
+ * @param purchasedNames 구매 상품명 — **최근순(최신이 index 0)** 으로 전달해야 시간 가중치가 올바르게 적용됨.
+ * @param interestCategories 사용자 관심 카테고리.
  */
 export function getPersonalizedRecommendations(
   purchasedNames: string[],
@@ -100,25 +125,32 @@ export function getPersonalizedRecommendations(
 ): RecResult[] {
   if (allProducts.length === 0) return [];
 
-  // 구매 상품명에서 키워드 집합 추출
-  const keywords = new Set<string>();
-  for (const name of purchasedNames) {
-    for (const kw of extractKeywords(name)) keywords.add(kw);
-  }
+  // 구매 상품명 키워드에 최근성(recency) 가중치 부여.
+  // 최신 구매(index 0)는 1.0, 오래될수록 선형 감쇠하여 최저 0.4까지.
+  const keywordWeight = new Map<string, number>();
+  const n = purchasedNames.length;
+  purchasedNames.forEach((name, i) => {
+    const recency = n <= 1 ? 1 : 1 - 0.6 * (i / (n - 1)); // 1.0 → 0.4
+    for (const kw of extractKeywords(name)) {
+      // 같은 키워드가 여러 번 등장하면 가장 높은(최근) 가중치 유지
+      keywordWeight.set(kw, Math.max(keywordWeight.get(kw) ?? 0, recency));
+    }
+  });
 
   const interestSet = new Set(interestCategories);
 
   // 구매내역도 관심사도 없으면 빈 결과 (호출부에서 fallback 처리)
-  if (keywords.size === 0 && interestSet.size === 0) return [];
+  if (keywordWeight.size === 0 && interestSet.size === 0) return [];
 
   const scored = allProducts
     .filter((p) => !p.soldOut)
     .map((p) => {
       let score = 0;
-      // 구매 키워드 매칭 (상품명 +3, items +1) — 구매내역을 가장 강하게 반영
-      for (const kw of keywords) {
-        if (p.name.includes(kw)) score += 3;
-        if (p.items.some((item) => item.includes(kw))) score += 1;
+      // 구매 키워드 매칭 (상품명 +3, items +1) × 최근성 가중치 — 구매내역을 가장 강하게 반영.
+      // 매칭된 키워드 점수를 합산하되, 단일 키워드 폭주를 막기 위해 키워드별로 1회만 계산.
+      for (const [kw, w] of keywordWeight) {
+        if (p.name.includes(kw)) score += 3 * w;
+        if (p.items.some((item) => item.includes(kw))) score += 1 * w;
       }
       // 관심 카테고리 보완 가산
       if (interestSet.has(p.category)) score += 2;

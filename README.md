@@ -47,12 +47,17 @@
 | ⚡ **선착순 구매** | 먼저 구매 버튼 누른 사람이 낙찰 |
 | 🎭 **블라인드 경매** | 다른 입찰가 안 보이는 밀봉 경매 |
 | 🎁 **무료 나눔** | 추첨 방식 증정 |
-| 🛒 **일반 판매** | 라이브 없이 상품 직접 구매 |
+| 🛒 **일반 판매** | 라이브 없이 상품 직접 구매 — 수량 선택 + 재고 관리 |
+| 🤝 **공동판매** | 목표 인원 모집 후 확정 시 일괄 발송 |
+| 🎯 **개인화 추천** | 구매내역 키워드(시간 가중치) + 관심 카테고리 혼합 추천 |
+| 🔔 **알림** | 낙찰·제철 꾸러미 등 인앱 알림 + 읽음 처리 |
 | 💬 **채팅 / DM** | 오픈 채팅방 + 1:1 다이렉트 메시지 |
 | 📦 **위탁판매** | 농협 위탁판매 신청 및 관리 |
+| 🏪 **하나로마트 배송** | 하나로마트 픽업·배송 옵션 연동 |
 | 📊 **실시간 시세** | KAMIS API 연동 농산물 일별 시세 티커 |
-| 👤 **팔로우** | 단골 셀러 팔로우 및 LIVE 알림 |
+| 👤 **팔로우 / 구독** | 단골 셀러 팔로우·구독 및 LIVE 알림 |
 | 📍 **배송지 관리** | 다중 배송지 등록 및 관리 |
+| 💳 **등급·정산** | 구매자 할인 등급 + 셀러 수수료·정산 관리 |
 
 ---
 
@@ -64,7 +69,7 @@
 │  WebView ─────────────────────────────────  │
 │  │  server/public/web/ (SPA)             │  │
 │  │  ┌─────────────────────────────────┐  │  │
-│  │  │  27+ Pages  │  Design Tokens    │  │  │
+│  │  │  36+ Pages  │  Design Tokens    │  │  │
 │  │  │  Router     │  Components       │  │  │
 │  │  └─────────────────────────────────┘  │  │
 │  └── JS Bridge (권한·푸시·시큐어스토리지) ─┘  │
@@ -73,7 +78,7 @@
 ┌─────────────────────────────────────────────┐
 │           Node.js + Express Server           │
 │                                              │
-│  REST API ─── 11 Routes                      │
+│  REST API ─── 17 Routes                      │
 │  Socket.io ── Auction Engine (In-Memory)     │
 │  LiveKit SDK ─ Room 관리 + 토큰 발급          │
 │  KAMIS API ── 농산물 시세 캐싱               │
@@ -127,7 +132,7 @@ barofarm/
 ├── server/                     # Node.js 서버
 │   ├── src/
 │   │   ├── index.ts            # Express + Socket.io 엔트리
-│   │   ├── routes/             # REST API (11개)
+│   │   ├── routes/             # REST API (17개)
 │   │   ├── services/           # LiveKit, KAMIS, Auth, JWT
 │   │   ├── store/              # In-Memory 경매 상태
 │   │   └── middleware/         # Auth 미들웨어
@@ -137,11 +142,11 @@ barofarm/
 │   │   ├── scripts/            # Router, Socket, API, Bridge
 │   │   ├── styles/             # Design Tokens (tokens.css)
 │   │   ├── components/         # 공유 컴포넌트
-│   │   └── pages/              # 27개 페이지 (JS + CSS)
+│   │   └── pages/              # 36개 페이지 (JS + CSS)
 │   │
 │   └── db/
 │       ├── schema.sql          # 초기 스키마
-│       └── migrations/         # 020개 마이그레이션
+│       └── migrations/         # 33개 마이그레이션
 │
 ├── docker-compose.yml
 └── nginx/
@@ -258,9 +263,14 @@ flutter run
 | `POST` | `/api/live/token` | LiveKit 토큰 발급 |
 | `GET/POST` | `/api/auctions` | 경매 목록·생성 |
 | `PATCH` | `/api/auctions/:id/start` | 경매 시작 |
-| `GET/POST` | `/api/products` | 상품 목록·등록 |
-| `POST` | `/api/products/:id/purchase` | 즉시 구매 |
+| `GET/POST` | `/api/products` | 상품 목록·등록 (수량/재고 포함) |
+| `POST` | `/api/products/:id/purchase` | 즉시 구매 (수량 지정·재고 차감) |
+| `GET/POST` | `/api/group-deals` | 공동판매 목록·개설 |
+| `GET` | `/api/recommendations/personalized` | 개인화 추천 (구매내역+관심사) |
+| `GET` | `/api/recommendations/by-interests` | 카테고리 기반 추천 |
+| `GET/PATCH` | `/api/notifications` | 알림 목록·읽음 처리 |
 | `GET/POST` | `/api/chat-rooms` | 채팅방 목록·생성 |
+| `GET/POST` | `/api/delivery-addresses` | 배송지 목록·등록 |
 | `GET` | `/api/market-prices` | 농산물 일별 시세 |
 | `GET` | `/api/market-prices/:itemCode/history` | 시세 이력 |
 
@@ -304,14 +314,30 @@ flutter run
 
 ---
 
+## 🎯 개인화 상품 추천
+
+농협몰 상품 카탈로그(12,000여 종)를 추천 풀로 활용하며, 화면별로 추천 전략이 분기됩니다.
+
+| 화면 | 전략 | 엔드포인트 |
+|------|------|-----------|
+| **홈** | 구매내역 키워드(시간 가중치) + 관심 카테고리 혼합 개인화 | `GET /api/recommendations/personalized` |
+| **상품 상세** | 현재 상품과 동일 카테고리 + 할인율순 | `GET /api/recommendations/by-interests` |
+
+- **노이즈 제거**: 상품명 빈도 분석 기반 불용어 사전으로 "농협·선물세트·산지직송·냉장" 등 정체성과 무관한 수식어를 매칭에서 제외
+- **시간 가중치(recency)**: 최근 구매 키워드(1.0)일수록 높게, 오래된 구매(0.4)는 낮게 선형 감쇠
+- **Cold Start**: 구매내역이 없으면 관심 카테고리, 그것도 없으면 전체 카테고리 인기순으로 fallback
+
+---
+
 ## 🗺 개발 로드맵
 
 | Stage | 내용 | 상태 |
 |-------|------|------|
 | Stage 1 | LiveKit 인프라 + 서버 기반 구축 | ✅ 완료 |
 | Stage 2 | Socket.io 경매 엔진 | ✅ 완료 |
-| Stage 3 | SPA 웹앱 + Flutter WebView 셸 | 🔧 진행 중 |
-| Stage 4 | UI 고도화 + AWS 배포 | ❌ 예정 |
+| Stage 3 | SPA 웹앱 + Flutter WebView 셸 | ✅ 완료 |
+| Stage 4 | 커머스 고도화 (일반판매·공동판매·개인화 추천·알림) | 🔧 진행 중 |
+| Stage 5 | UI 마감 + AWS 배포 | ❌ 예정 |
 
 ---
 
