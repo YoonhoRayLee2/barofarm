@@ -245,6 +245,8 @@ ol {
   .wnm-backdrop,
   .ch-create-overlay,
   .da-form-overlay,
+  .pm-form-overlay,
+  .od-refund-overlay,
   .hanaro-search-overlay,
   .product-sheet-backdrop,
   .auction-modal-backdrop,
@@ -264,6 +266,8 @@ ol {
   .pi-sheet,
   .pd-confirm-sheet,
   .da-form-sheet,
+  .pm-form-sheet,
+  .od-refund-sheet,
   .pes-sheet,
   .bank-sheet {
     width: 100% !important;

@@ -475,7 +475,13 @@ export default async function load(params) {
       </section>
     `;
 
-    container.innerHTML = card + stepperHtml + feeHtml + shippingFeeHtml + trackingHtml + deliveryHtml + carbonHtml + timelineHtml + actionHtml + recommendationsHtml;
+    /* 환불 섹션 placeholder — 렌더 후 비동기 로드 */
+    const refundHtml = `<section class="od-refund" id="od-refund"></section>`;
+
+    container.innerHTML = card + stepperHtml + feeHtml + shippingFeeHtml + trackingHtml + deliveryHtml + carbonHtml + timelineHtml + actionHtml + refundHtml + recommendationsHtml;
+
+    /* 환불 섹션 로드 */
+    loadRefundSection(container, data, user, isSeller, status, loadDetail);
 
     /* Bind fee help button */
     const feeHelpBtn = container.querySelector('.od-fee__help');
@@ -613,6 +619,196 @@ function calcCarbon(farmZip, buyerZip) {
   const savedCo2g = Math.round(savedKm * 0.000166 * 3 * 1000);
   const savedPct = Math.round(savedKm / 800 * 100);
   return { dist, savedKm, savedCo2g, savedPct };
+}
+
+/* ─── 반품/환불 섹션 ─────────────────────────────────────── */
+const REFUND_STATUS_LABEL = {
+  requested: '환불 요청됨',
+  approved:  '환불 승인됨',
+  rejected:  '환불 거절됨',
+  completed: '환불 완료',
+};
+
+async function loadRefundSection(container, data, user, isSeller, status, reload) {
+  const section = container.querySelector('#od-refund');
+  if (!section) return;
+
+  let refund = null;
+  try {
+    const res = await fetch(`/api/refunds/by-auction/${encodeURIComponent(data.auctionId)}`);
+    if (res.ok) refund = await res.json();
+  } catch { /* ignore */ }
+
+  // 활성 환불 건이 있으면 상태 카드 표시
+  const active = refund && refund.status !== 'rejected';
+  const refundable = ['shipped', 'purchase_confirmed'].includes(status);
+
+  // 1) 진행/완료 환불 건이 있을 때 → 상태 카드
+  if (active) {
+    const label = REFUND_STATUS_LABEL[refund.status] || refund.status;
+    let actionsHtml = '';
+    if (isSeller && refund.status === 'requested') {
+      actionsHtml = `
+        <div class="od-refund__actions">
+          <button class="od-refund__btn od-refund__btn--approve" id="od-refund-approve">승인</button>
+          <button class="od-refund__btn od-refund__btn--reject" id="od-refund-reject">거절</button>
+        </div>`;
+    } else if (isSeller && refund.status === 'approved') {
+      actionsHtml = `
+        <div class="od-refund__actions">
+          <button class="od-refund__btn od-refund__btn--approve" id="od-refund-complete">환불 완료 처리</button>
+        </div>`;
+    }
+    section.innerHTML = `
+      <div class="od-refund__card od-refund__card--${refund.status}">
+        <div class="od-refund__head">
+          <span class="od-refund__badge od-refund__badge--${refund.status}">${label}</span>
+          <span class="od-refund__amount">${Number(refund.refundAmount).toLocaleString('ko-KR')}원</span>
+        </div>
+        <div class="od-refund__reason"><b>사유</b> ${escapeHtml(refund.reason)}</div>
+        ${refund.status === 'completed' ? '<p class="od-refund__note">환불이 정상 처리되었습니다.</p>' : ''}
+        ${actionsHtml}
+      </div>`;
+
+    bindRefundActions(section, refund, user, reload);
+    return;
+  }
+
+  // 2) 환불 건 없음 + 구매자 + 신청 가능 상태 → 신청 버튼
+  //    (거절된 이력만 있으면 재신청 허용)
+  if (!isSeller && refundable) {
+    const rejectedNote = refund && refund.status === 'rejected'
+      ? `<p class="od-refund__rejected-note">이전 요청이 거절되었습니다${refund.rejectReason ? ` — ${escapeHtml(refund.rejectReason)}` : ''}</p>`
+      : '';
+    section.innerHTML = `
+      ${rejectedNote}
+      <button class="od-refund__request-btn" id="od-refund-request">반품·환불 신청</button>`;
+    section.querySelector('#od-refund-request').addEventListener('click', () => {
+      openRefundRequestSheet(data, user, reload);
+    });
+    return;
+  }
+
+  section.innerHTML = '';
+}
+
+function bindRefundActions(section, refund, user, reload) {
+  const approveBtn = section.querySelector('#od-refund-approve');
+  const rejectBtn = section.querySelector('#od-refund-reject');
+  const completeBtn = section.querySelector('#od-refund-complete');
+
+  approveBtn?.addEventListener('click', async () => {
+    approveBtn.disabled = true;
+    try {
+      const res = await fetch(`/api/refunds/${refund.id}/approve`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sellerId: user.id }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      showToast('환불 요청을 승인했습니다', { variant: 'success', duration: 1600 });
+      await reload();
+    } catch {
+      approveBtn.disabled = false;
+      showToast('승인에 실패했습니다', { duration: 2000 });
+    }
+  });
+
+  rejectBtn?.addEventListener('click', async () => {
+    const reason = prompt('거절 사유를 입력해주세요 (선택)');
+    if (reason === null) return; // 취소
+    rejectBtn.disabled = true;
+    try {
+      const res = await fetch(`/api/refunds/${refund.id}/reject`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sellerId: user.id, rejectReason: reason }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      showToast('환불 요청을 거절했습니다', { variant: 'success', duration: 1600 });
+      await reload();
+    } catch {
+      rejectBtn.disabled = false;
+      showToast('거절에 실패했습니다', { duration: 2000 });
+    }
+  });
+
+  completeBtn?.addEventListener('click', async () => {
+    completeBtn.disabled = true;
+    try {
+      const res = await fetch(`/api/refunds/${refund.id}/complete`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sellerId: user.id }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      showToast('환불 완료 처리되었습니다', { variant: 'success', duration: 1600 });
+      await reload();
+    } catch {
+      completeBtn.disabled = false;
+      showToast('처리에 실패했습니다', { duration: 2000 });
+    }
+  });
+}
+
+function openRefundRequestSheet(data, user, reload) {
+  const overlay = document.createElement('div');
+  overlay.className = 'od-refund-overlay';
+  overlay.dataset.theme = 'light';
+  overlay.innerHTML = `
+    <div class="od-refund-sheet">
+      <div class="od-refund-sheet__header">
+        <h2>반품·환불 신청</h2>
+        <button class="od-refund-sheet__close" type="button" aria-label="닫기">✕</button>
+      </div>
+      <div class="od-refund-sheet__body">
+        <p class="od-refund-sheet__product">${escapeHtml(data.productName || '상품')}</p>
+        <label class="od-refund-sheet__label">반품·환불 사유</label>
+        <textarea class="od-refund-sheet__textarea" id="od-refund-reason" maxlength="200" rows="4" placeholder="예) 상품이 상해서 도착했어요"></textarea>
+        <p class="od-refund-sheet__hint">판매자 승인 후 환불이 진행됩니다.</p>
+      </div>
+      <div class="od-refund-sheet__footer">
+        <button class="od-refund-sheet__submit" id="od-refund-submit">신청하기</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('od-refund-overlay--open'));
+
+  const close = () => {
+    overlay.classList.remove('od-refund-overlay--open');
+    const sheet = overlay.querySelector('.od-refund-sheet');
+    const cleanup = () => overlay.remove();
+    sheet.addEventListener('transitionend', cleanup, { once: true });
+    setTimeout(cleanup, 400);
+  };
+  overlay.querySelector('.od-refund-sheet__close').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  const submitBtn = overlay.querySelector('#od-refund-submit');
+  submitBtn.addEventListener('click', async () => {
+    const reason = overlay.querySelector('#od-refund-reason').value.trim();
+    if (!reason) { showToast('사유를 입력해주세요', { duration: 1800 }); return; }
+    submitBtn.disabled = true;
+    submitBtn.textContent = '신청 중...';
+    try {
+      const res = await fetch('/api/refunds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ auctionId: data.auctionId, buyerId: user.id, reason }),
+      });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.error || `HTTP ${res.status}`);
+      }
+      showToast('반품·환불 신청이 접수되었습니다', { variant: 'success', duration: 1800 });
+      close();
+      await reload();
+    } catch (err) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '신청하기';
+      showToast(err.message === 'refund already in progress' ? '이미 진행 중인 환불이 있습니다' : '신청에 실패했습니다', { duration: 2000 });
+    }
+  });
 }
 
 async function loadRecommendations(container, auctionId) {

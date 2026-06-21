@@ -1330,3 +1330,197 @@
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+/* ─── 반품/환불 ─────────────────────────────────────────── */
+.od-refund { padding: 0 16px; }
+.od-refund:empty { display: none; }
+
+.od-refund__request-btn {
+  width: 100%;
+  padding: 13px;
+  margin-top: 4px;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  font-weight: 700;
+  color: var(--color-ink-soft);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.od-refund__request-btn:active { background: var(--color-surface-alt); }
+
+.od-refund__rejected-note {
+  font-size: var(--fs-sm);
+  color: var(--color-danger);
+  margin: 0 0 8px;
+}
+
+.od-refund__card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.od-refund__card--completed { border-color: var(--color-success); }
+.od-refund__card--rejected  { border-color: var(--color-danger); }
+
+.od-refund__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.od-refund__badge {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+}
+.od-refund__badge--requested { background: var(--color-warn); color: #fff; }
+.od-refund__badge--approved  { background: var(--color-accent); color: var(--color-bg); }
+.od-refund__badge--completed { background: var(--color-success); color: #fff; }
+.od-refund__badge--rejected  { background: var(--color-danger); color: #fff; }
+
+.od-refund__amount {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--color-ink);
+}
+.od-refund__reason {
+  font-size: var(--fs-sm);
+  color: var(--color-ink-soft);
+  line-height: 1.5;
+}
+.od-refund__reason b { color: var(--color-ink); margin-right: 4px; }
+.od-refund__note {
+  font-size: var(--fs-sm);
+  color: var(--color-success);
+  margin: 0;
+}
+
+.od-refund__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+.od-refund__btn {
+  flex: 1;
+  padding: 11px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+}
+.od-refund__btn--approve { background: var(--grad-accent); color: var(--color-bg); }
+.od-refund__btn--reject {
+  background: var(--color-surface);
+  color: var(--color-danger);
+  border: 1.5px solid var(--color-danger);
+}
+
+/* 신청 바텀시트 */
+.od-refund-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal, 1000);
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+.od-refund-overlay--open { opacity: 1; pointer-events: auto; }
+
+.od-refund-sheet {
+  width: 100%;
+  max-width: 480px;
+  background: var(--color-bg);
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  transform: translateY(100%);
+  transition: transform var(--dur-base) cubic-bezier(0.32,0.72,0,1);
+}
+.od-refund-overlay--open .od-refund-sheet { transform: translateY(0); }
+
+.od-refund-sheet__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--color-line);
+}
+.od-refund-sheet__header h2 {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--color-ink);
+  margin: 0;
+}
+.od-refund-sheet__close {
+  background: none; border: none;
+  font-size: 18px; color: var(--color-ink-soft);
+  cursor: pointer; padding: 6px 10px;
+}
+.od-refund-sheet__body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.od-refund-sheet__product {
+  font-size: var(--fs-base);
+  font-weight: 700;
+  color: var(--color-ink);
+  margin: 0 0 4px;
+}
+.od-refund-sheet__label {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--color-ink-soft);
+}
+.od-refund-sheet__textarea {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  padding: 12px;
+  outline: none;
+  resize: none;
+  width: 100%;
+}
+.od-refund-sheet__textarea:focus { border-color: var(--color-accent); }
+.od-refund-sheet__hint {
+  font-size: var(--fs-xs);
+  color: var(--color-ink-mute);
+  margin: 0;
+}
+.od-refund-sheet__footer {
+  padding: 12px 16px max(16px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-line);
+}
+.od-refund-sheet__submit {
+  width: 100%;
+  padding: 14px;
+  background: var(--grad-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--color-bg);
+  cursor: pointer;
+}
+.od-refund-sheet__submit:disabled { opacity: 0.45; cursor: not-allowed; }
