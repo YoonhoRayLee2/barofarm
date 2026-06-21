@@ -382,13 +382,13 @@ router.post('/:id/purchase', async (req: Request, res: Response) => {
     if (product.status !== 'active') { res.status(409).json({ error: 'not available' }); return; }
     if (product.seller_id === buyerId) { res.status(400).json({ error: 'cannot buy own product' }); return; }
 
-    // 2. 구매자 배송지 확인
-    const [buyerRows] = await pool.execute(
-      'SELECT delivery_address FROM users WHERE id = ?',
+    // 2. 구매자 배송지 확인 (delivery_addresses 테이블 — 기본 배송지 or 첫 번째)
+    const [addrRows] = await pool.execute(
+      'SELECT address, detail FROM delivery_addresses WHERE user_id = ? ORDER BY is_default DESC, id ASC LIMIT 1',
       [buyerId],
     ) as [unknown[], unknown];
-    const buyer = (buyerRows as Array<{ delivery_address: string | null }>)[0];
-    if (!buyer || !buyer.delivery_address) {
+    const addrRow = (addrRows as Array<{ address: string; detail: string | null }>)[0];
+    if (!addrRow) {
       res.status(400).json({ error: 'delivery address required' });
       return;
     }
