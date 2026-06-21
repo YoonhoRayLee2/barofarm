@@ -695,7 +695,7 @@ async function loadHomeRecommendations(feed) {
   try {
     const token = await getSecureItem('barofarm_token');
     const headers = token ? { Authorization: `Bearer ${token}` } : {};
-    const res = await fetch('/api/recommendations/by-interests?limit=8', { headers });
+    const res = await fetch('/api/recommendations/personalized?limit=8', { headers });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const { recommendations } = await res.json();
 

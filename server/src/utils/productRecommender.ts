@@ -72,6 +72,66 @@ export function getRecommendationsByCategories(
     }));
 }
 
+type RecResult = Pick<Product, 'wrsC' | 'name' | 'price' | 'listPrice' | 'discountRate' | 'imgUrl' | 'category' | 'detailUrl'>;
+
+function toResult(p: Product): RecResult {
+  return {
+    wrsC: p.wrsC,
+    name: p.name,
+    price: p.price,
+    listPrice: p.listPrice,
+    discountRate: p.discountRate,
+    imgUrl: p.imgUrl,
+    category: p.category,
+    detailUrl: p.detailUrl,
+  };
+}
+
+/**
+ * 개인화 추천 — 구매내역(상품명 키워드 매칭) + 관심 카테고리 혼합.
+ * 구매 상품명 키워드와 매칭되는 농협몰 상품을 고득점으로 우선,
+ * 관심 카테고리에 속하면 가산점을 주어 종합 점수순으로 정렬한다.
+ * 구매내역이 없으면 관심 카테고리만으로 동작한다.
+ */
+export function getPersonalizedRecommendations(
+  purchasedNames: string[],
+  interestCategories: string[],
+  limit = 8
+): RecResult[] {
+  if (allProducts.length === 0) return [];
+
+  // 구매 상품명에서 키워드 집합 추출
+  const keywords = new Set<string>();
+  for (const name of purchasedNames) {
+    for (const kw of extractKeywords(name)) keywords.add(kw);
+  }
+
+  const interestSet = new Set(interestCategories);
+
+  // 구매내역도 관심사도 없으면 빈 결과 (호출부에서 fallback 처리)
+  if (keywords.size === 0 && interestSet.size === 0) return [];
+
+  const scored = allProducts
+    .filter((p) => !p.soldOut)
+    .map((p) => {
+      let score = 0;
+      // 구매 키워드 매칭 (상품명 +3, items +1) — 구매내역을 가장 강하게 반영
+      for (const kw of keywords) {
+        if (p.name.includes(kw)) score += 3;
+        if (p.items.some((item) => item.includes(kw))) score += 1;
+      }
+      // 관심 카테고리 보완 가산
+      if (interestSet.has(p.category)) score += 2;
+      return { p, score };
+    })
+    .filter(({ score }) => score > 0);
+
+  return scored
+    .sort((a, b) => b.score - a.score || b.p.discountRate - a.p.discountRate || a.p.price - b.p.price)
+    .slice(0, limit)
+    .map(({ p }) => toResult(p));
+}
+
 export function getRecommendations(
   productName: string,
   category?: string,
