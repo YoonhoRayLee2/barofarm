@@ -1,4 +1,4 @@
-.up-page { display:flex;flex-direction:column;min-height:100vh;background:var(--color-bg); }
+.up-page { display:flex;flex-direction:column;height:100dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--color-bg); }
 
 .up-header {
   display:flex;align-items:center;gap:8px;
