@@ -100,6 +100,7 @@ class _WebViewShellState extends State<WebViewShell>
     final platform = _controller.platform;
     if (platform is AndroidWebViewController) {
       platform.setMediaPlaybackRequiresUserGesture(false);
+      platform.setGeolocationEnabled(true);
       platform.setOnPlatformPermissionRequest((request) {
         request.grant();
       });

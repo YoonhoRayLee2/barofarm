@@ -9,7 +9,7 @@
  */
 
 import { getSecureItem } from '/app/scripts/native-bridge.js';
-import { replace } from '/app/scripts/router.js';
+import { replace, navigate } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
 import { showConfirmDialog } from '/app/components/confirm-dialog.js';
 
@@ -24,6 +24,7 @@ if (!document.getElementById(_cssId)) {
 }
 
 export default async function load() {
+  const returnTo = new URLSearchParams(window.location.search).get('returnTo') || null;
   const stored = await getSecureItem('user');
   if (!stored) { await replace('/app/login'); return document.createElement('div'); }
   let user;
@@ -46,7 +47,9 @@ export default async function load() {
     </div>
   `;
 
-  page.querySelector('.da-header__back').addEventListener('click', () => window.history.back());
+  page.querySelector('.da-header__back').addEventListener('click', () => {
+    if (returnTo) navigate(returnTo); else window.history.back();
+  });
   page.querySelector('.da-header__add').addEventListener('click', () => openAddressForm(null));
 
   const listEl = page.querySelector('#da-list');
@@ -289,8 +292,13 @@ export default async function load() {
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         showToast(isEdit ? '배송지가 수정되었습니다' : '배송지가 등록되었습니다', { variant: 'success', duration: 1600 });
-        close();
-        await loadList();
+        if (!isEdit && returnTo) {
+          close();
+          setTimeout(() => navigate(returnTo), 400);
+        } else {
+          close();
+          await loadList();
+        }
       } catch {
         submitBtn.disabled = false;
         submitBtn.textContent = '저장하기';

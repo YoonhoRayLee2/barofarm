@@ -293,7 +293,8 @@ export default async function load(params = {}) {
 
       if (!deliveryAddr) {
         showToast('배송지를 먼저 등록해주세요');
-        navigate('/app/delivery-addresses');
+        const returnTo = window.location.pathname + window.location.search;
+        navigate('/app/delivery-addresses?returnTo=' + encodeURIComponent(returnTo));
         return;
       }
 
