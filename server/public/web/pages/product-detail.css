@@ -232,6 +232,61 @@
 
 
 /* ── Bottom bar ───────────────────────────────────────────── */
+/* 재고 표시 */
+.pd-stock {
+  margin-left: var(--space-2);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--color-accent);
+}
+.pd-stock--out {
+  color: var(--color-danger);
+}
+
+/* 수량 선택 */
+.pd-qty-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-bg);
+  flex-shrink: 0;
+}
+.pd-qty-label {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--color-ink-soft);
+}
+.pd-qty-ctrl {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.pd-qty-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-line);
+  background: var(--color-surface);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  line-height: 1;
+}
+.pd-qty-btn:active { transform: scale(0.9); }
+.pd-qty-val {
+  font-size: var(--fs-base);
+  font-weight: 700;
+  min-width: 24px;
+  text-align: center;
+  color: var(--color-ink);
+}
+
 .pd-bottom-bar {
   flex-shrink: 0;
   padding: var(--space-4);
@@ -239,7 +294,8 @@
   background: var(--color-bg);
   border-top: 1px solid var(--color-line);
   display: flex;
-  gap: var(--space-3);
+  flex-direction: column;
+  gap: var(--space-2);
 }
 .pd-btn {
   flex: 1;

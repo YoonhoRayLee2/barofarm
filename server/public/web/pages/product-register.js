@@ -544,9 +544,11 @@ export default async function load(params = {}) {
     // Only send files (Files we own); skip null entries (remote-only existing images).
     const extraFilesToSend = extraImageFiles.filter((f) => f instanceof File);
 
+    const stockVal = Math.max(1, Number(stockInput.value) || 1);
     const payload = {
       name,
       price,
+      stock:       stockVal,
       category:    category || undefined,
       description: description || undefined,
       features:    features.length   ? JSON.stringify(features)   : undefined,

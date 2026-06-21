@@ -72,6 +72,7 @@ function formatProduct(row: ProductRow, extraImages: string[] = [], viewerIsSubs
     name:              row.name,
     description:       row.description,
     price:             row.price,
+    stock:             row.stock ?? 1,
     category:          row.category,
     imageUrl:          row.image_url,
     features:          row.features,
@@ -89,7 +90,7 @@ const router = Router();
 
 // POST /api/products — 상품 등록
 router.post('/', uploadFields, async (req: Request, res: Response) => {
-  const { sellerId, name, description, price, category, features, attributes, isSeasonalBundle, subscriberPrice, seasonLabel } = req.body;
+  const { sellerId, name, description, price, stock, category, features, attributes, isSeasonalBundle, subscriberPrice, seasonLabel } = req.body;
   const files = (req.files ?? {}) as UploadedFiles;
 
   if (!sellerId || !name || !price) {
@@ -101,12 +102,13 @@ router.post('/', uploadFields, async (req: Request, res: Response) => {
   const isBundleVal = isSeasonalBundle ? 1 : 0;
   const subPriceVal = subscriberPrice != null ? Number(subscriberPrice) : null;
   const seasonLabelVal = seasonLabel ?? null;
+  const stockVal = stock != null ? Math.max(1, Number(stock)) : 1;
 
   try {
     const [result] = await pool.execute(
-      `INSERT INTO products (seller_id, name, description, price, category, features, attributes, is_seasonal_bundle, subscriber_price, season_label)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [sellerId, name, description ?? null, Number(price), category ?? null, features ?? null, attributes ?? null, isBundleVal, subPriceVal, seasonLabelVal],
+      `INSERT INTO products (seller_id, name, description, price, stock, category, features, attributes, is_seasonal_bundle, subscriber_price, season_label)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [sellerId, name, description ?? null, Number(price), stockVal, category ?? null, features ?? null, attributes ?? null, isBundleVal, subPriceVal, seasonLabelVal],
     ) as [InsertResult, unknown];
 
     const productId: number = result.insertId;
@@ -250,7 +252,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 // PATCH /api/products/:id — 상품 수정
 router.patch('/:id', uploadFields, async (req: Request, res: Response) => {
   const productId = Number(req.params.id);
-  const { name, description, price, category, features, attributes, status } = req.body;
+  const { name, description, price, stock, category, features, attributes, status } = req.body;
   const files = (req.files ?? {}) as UploadedFiles;
 
   try {
@@ -271,6 +273,7 @@ router.patch('/:id', uploadFields, async (req: Request, res: Response) => {
     if (name        !== undefined) { setClauses.push('name = ?');        params.push(name); }
     if (description !== undefined) { setClauses.push('description = ?'); params.push(description); }
     if (price       !== undefined) { setClauses.push('price = ?');       params.push(Number(price)); }
+    if (stock       !== undefined) { setClauses.push('stock = ?');       params.push(Math.max(1, Number(stock))); }
     if (category    !== undefined) { setClauses.push('category = ?');    params.push(category); }
     if (features    !== undefined) { setClauses.push('features = ?');    params.push(features); }
     if (attributes  !== undefined) { setClauses.push('attributes = ?');  params.push(attributes); }
@@ -369,18 +372,22 @@ router.post('/:id/purchase', async (req: Request, res: Response) => {
   }
 
   try {
+    // 0. quantity 파라미터
+    const quantity = Math.max(1, Number(req.body.quantity) || 1);
+
     // 1. 상품 조회
     const [productRows] = await pool.execute(
-      'SELECT id, seller_id, name, price, image_url, status FROM products WHERE id = ?',
+      'SELECT id, seller_id, name, price, image_url, status, stock FROM products WHERE id = ?',
       [productId],
     ) as [unknown[], unknown];
     const product = (productRows as Array<{
       id: number; seller_id: number; name: string; price: number;
-      image_url: string | null; status: string;
+      image_url: string | null; status: string; stock: number;
     }>)[0];
     if (!product) { res.status(404).json({ error: 'product not found' }); return; }
     if (product.status !== 'active') { res.status(409).json({ error: 'not available' }); return; }
     if (product.seller_id === buyerId) { res.status(400).json({ error: 'cannot buy own product' }); return; }
+    if (product.stock < quantity) { res.status(409).json({ error: 'insufficient stock' }); return; }
 
     // 2. 구매자 배송지 확인 (delivery_addresses 테이블 — 기본 배송지 or 첫 번째)
     const [addrRows] = await pool.execute(
@@ -393,13 +400,15 @@ router.post('/:id/purchase', async (req: Request, res: Response) => {
       return;
     }
 
-    // 3. 구매 처리 — auctions row 생성 + product sold 처리
+    // 3. 구매 처리 — auctions row 생성 + 재고 차감
     const [buyerTier, sellerTier] = await Promise.all([
       getBuyerTier(buyerId),
       getSellerTier(product.seller_id),
     ]);
-    const { discountAmt, buyerDiscountRate } = calcBuyerDiscount(product.price, buyerTier);
-    const { feeAmt, sellerFeeRate }           = calcSellerFee(product.price, sellerTier);
+    const unitPrice = product.price;
+    const totalPrice = unitPrice * quantity;
+    const { discountAmt, buyerDiscountRate } = calcBuyerDiscount(totalPrice, buyerTier);
+    const { feeAmt, sellerFeeRate }           = calcSellerFee(totalPrice, sellerTier);
     const orderId = crypto.randomUUID();
     await pool.execute(
       `INSERT INTO auctions
@@ -407,12 +416,16 @@ router.post('/:id/purchase', async (req: Request, res: Response) => {
           buyer_tier, buyer_discount_rate, buyer_discount_amt, seller_fee_rate, seller_fee_amt)
        VALUES (?, ?, ?, ?, ?, 'direct', ?, 'ended', ?, NOW(), ?, ?, ?, ?, ?)`,
       [
-        orderId, product.seller_id, product.name, product.price, product.price,
+        orderId, product.seller_id, product.name, totalPrice, totalPrice,
         product.image_url ?? null, buyerId,
         buyerTier, buyerDiscountRate, discountAmt, sellerFeeRate, feeAmt,
       ],
     );
-    await pool.execute('UPDATE products SET status = ? WHERE id = ?', ['sold', productId]);
+    const newStock = product.stock - quantity;
+    await pool.execute(
+      'UPDATE products SET stock = ?, status = ? WHERE id = ?',
+      [newStock, newStock <= 0 ? 'sold' : 'active', productId],
+    );
 
     res.json({ orderId });
   } catch (err) {

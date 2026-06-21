@@ -108,6 +108,9 @@ export default async function load(params = {}) {
         <div class="pd-price-area">
           <span class="pd-price">${formatPriceRaw(product.price)}</span>
           <span class="pd-price__won">원</span>
+          ${product.stock > 0
+            ? `<span class="pd-stock">재고 ${product.stock}개</span>`
+            : `<span class="pd-stock pd-stock--out">품절</span>`}
         </div>
 
         ${renderChips(product.attributes, 'pd-attr-chips')}
@@ -274,9 +277,26 @@ export default async function load(params = {}) {
         }
       });
   } else {
+    const maxStock = Number(product.stock) || 1;
     bottomBar.innerHTML = `
+      <div class="pd-qty-row">
+        <span class="pd-qty-label">수량</span>
+        <div class="pd-qty-ctrl">
+          <button class="pd-qty-btn" id="pd-qty-minus" aria-label="수량 감소">−</button>
+          <span class="pd-qty-val" id="pd-qty-val">1</span>
+          <button class="pd-qty-btn" id="pd-qty-plus" aria-label="수량 증가">+</button>
+        </div>
+      </div>
       <button class="pd-btn pd-btn--cta" id="pd-buy-btn">구매하기</button>
     `;
+    let selectedQty = 1;
+    const qtyValEl = page.querySelector('#pd-qty-val');
+    page.querySelector('#pd-qty-minus').addEventListener('click', () => {
+      if (selectedQty > 1) { selectedQty--; qtyValEl.textContent = selectedQty; }
+    });
+    page.querySelector('#pd-qty-plus').addEventListener('click', () => {
+      if (selectedQty < maxStock) { selectedQty++; qtyValEl.textContent = selectedQty; }
+    });
     page.querySelector('#pd-buy-btn').addEventListener('click', async () => {
       // 배송지 조회: delivery-addresses API에서 기본 배송지 가져오기
       let deliveryAddr = null;
@@ -303,18 +323,19 @@ export default async function load(params = {}) {
       try {
         tier = await api.getUserTier(currentUser.id);
       } catch { /* ignore; show base price */ }
-      const basePrice    = Number(product.price) || 0;
+      const unitPrice    = Number(product.price) || 0;
+      const totalBase    = unitPrice * selectedQty;
       const discountRate = Number(tier && tier.buyerDiscountRate) || 0;
-      const discountAmt  = Math.round(basePrice * discountRate / 100);
-      const finalPrice   = Math.max(0, basePrice - discountAmt);
+      const discountAmt  = Math.round(totalBase * discountRate / 100);
+      const finalPrice   = Math.max(0, totalBase - discountAmt);
       const priceRowHtml = discountAmt > 0
         ? `<span class="pd-confirm-sheet__value">
-             <span class="pd-confirm-sheet__price-original">${basePrice.toLocaleString('ko-KR')}원</span>
+             <span class="pd-confirm-sheet__price-original">${totalBase.toLocaleString('ko-KR')}원</span>
              <span class="pd-confirm-sheet__price-arrow">→</span>
              <span class="pd-confirm-sheet__price-final">${finalPrice.toLocaleString('ko-KR')}원</span>
              <span class="pd-confirm-sheet__price-tag">(${escapeHtml(tier.label || '')} 등급 ${discountRate}% 할인)</span>
            </span>`
-        : `<span class="pd-confirm-sheet__value">${basePrice.toLocaleString('ko-KR')}원</span>`;
+        : `<span class="pd-confirm-sheet__value">${finalPrice.toLocaleString('ko-KR')}원</span>`;
 
       // 구매 확인 바텀시트
       const overlay = document.createElement('div');
@@ -326,6 +347,10 @@ export default async function load(params = {}) {
           <div class="pd-confirm-sheet__row">
             <span class="pd-confirm-sheet__label">상품</span>
             <span class="pd-confirm-sheet__value">${escapeHtml(product.name)}</span>
+          </div>
+          <div class="pd-confirm-sheet__row">
+            <span class="pd-confirm-sheet__label">수량</span>
+            <span class="pd-confirm-sheet__value">${selectedQty}개</span>
           </div>
           <div class="pd-confirm-sheet__row">
             <span class="pd-confirm-sheet__label">가격</span>
@@ -352,7 +377,7 @@ export default async function load(params = {}) {
           const res = await fetch(`/api/products/${product.id}/purchase`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ buyerId: currentUser.id }),
+            body: JSON.stringify({ buyerId: currentUser.id, quantity: selectedQty }),
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || '구매 실패');
