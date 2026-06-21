@@ -1,0 +1,9 @@
+# Build output — tsc로 src/에서 생성 (Dockerfile이 빌드 시 재생성)
+dist/
+
+# Runtime uploads — 사용자 업로드물. 폴더 구조(.gitkeep)만 유지하고 파일은 추적 제외
+public/uploads/**
+!public/uploads/
+!public/uploads/**/
+!public/uploads/**/.gitkeep
+!public/uploads/**/.gitignore

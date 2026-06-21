@@ -1,6 +1,6 @@
 # 바로팜 개발 페이즈 — 진행 현황
 
-> 최종 갱신: 2026-05-01 (17차) — wyyyes UI/UX 전면 적용: 홈 2컬럼 그리드·카드 3/4 비율·LIVE 펄스·뷰어수, 바이어 화면 상품패널·팔로우·코인칩·수직스와이프·종료 confetti, 채팅 입력창 상시 노출, 셀러 진행바 타이머·AI 버튼. lint-tokens PASS.
+> 최종 갱신: 2026-06-21 (19차) — Stage 7(배송·물류 + 단골 구독 + 탄소·추천 + 알림) 추가·검증 완료. 빌드 깨짐(users.ts `req.params.id` 타입) 수정. 마이그레이션 030~032 적용 확인, 신규 엔드포인트 4종 런타임 200 검증.
 
 ---
 
@@ -298,6 +298,56 @@
 
 ---
 
+## Stage 7 — 배송·물류 + 단골 구독 + 탄소·추천 + 알림 ✅ 완료 (2026-06-21)
+
+> 목표: 낙찰 이후 거래 경험 확장 — 배송 상태/타임라인, 단골(구독), 탄소 절감 집계, 상품 추천, 인앱 알림.
+> 검증: 서버 타입체크 통과, 마이그레이션 030~032 DB 적용 확인, 신규 엔드포인트 런타임 200(권한 검증 403 정상) 확인.
+
+### 7-1. 데이터 모델·마이그레이션 (backend-dev)
+
+| # | 작업 | 파일 | 상태 |
+|---|------|------|------|
+| 7-1 | `delivery_timeline` 테이블 (auction_id/stage/photo_url/farmer_note) | `db/migrations/030_delivery_timeline.sql` | ✅ |
+| 7-2 | `subscriptions` 테이블 (subscriber_id/seller_id/status) | `db/migrations/031_subscriptions.sql` | ✅ |
+| 7-3 | `notifications` 테이블 (user_id/type/title/body/link/is_read) | `db/migrations/032_notifications.sql` | ✅ |
+
+### 7-2. 서버 라우트 (backend-dev)
+
+| # | 작업 | 파일 | 상태 |
+|---|------|------|------|
+| 7-4 | 배송 타임라인 — `POST /api/timelines`(사진 업로드), `GET /api/timelines/:auctionId`(셀러/낙찰자만 조회, 타인 403) | `routes/timelines.ts` | ✅ |
+| 7-5 | 알림 — `GET /api/notifications`, `PATCH /api/notifications/:id/read` | `routes/notifications.ts` + `services/notifications.ts` | ✅ |
+| 7-6 | 단골 구독 — `POST/DELETE /api/users/:id/subscribe`, `GET /:id/subscriptions`, `GET /:id/subscriber-count`, 프로필 응답에 subscriberCount/isSubscribed | `routes/users.ts` | ✅ |
+| 7-6a | 구독 라우트 인증 보안 — subscribe/unsubscribe/subscriptions에 `requireAuth` 적용, subscriberId를 body 대신 `req.user.userId`에서 취득(위변조 차단), subscriptions 본인만 조회(403) | `routes/users.ts` | ✅ |
+| 7-6b | 구독 UI 연동 — 셀러 공개 프로필에 단골 버튼(맺기/해제)+단골 수 통계, 등록 시 자동 팔로우 동기화, `api.js` subscribe/unsubscribe 래퍼(토큰 자동첨부) | `pages/user-profile.{js,css}`, `scripts/api.js` | ✅ |
+| 7-16 | bank 인증 가드 버그 수정 — `(req as any).user?.id`(항상 undefined→403) → `req.user.userId`. bank/request·confirm 2곳 | `routes/users.ts` | ✅ |
+| 7-17 | PROF-4 활동 배지 그리드(6종) — public-profile이 기존 지표(판매수·단골·팔로워·계좌인증) 기반 badges 산출, profile.js 배지 그리드 6-up 렌더(획득/잠금 상태) | `routes/users.ts`, `pages/profile.{js,css}` | ✅ |
+| 7-17a | 배지 조건 안내 — 서버 badges에 hint(획득조건)+progress(달성도) 추가, 배지 탭 시 tier-help 시트로 조건·진행도·획득여부 표시 | `routes/users.ts`, `pages/profile.{js,css}` | ✅ |
+| 7-6c | 단골 버튼 비활성화 버그 수정 — public-profile 로드 실패/지연 시 버튼이 disabled로 멈추던 문제, 핸들러 등록부에서 updateSubscribeBtn 선호출(팔로우 버튼과 동일 패턴) | `pages/user-profile.js` | ✅ |
+| 7-7 | 탄소 절감 집계 — `GET /api/users/:id/carbon-summary` | `routes/users.ts`, `utils/carbon.ts` | ✅ |
+| 7-8 | 상품 추천 — `GET /api/auctions/:id/recommendations` | `routes/auctions.ts`, `utils/productRecommender.ts`, `routes/recommendations.ts` | ✅ |
+| 7-9 | 배송 처리 — `PATCH /:id/delivery-status`, `PATCH /:id/pay-shipping-fee`, `POST /batch-ship`(합배송) | `routes/auctions.ts` | ✅ |
+| 7-10 | 빌드 수정 — `users.ts` `req.params.id`(@types/express v5 `string\|string[]`) → `String()` 코어싱 | `routes/users.ts:394` | ✅ |
+
+### 7-3. SPA 구현 (web-ui-dev)
+
+| # | 작업 | 파일 | 상태 |
+|---|------|------|------|
+| 7-11 | 나의 숲 — 탄소 절감 집계 화면 (`/app/my-forest`) | `pages/my-forest.{js,css}` | ✅ |
+| 7-12 | 주문 상세 — 배송 상태/타임라인/추천/발송·확정 액션 (`/app/order-detail/:id`) | `pages/order-detail.{js,css}` | ✅ |
+| 7-13 | 프로필 단골 표시 연동 | `pages/profile.{js,css}` | ✅ |
+| 7-14 | 라우터 등록 (`/app/my-forest`, `/app/order-detail/:id`) | `scripts/router.js` | ✅ |
+
+### 7-4. 검증 (qa)
+
+| # | 작업 | 상태 |
+|---|------|------|
+| 7-15 | 런타임 검증 — carbon-summary/notifications/recommendations 200, timelines 셀러 200·타인 403, 정적 페이지 200 | ✅ |
+
+**검증 포인트:** 낙찰 후 주문 상세에서 배송 단계 진행·타임라인 조회, 나의 숲 탄소 집계 표시, 셀러 단골 등록/해제, 인앱 알림 읽음 처리.
+
+---
+
 ## 당장 해야 할 작업 (최우선) — Stage 6+ 고도화 W+1
 
 플랜: `~/.claude/plans/eager-brewing-badger.md`
@@ -317,6 +367,17 @@
 3. Stage 4 잔여 (사용자 환경): 4-3 부하테스트, 4-5 EC2 배포, 4-8 시연
    - INFRA-4~7과 통합 진행
 ```
+
+> 완료된 작업 (2026-05-22, UI/UX 전면 보완):
+> - Home: 설정 버튼 인라인 onclick 제거 → navigate() SPA 라우터 연결
+> - Live Seller: hidden 잔재 DOM 요소(줌 컨트롤 3개) 제거
+> - 전체 pages: inline style.display 90개+ → .is-hidden CSS 유틸 클래스 교체 (base.css 추가)
+> - 터치 영역: profile.css·settings.css 버튼/탭에 min-height: 44px 보장
+> - 모달 포커스 트랩: confirm-dialog.js·fab-modal.js — 열기 시 첫 요소 포커스, 닫기 시 이전 포커스 복구
+> - 폼 접근성: login.js·signup.js 에러 메시지 aria-describedby + role="alert" 연결
+> - 스크롤 복구: home.js 카테고리 전환·profile-history.js 탭 전환 시 scrollTop 처리
+> - SVG 컬러: home.js getCatGlyphSVG CSS 변수화, home.css 빈상태 SVG #2D8A3E → var(--color-accent)
+> - 다크모드 토글 신규: settings.js/css에 토글 UI 추가, localStorage 저장·router.js 부트 시 테마 복구
 
 > 완료된 작업 (2026-05-01, 17차 — wyyyes UI/UX 전면 적용):
 > - 홈: `home.css` 2컬럼 그리드(3/4 카드), `live-card.js/css` 셀러 아바타·뷰어수 우하단 chip·LIVE 뱃지 펄스 dot 애니메이션, 빈 상태 SVG 일러스트, `tokens.css` --color-live-bg/--fs-price/--fw-price/--fs-timer 신규
@@ -395,4 +456,6 @@
 | Stage 4 (배포, 4-7 SSL 제외) | 5 / 8 | 8 | **63%** (4-1b 포함) |
 | Stage 6 — T6-AUTH | 13 / 13 | 13 | **100%** ✅ |
 | Stage 6 — T6-DS | 11 / 11 | 11 | **100%** ✅ |
-| **전체** | **143 / 152** | **152** | **94%** |
+| UI/UX 보완 (2026-05-22) | 9 / 9 | 9 | **100%** ✅ |
+| Stage 7 (배송·구독·탄소·추천·알림) | 23 / 23 | 23 | **100%** ✅ |
+| **전체** | **175 / 184** | **184** | **95%** |
