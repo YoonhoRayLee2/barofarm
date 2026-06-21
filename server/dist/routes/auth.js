@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
+const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const mysql_1 = __importDefault(require("../db/mysql"));
 const auth_1 = require("../services/auth");
 const nickname_1 = require("../services/nickname");
@@ -11,8 +12,15 @@ const jwt_1 = require("../services/jwt");
 const auth_2 = require("../middleware/auth");
 const phone_1 = require("../utils/phone");
 const router = (0, express_1.Router)();
+const authLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    message: { error: '너무 많은 요청입니다. 잠시 후 다시 시도해주세요' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 // ─── POST /api/auth/signup ────────────────────────────────────────────────────
-router.post('/signup', async (req, res) => {
+router.post('/signup', authLimiter, async (req, res) => {
     const { username, password, phone } = req.body;
     // 입력 검증
     if (!username || !password || !phone) {
@@ -58,14 +66,14 @@ router.post('/signup', async (req, res) => {
     }
 });
 // ─── POST /api/auth/login ─────────────────────────────────────────────────────
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) {
         res.status(400).json({ error: 'username and password are required' });
         return;
     }
     try {
-        const [rows] = await mysql_1.default.execute('SELECT id, username, password_hash, nickname, phone FROM users WHERE username = ?', [username]);
+        const [rows] = await mysql_1.default.execute('SELECT id, username, password_hash, nickname, phone, interests FROM users WHERE username = ?', [username]);
         const user = rows[0];
         if (!user) {
             res.status(401).json({ error: 'Invalid username or password' });
@@ -79,8 +87,11 @@ router.post('/login', async (req, res) => {
         const tokenPayload = { userId: user.id, username: user.username };
         const token = (0, jwt_1.signToken)(tokenPayload);
         const refreshToken = (0, jwt_1.signRefreshToken)(tokenPayload);
+        const interests = user.interests
+            ? user.interests.split(',').map((s) => s.trim()).filter(Boolean)
+            : [];
         res.json({
-            user: { id: user.id, username: user.username, nickname: user.nickname, phone: user.phone },
+            user: { id: user.id, username: user.username, nickname: user.nickname, phone: user.phone, interests },
             token,
             refreshToken,
         });

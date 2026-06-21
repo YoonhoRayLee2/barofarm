@@ -12,12 +12,16 @@ exports.auctions = new Map();
 const timers = new Map();
 // 블라인드 경매 종료 후 blindBids를 30분간 보관하는 Map
 exports.endedBlindBids = new Map();
-function createLive(id, { sellerId, title }) {
+function createLive(id, { sellerId, sellerName, title, thumbnailUrl, category, scheduledAt }) {
     const state = {
         id,
         sellerId,
+        sellerName,
         title,
-        status: 'live',
+        thumbnailUrl,
+        category,
+        status: scheduledAt ? 'upcoming' : 'live',
+        scheduledAt,
         viewerCount: 0,
         currentAuctionId: null,
         createdAt: Date.now(),
@@ -37,6 +41,7 @@ function createAuction(id, { liveId, productName, startPrice, sellerId, mode = '
         liveId,
         productName,
         sellerId,
+        startPrice,
         currentPrice: startPrice,
         topBidder: null,
         timeLeft: durationSec,
@@ -51,6 +56,10 @@ function createAuction(id, { liveId, productName, startPrice, sellerId, mode = '
     }
     if (mode === 'blind') {
         state.blindBids = [];
+    }
+    if (mode === 'giveaway') {
+        state.giveawayParticipants = [];
+        state.currentPrice = 0;
     }
     exports.auctions.set(id, state);
 }
@@ -69,6 +78,13 @@ function endAuctionState(auc, io, onEnd) {
         exports.endedBlindBids.set(auc.id, sorted);
         setTimeout(() => exports.endedBlindBids.delete(auc.id), 30 * 60 * 1000);
     }
+    if (auc.mode === 'giveaway' && auc.giveawayParticipants && auc.giveawayParticipants.length > 0) {
+        const idx = Math.floor(Math.random() * auc.giveawayParticipants.length);
+        const winner = auc.giveawayParticipants[idx];
+        auc.topBidder = winner.userId;
+        auc.topBidderName = winner.userName;
+        auc.currentPrice = 0;
+    }
     const live = exports.lives.get(auc.liveId);
     if (live)
         live.currentAuctionId = null;
@@ -76,11 +92,18 @@ function endAuctionState(auc, io, onEnd) {
     const isVoid = !auc.topBidder; // 입찰/구매자가 없으면 유찰
     io.to(auc.liveId).emit('auction:ended', {
         id: auc.id,
+        liveId: auc.liveId,
+        productName: auc.productName,
         winner: auc.topBidder,
         winnerName: auc.topBidderName,
         price: auc.currentPrice,
+        currentPrice: auc.currentPrice,
+        finalPrice: auc.currentPrice,
         mode: auc.mode,
         void: isVoid,
+        endedAt: Date.now(),
+        imageUrl: auc.imageUrl ?? null,
+        participants: auc.mode === 'giveaway' ? (auc.giveawayParticipants ?? []) : undefined,
     });
     stopTimer(auc.id);
     onEnd?.(auc);

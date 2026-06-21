@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0E8C3A" />
+  <title>바로팜몰 — 신선한 농수축산물 직거래</title>
+  <meta name="description" content="산지직송 농수축산물 — 바로팜몰" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230E8C3A'/%3E%3Ctext x='50%25' y='55%25' text-anchor='middle' dominant-baseline='middle' fill='%23fff' font-family='sans-serif' font-size='18' font-weight='800'%3E바%3C/text%3E%3C/svg%3E" />
+
+  <link rel="stylesheet" href="/mall/styles/tokens.css" />
+  <link rel="stylesheet" href="/mall/styles/base.css" />
+  <link rel="stylesheet" href="/mall/styles/layout.css" />
+</head>
+<body>
+  <div id="mall-app">
+    <header class="mall-header" id="mall-header" role="banner"></header>
+    <div id="mall-view" role="main"></div>
+    <footer class="mall-footer" id="mall-footer" role="contentinfo"></footer>
+  </div>
+  <div class="mall-toast" id="mall-toast" role="status" aria-live="polite"></div>
+
+  <script type="module">
+    import { startRouter } from '/mall/scripts/router.js';
+
+    // 토스트 이벤트 핸들러
+    const toastEl = document.getElementById('mall-toast');
+    let toastTimer = null;
+    window.addEventListener('mall:toast', (e) => {
+      if (!toastEl) return;
+      toastEl.textContent = (e.detail && e.detail.msg) || '';
+      toastEl.classList.add('is-visible');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toastEl.classList.remove('is-visible');
+      }, 2400);
+    });
+
+    startRouter();
+  </script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+/*
+  mall-demo 디자인 토큰 (밝은 농협몰 분위기)
+  barofarm Fresh Field와 의도적으로 분리됨 — 절대 cross-import 금지.
+*/
+:root {
+  /* Brand greens */
+  --mall-green-700: #0E6E2E;
+  --mall-green-600: #0E8C3A;
+  --mall-green-500: #14A346;
+  --mall-green-400: #1AB257;
+  --mall-green-100: #E6F4EA;
+  --mall-green-50:  #F1F9F4;
+
+  /* Neutrals */
+  --mall-bg:       #FFFFFF;
+  --mall-bg-soft:  #F5F7F4;
+  --mall-bg-muted: #FAFBFA;
+  --mall-line:     #E5E8E3;
+  --mall-line-strong: #D1D6CC;
+  --mall-ink:      #1A1A1A;
+  --mall-ink-2:    #444444;
+  --mall-ink-3:    #666666;
+  --mall-ink-4:    #999999;
+
+  /* Accents */
+  --mall-accent-red: #D63A2A;     /* 가격·세일 표시 */
+  --mall-accent-blue: #1F6FCF;    /* 링크 */
+  --mall-warn: #E89B16;           /* 재고 부족 */
+
+  /* Shadows */
+  --mall-shadow-sm: 0 1px 2px rgba(20, 30, 18, 0.04);
+  --mall-shadow-md: 0 4px 12px rgba(20, 30, 18, 0.06);
+  --mall-shadow-lg: 0 8px 24px rgba(20, 30, 18, 0.08);
+
+  /* Radii */
+  --mall-radius-sm: 6px;
+  --mall-radius-md: 10px;
+  --mall-radius-lg: 16px;
+  --mall-radius-pill: 999px;
+
+  /* Spacing */
+  --mall-sp-1: 4px;
+  --mall-sp-2: 8px;
+  --mall-sp-3: 12px;
+  --mall-sp-4: 16px;
+  --mall-sp-5: 20px;
+  --mall-sp-6: 24px;
+  --mall-sp-8: 32px;
+  --mall-sp-10: 40px;
+  --mall-sp-12: 48px;
+
+  /* Typography (시스템 폰트 스택 — barofarm Pretendard와 분리) */
+  --mall-font: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+               "Noto Sans KR", "Malgun Gothic", "맑은 고딕", sans-serif;
+  --mall-fs-xs: 11px;
+  --mall-fs-sm: 12px;
+  --mall-fs-md: 14px;
+  --mall-fs-lg: 16px;
+  --mall-fs-xl: 18px;
+  --mall-fs-2xl: 22px;
+  --mall-fs-3xl: 28px;
+  --mall-fs-4xl: 34px;
+
+  /* Layout */
+  --mall-max-w: 1280px;
+  --mall-header-h: 120px;
+  --mall-header-h-mobile: 96px;
+}

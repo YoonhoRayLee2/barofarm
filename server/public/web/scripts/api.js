@@ -563,3 +563,21 @@ export async function updateProfile(userId, fields) {
   });
   return request(`/api/users/${userId}`, { method: 'PATCH', body: fd });
 }
+
+/**
+ * 낙찰 직후 임시 쇼핑몰(mall-demo)에서 추천 상품을 가져온다.
+ * @param {string|number} auctionId
+ * @param {number} [limit=5] — 1~10
+ * @returns {Promise<{
+ *   auction: { id: string, itemName: string, category: string, finalPrice: number, winnerNickname?: string },
+ *   recommendations: Array<{ product: object, score: number, reasons: string[] }>,
+ *   meta: { algorithm: string, generatedAt: string }
+ * }>}
+ */
+export async function getRecommendations(auctionId, limit = 5) {
+  const qs = new URLSearchParams({
+    auctionId: String(auctionId),
+    limit: String(limit),
+  }).toString();
+  return request(`/api/recommend?${qs}`);
+}

@@ -17,8 +17,10 @@ import consignmentsRouter from './routes/consignments';
 import deliveryAddressesRouter from './routes/delivery-addresses';
 import marketPricesRouter from './routes/market-prices';
 import hanaroStoresRouter from './routes/hanaro-stores';
+import mallRouter from './routes/mall';
 import adminRouter from './routes/admin';
 import { createGroupDealsRouter } from './routes/group-deals';
+import recommendRouter from './routes/recommend';
 import registerAuctionSocket from './socket/auction';
 import registerChatSocket from './socket/chat';
 import pool from './db/mysql';
@@ -88,6 +90,27 @@ app.get('/app/*', (req, res, next) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'web', 'index.html'));
 });
 
+// 임시 쇼핑몰(Mock Mall) 정적 서빙 — 농협몰 시뮬레이션
+app.use(
+  '/mall',
+  express.static(path.join(__dirname, '..', 'public', 'mall-demo'), {
+    etag: false,
+    lastModified: false,
+    cacheControl: false,
+    setHeaders: (res) => {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    },
+  }),
+);
+
+// /mall/* history fallback — 확장자 없는 경로는 mall-demo/index.html 반환
+app.get('/mall/*', (req, res, next) => {
+  if (req.path.includes('.')) return next();
+  res.sendFile(path.join(__dirname, '..', 'public', 'mall-demo', 'index.html'));
+});
+
 // 업로드 파일 정적 서빙 (/uploads/auctions/{id}.jpg)
 app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads')));
 
@@ -110,6 +133,8 @@ app.use('/api/consignments', consignmentsRouter);
 app.use('/api/delivery-addresses', deliveryAddressesRouter);
 app.use('/api/market-prices', marketPricesRouter);
 app.use('/api/hanaro-stores', hanaroStoresRouter);
+app.use('/api/mall', mallRouter);
+app.use('/api/recommend', recommendRouter);
 app.use('/admin', adminRouter);
 app.use('/api/group-deals', createGroupDealsRouter(io));
 

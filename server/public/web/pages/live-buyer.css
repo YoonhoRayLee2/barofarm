@@ -356,3 +356,153 @@
   60%  { transform: translateY(-200px) scale(1.15); opacity: 0.95; }
   100% { transform: translateY(-320px) scale(0.7);  opacity: 0; }
 }
+
+/* ── Won-overlay recommendation section ───────────────── */
+/* won-card / won-overlay 기본 스타일은 live-seller.css 에 정의되어 있고,
+   여기서는 추천 섹션 전용 스타일만 추가한다. */
+.won-card--with-recs {
+  max-width: min(92vw, 420px);
+  width: 92vw;
+  gap: 8px;
+}
+
+.won-recs {
+  margin-top: 12px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.won-recs__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.won-recs__title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--color-ink);
+}
+
+.won-recs__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-tint);
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent-tint);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.won-recs__list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.won-recs__loading,
+.won-recs__empty {
+  grid-column: 1 / -1;
+  padding: 14px 8px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--color-ink-soft);
+}
+
+.won-rec-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out);
+  min-width: 0;
+}
+
+.won-rec-card:hover,
+.won-rec-card:active {
+  transform: translateY(-1px);
+  border-color: var(--color-accent);
+}
+
+.won-rec-card__thumb {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.won-rec-card__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.won-rec-card__name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-ink);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.won-rec-card__price {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--color-ink);
+}
+
+.won-rec-card__reason {
+  font-size: 10px;
+  color: var(--color-accent);
+  background: var(--color-accent-tint);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  align-self: flex-start;
+  font-weight: 600;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.won-recs__more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 2px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
+  color: var(--color-bg);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: filter var(--dur-fast) var(--ease-out);
+}
+
+.won-recs__more:hover {
+  filter: brightness(1.05);
+}

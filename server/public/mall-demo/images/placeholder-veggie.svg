@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="채소 이미지">
+  <defs>
+    <radialGradient id="bgVeg" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#F0F8E8" />
+      <stop offset="100%" stop-color="#D6E9C0" />
+    </radialGradient>
+    <linearGradient id="leaf" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7CC247" />
+      <stop offset="100%" stop-color="#3E8E3E" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#bgVeg)" />
+  <path d="M100 50 C 60 60, 50 110, 80 150 C 100 165, 130 160, 145 130 C 155 100, 145 65, 100 50 Z" fill="url(#leaf)" />
+  <path d="M100 55 L 100 150" stroke="#2E6B2E" stroke-width="2.5" fill="none" />
+  <path d="M100 80 Q 80 95, 75 115" stroke="#2E6B2E" stroke-width="1.8" fill="none" />
+  <path d="M100 80 Q 120 95, 130 115" stroke="#2E6B2E" stroke-width="1.8" fill="none" />
+  <path d="M100 110 Q 82 125, 80 140" stroke="#2E6B2E" stroke-width="1.8" fill="none" />
+  <path d="M100 110 Q 120 125, 128 140" stroke="#2E6B2E" stroke-width="1.8" fill="none" />
+</svg>

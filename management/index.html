@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>지역 기반 액티비티 추천</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="page-shell">
+    <section class="hero">
+      <h1>지역 기반 액티비티 추천</h1>
+      <p>원하는 지역을 입력하면 주변에서 즐길만한 액티비티 장소를 추천해드립니다.</p>
+      <div class="search-box">
+        <label for="location-input">지역 또는 역 이름 입력</label>
+        <div class="input-row">
+          <input id="location-input" type="text" placeholder="예: 평촌역, 서울역, 강남역" />
+          <button id="search-button" type="button">추천 받기</button>
+        </div>
+        <label for="capacity-input">인원 수</label>
+        <div class="input-row">
+          <input id="capacity-input" type="number" min="1" value="2" />
+          <span class="hint">요청 인원 수를 입력하면 수용 가능한 장소만 추천됩니다.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="results" aria-live="polite">
+      <h2>추천 장소</h2>
+      <div id="result-message" class="message">지역을 입력하고 버튼을 눌러주세요.</div>
+      <div id="recommendation-list" class="recommendation-list"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

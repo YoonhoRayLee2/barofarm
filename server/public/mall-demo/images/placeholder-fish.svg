@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="수산물 이미지">
+  <defs>
+    <radialGradient id="bgFish" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#E8F4FA" />
+      <stop offset="100%" stop-color="#BFDFEF" />
+    </radialGradient>
+    <linearGradient id="fishBody" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#67A6CC" />
+      <stop offset="100%" stop-color="#2E6E96" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#bgFish)" />
+  <path d="M30 100 Q 60 60, 130 70 Q 165 80, 165 100 Q 165 120, 130 130 Q 60 140, 30 100 Z" fill="url(#fishBody)" />
+  <path d="M165 100 L 195 75 L 188 100 L 195 125 Z" fill="url(#fishBody)" />
+  <circle cx="55" cy="95" r="5" fill="#FFFFFF" />
+  <circle cx="55" cy="95" r="2.5" fill="#0E2A3E" />
+  <path d="M70 85 Q 100 95, 130 88" stroke="#FFFFFF" stroke-width="1.5" fill="none" opacity="0.4" />
+  <path d="M70 100 Q 105 110, 130 100" stroke="#FFFFFF" stroke-width="1.5" fill="none" opacity="0.4" />
+  <path d="M70 115 Q 100 120, 130 115" stroke="#FFFFFF" stroke-width="1.5" fill="none" opacity="0.4" />
+  <path d="M95 130 Q 100 145, 88 155" stroke="#2E6E96" stroke-width="3" fill="none" />
+</svg>

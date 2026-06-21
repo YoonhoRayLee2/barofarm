@@ -592,17 +592,34 @@ export default async function load(params) {
         </div>
       `;
     } else {
+      const winAuctionId = auction.id || auction.auctionId || currentAuctionId;
       backdrop.innerHTML = `
-        <div class="won-card">
+        <div class="won-card won-card--with-recs">
           <div class="won-card__emoji">🏆</div>
           <div class="won-card__title">낙찰 완료!</div>
           <div class="won-card__price">${(auction.finalPrice || auction.price || auction.currentPrice || 0).toLocaleString()}원</div>
           <div class="won-card__winner">${escapeHtml(auction.winnerName || '-')}</div>
+          <div class="won-recs" id="won-recs" data-auction-id="${escapeHtml(String(winAuctionId || ''))}">
+            <div class="won-recs__header">
+              <span class="won-recs__title">✨ 함께 즐기면 더 좋은 상품</span>
+              <span class="won-recs__badge">농협몰 추천</span>
+            </div>
+            <div class="won-recs__list" id="won-recs-list">
+              <div class="won-recs__loading">추천 상품을 불러오는 중...</div>
+            </div>
+            <a class="won-recs__more" id="won-recs-more" href="/app/auction/${encodeURIComponent(String(winAuctionId || ''))}/result" data-link>
+              농협몰에서 더보기 →
+            </a>
+          </div>
           <button class="won-card__confirm-btn" id="won-confirm-btn">확인</button>
         </div>
       `;
       // Spawn confetti for actual win
       spawnConfetti(backdrop);
+      // Fetch recommendations and inject into the overlay (best-effort)
+      if (winAuctionId) {
+        loadWonRecs(backdrop, winAuctionId);
+      }
     }
     page.appendChild(backdrop);
 
@@ -610,7 +627,45 @@ export default async function load(params) {
     if (confirmBtn) {
       confirmBtn.addEventListener('click', () => backdrop.remove());
     }
-    setTimeout(() => { if (backdrop.parentNode) backdrop.remove(); }, 5000);
+    // 일반 낙찰(추천 섹션이 있는 경우)은 사용자가 추천을 살펴볼 수 있도록 자동 dismiss 시간을 늘린다.
+    const dismissMs = isVoid ? 5000 : 12000;
+    setTimeout(() => { if (backdrop.parentNode) backdrop.remove(); }, dismissMs);
+  }
+
+  /**
+   * 낙찰 오버레이 안의 추천 섹션에 mall-demo 추천 카드 3개를 주입한다.
+   * @param {HTMLElement} backdrop
+   * @param {string} auctionId
+   */
+  async function loadWonRecs(backdrop, auctionId) {
+    const listEl = backdrop.querySelector('#won-recs-list');
+    if (!listEl) return;
+    try {
+      const data = await api.getRecommendations(auctionId, 3);
+      const recs = (data && data.recommendations) || [];
+      if (recs.length === 0) {
+        listEl.innerHTML = '<div class="won-recs__empty">추천 상품을 준비 중입니다</div>';
+        return;
+      }
+      listEl.innerHTML = recs.map((rec) => {
+        const p = rec.product || {};
+        const reason = (rec.reasons && rec.reasons[0]) || '';
+        const price = (p.price || 0).toLocaleString();
+        const img = p.imageUrl || '';
+        return `
+          <a class="won-rec-card" href="/mall/product/${encodeURIComponent(p.id || '')}" target="_blank" rel="noopener">
+            <div class="won-rec-card__thumb">
+              ${img ? `<img src="${escapeHtml(img)}" alt="" loading="lazy" />` : ''}
+            </div>
+            <div class="won-rec-card__name">${escapeHtml(p.name || '')}</div>
+            <div class="won-rec-card__price">${price}원</div>
+            ${reason ? `<div class="won-rec-card__reason">${escapeHtml(reason)}</div>` : ''}
+          </a>
+        `;
+      }).join('');
+    } catch (_err) {
+      listEl.innerHTML = '<div class="won-recs__empty">추천 상품을 불러오지 못했습니다</div>';
+    }
   }
 
   // ---- Load seller info ----

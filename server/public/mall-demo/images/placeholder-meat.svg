@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="축산물 이미지">
+  <defs>
+    <radialGradient id="bgMeat" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#FFF0F0" />
+      <stop offset="100%" stop-color="#F4D5D2" />
+    </radialGradient>
+    <linearGradient id="meatBody" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E07060" />
+      <stop offset="100%" stop-color="#B23B2A" />
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" fill="url(#bgMeat)" />
+  <path d="M50 90 Q 60 60, 100 60 Q 150 65, 155 110 Q 150 145, 110 150 Q 65 148, 50 120 Z" fill="url(#meatBody)" />
+  <ellipse cx="70" cy="85" rx="8" ry="5" fill="#F8E0C0" opacity="0.65" />
+  <ellipse cx="120" cy="100" rx="14" ry="6" fill="#F8E0C0" opacity="0.55" />
+  <ellipse cx="90" cy="125" rx="10" ry="5" fill="#F8E0C0" opacity="0.55" />
+  <path d="M55 80 Q 70 55, 100 56" stroke="#F8E0C0" stroke-width="6" fill="none" opacity="0.5" />
+</svg>
