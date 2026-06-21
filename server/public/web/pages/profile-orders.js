@@ -50,7 +50,12 @@ export default async function load() {
   const _toDefault = new Date();
   const _fromDefault = new Date();
   _fromDefault.setMonth(_fromDefault.getMonth() - 3);
-  const _fmt = (d) => d.toISOString().slice(0, 10);
+  const _fmt = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
 
   page.innerHTML = `
     <header class="orders-header">
@@ -108,7 +113,7 @@ export default async function load() {
         hintEl.textContent = '최대 3개월 범위까지 조회 가능합니다';
         hintEl.className = 'orders-date-hint orders-date-hint--error';
         // 시작일을 자동 조정
-        fromEl.value = maxFrom.toISOString().slice(0, 10);
+        fromEl.value = _fmt(maxFrom);
         return;
       }
       hintEl.textContent = '';
