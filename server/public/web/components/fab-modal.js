@@ -77,8 +77,9 @@ function mount() {
     </button>
   `;
 
-  document.body.appendChild(_overlay);
-  document.body.appendChild(_sheet);
+  const root = document.getElementById('app-root') || document.body;
+  root.appendChild(_overlay);
+  root.appendChild(_sheet);
 
   // Close on overlay click
   _overlay.addEventListener('click', closeFabModal);
@@ -113,13 +114,10 @@ function _handleKeydown(e) {
  */
 export function openFabModal() {
   mount();
-  // Remember focused element to restore on close
   _previousFocus = document.activeElement;
-  // Force reflow before adding .is-open so transition fires
   void _overlay.offsetHeight;
   _overlay.classList.add('is-open');
   _sheet.classList.add('is-open');
-  // Focus the first interactive option inside the sheet
   requestAnimationFrame(() => {
     const firstBtn = _sheet.querySelector('#fab-opt-live');
     if (firstBtn) firstBtn.focus();
@@ -133,7 +131,6 @@ export function closeFabModal() {
   if (!_mounted) return;
   _overlay.classList.remove('is-open');
   _sheet.classList.remove('is-open');
-  // Restore focus to the element that opened the modal
   if (_previousFocus && typeof _previousFocus.focus === 'function') {
     _previousFocus.focus();
   }

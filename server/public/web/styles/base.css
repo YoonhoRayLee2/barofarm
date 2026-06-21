@@ -184,16 +184,14 @@ ol {
 .pi-overlay,
 .pd-confirm-overlay,
 .da-form-overlay,
-.pes-backdrop,
-.fab-overlay {
+.pes-backdrop {
   justify-content: center;
 }
 
 .pi-sheet,
 .pd-confirm-sheet,
 .da-form-sheet,
-.pes-sheet,
-.fab-sheet {
+.pes-sheet {
   width: min(100vw, calc(100dvh * 390 / 844));
   max-width: 480px;
 }
@@ -242,7 +240,6 @@ ol {
   .pi-overlay,
   .llm-overlay,
   .bank-sheet-overlay,
-  .fab-overlay,
   .confirm-dialog-backdrop,
   .pes-backdrop,
   .wnm-backdrop,
@@ -268,7 +265,6 @@ ol {
   .pd-confirm-sheet,
   .da-form-sheet,
   .pes-sheet,
-  .fab-sheet,
   .bank-sheet {
     width: 100% !important;
     max-width: 100% !important;
