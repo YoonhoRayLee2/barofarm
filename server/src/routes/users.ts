@@ -74,26 +74,53 @@ router.get('/:id/public-profile', async (req: Request, res: Response) => {
 
   try {
     const [rows] = await pool.execute(
-      `SELECT u.id, u.nickname, u.name, u.avatar_url,
+      `SELECT u.id, u.nickname, u.name, u.avatar_url, u.bank_verified_at,
               (SELECT COUNT(*) FROM auctions WHERE seller_id = ? AND status = 'ended') AS sales_count,
               (SELECT COUNT(*) FROM follows WHERE following_id = ?) AS follower_count,
               (SELECT COUNT(*) FROM follows WHERE follower_id = ?) AS following_count,
-              (SELECT COUNT(*) FROM follows WHERE follower_id = ? AND following_id = ?) AS is_following
+              (SELECT COUNT(*) FROM follows WHERE follower_id = ? AND following_id = ?) AS is_following,
+              (SELECT COUNT(*) FROM subscriptions WHERE seller_id = ? AND status = 'active') AS subscriber_count,
+              (SELECT COUNT(*) FROM subscriptions WHERE subscriber_id = ? AND seller_id = ? AND status = 'active') AS is_subscribed
        FROM users u WHERE u.id = ?`,
-      [userId, userId, userId, viewerId, userId, userId],
+      [userId, userId, userId, viewerId, userId, userId, viewerId, userId, userId],
     ) as [unknown[], unknown];
 
     const user = (rows as any[])[0];
     if (!user) return res.status(404).json({ error: 'user not found' });
 
+    const salesCount = Number(user.sales_count);
+    const followerCount = Number(user.follower_count);
+    const subscriberCount = Number(user.subscriber_count);
+    const bankVerified = !!user.bank_verified_at;
+
+    // PROF-4 배지 6종 — 기존 집계 지표 기반 자동 산정 (DB 변경 없음).
+    // hint: 획득 조건 설명, progress: 카운트형 배지의 현재 달성도(단일 진실 공급원=서버).
+    const badges = [
+      { key: 'first_sale', emoji: '🌱', label: '첫 수확',     earned: salesCount >= 1,
+        hint: '경매 판매를 1건 이상 완료하면 받아요.',          progress: `${Math.min(salesCount, 1)}/1` },
+      { key: 'veteran',    emoji: '🏅', label: '베테랑 농부', earned: salesCount >= 20,
+        hint: '누적 판매 20건을 달성하면 받아요.',              progress: `${Math.min(salesCount, 20)}/20` },
+      { key: 'harvest',    emoji: '🌾', label: '풍년',         earned: salesCount >= 50,
+        hint: '누적 판매 50건을 달성하면 받아요.',              progress: `${Math.min(salesCount, 50)}/50` },
+      { key: 'regulars',   emoji: '🤝', label: '단골 농부',   earned: subscriberCount >= 5,
+        hint: '단골(구독자) 5명을 모으면 받아요.',             progress: `${Math.min(subscriberCount, 5)}/5` },
+      { key: 'popular',    emoji: '⭐', label: '인기 셀러',   earned: followerCount >= 10,
+        hint: '팔로워 10명을 모으면 받아요.',                  progress: `${Math.min(followerCount, 10)}/10` },
+      { key: 'verified',   emoji: '🛡️', label: '인증 거래',   earned: bankVerified,
+        hint: '계좌 인증을 완료하면 받아요.',                   progress: null },
+    ];
+
     res.json({
       id: user.id,
       displayName: user.nickname || user.name,
       avatarUrl: user.avatar_url ?? null,
-      salesCount: Number(user.sales_count),
-      followerCount: Number(user.follower_count),
+      salesCount,
+      followerCount,
       followingCount: Number(user.following_count),
       isFollowing: Number(user.is_following) > 0,
+      subscriberCount,
+      isSubscribed: Number(user.is_subscribed) > 0,
+      badges,
     });
   } catch (err) {
     console.error('[users] GET /:id/public-profile', err);
@@ -387,7 +414,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 // PATCH /api/users/:id — 프로필 수정 (아바타·닉네임)
 router.patch('/:id', uploadAvatar.single('avatar'), async (req: Request, res: Response) => {
-  const userId = req.params.id;
+  const userId = String(req.params.id);
   if (!userId) {
     res.status(400).json({ error: 'user id is required' });
     return;
@@ -1089,7 +1116,7 @@ router.get('/:id/carbon-summary', async (req: Request, res: Response) => {
 // POST /api/users/:id/bank/request — 1원 인증 요청
 router.post('/:id/bank/request', requireAuth, async (req, res) => {
   const userId = Number(req.params.id);
-  if ((req as any).user?.id !== userId) { res.status(403).json({ error: 'forbidden' }); return; }
+  if (req.user!.userId !== userId) { res.status(403).json({ error: 'forbidden' }); return; }
 
   const { bankName, accountNumber, holderName } = req.body as {
     bankName: string; accountNumber: string; holderName: string;
@@ -1113,7 +1140,7 @@ router.post('/:id/bank/request', requireAuth, async (req, res) => {
 // POST /api/users/:id/bank/confirm — 코드 확인 → 인증 완료
 router.post('/:id/bank/confirm', requireAuth, async (req, res) => {
   const userId = Number(req.params.id);
-  if ((req as any).user?.id !== userId) { res.status(403).json({ error: 'forbidden' }); return; }
+  if (req.user!.userId !== userId) { res.status(403).json({ error: 'forbidden' }); return; }
 
   const { code } = req.body as { code: string };
   const pending = pendingBankVerify.get(userId);
@@ -1165,6 +1192,92 @@ router.patch('/:id/delivery-option', async (req: Request, res: Response) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('[users] PATCH /:id/delivery-option error:', err);
+    res.status(500).json({ error: 'database error' });
+  }
+});
+
+// POST /api/users/:id/subscribe — 단골 등록 (:id = seller)
+router.post('/:id/subscribe', requireAuth, async (req: Request, res: Response) => {
+  const sellerId = Number(req.params.id);
+  const subscriberId = req.user!.userId;
+  if (subscriberId === sellerId) return res.status(400).json({ error: 'cannot subscribe yourself' });
+
+  try {
+    await pool.execute(
+      `INSERT INTO subscriptions (subscriber_id, seller_id, status)
+       VALUES (?, ?, 'active')
+       ON DUPLICATE KEY UPDATE status = 'active'`,
+      [subscriberId, sellerId],
+    );
+    // 자동 팔로우 (중복이면 무시)
+    await pool.execute(
+      'INSERT IGNORE INTO follows (follower_id, following_id) VALUES (?, ?)',
+      [subscriberId, sellerId],
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[users] POST /:id/subscribe', err);
+    res.status(500).json({ error: 'database error' });
+  }
+});
+
+// DELETE /api/users/:id/subscribe — 단골 해제 (소프트)
+router.delete('/:id/subscribe', requireAuth, async (req: Request, res: Response) => {
+  const sellerId = Number(req.params.id);
+  const subscriberId = req.user!.userId;
+
+  try {
+    await pool.execute(
+      `UPDATE subscriptions SET status = 'cancelled'
+       WHERE subscriber_id = ? AND seller_id = ?`,
+      [subscriberId, sellerId],
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[users] DELETE /:id/subscribe', err);
+    res.status(500).json({ error: 'database error' });
+  }
+});
+
+// GET /api/users/:id/subscriptions — 내가 단골인 농부 목록 (:id = subscriber)
+router.get('/:id/subscriptions', requireAuth, async (req: Request, res: Response) => {
+  const subscriberId = Number(req.params.id);
+  if (!subscriberId) return res.status(400).json({ error: 'user id required' });
+  if (subscriberId !== req.user!.userId) return res.status(403).json({ error: 'forbidden' });
+
+  try {
+    const [rows]: any = await pool.execute(
+      `SELECT u.id AS seller_id, u.nickname, u.avatar_url
+       FROM subscriptions s
+       JOIN users u ON u.id = s.seller_id
+       WHERE s.subscriber_id = ? AND s.status = 'active'
+       ORDER BY s.created_at DESC`,
+      [subscriberId],
+    );
+    res.json(rows.map((r: any) => ({
+      sellerId:   r.seller_id,
+      nickname:   r.nickname ?? '사용자',
+      avatarUrl:  r.avatar_url ?? null,
+    })));
+  } catch (err) {
+    console.error('[users] GET /:id/subscriptions', err);
+    res.status(500).json({ error: 'database error' });
+  }
+});
+
+// GET /api/users/:id/subscriber-count — 단골 수 (:id = seller)
+router.get('/:id/subscriber-count', async (req: Request, res: Response) => {
+  const sellerId = Number(req.params.id);
+  if (!sellerId) return res.status(400).json({ error: 'user id required' });
+
+  try {
+    const [rows]: any = await pool.execute(
+      'SELECT COUNT(*) AS cnt FROM subscriptions WHERE seller_id = ? AND status = \'active\'',
+      [sellerId],
+    );
+    res.json({ count: Number(rows[0]?.cnt ?? 0) });
+  } catch (err) {
+    console.error('[users] GET /:id/subscriber-count', err);
     res.status(500).json({ error: 'database error' });
   }
 });

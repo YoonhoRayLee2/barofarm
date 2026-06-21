@@ -38,6 +38,8 @@
   background:var(--color-accent);color:#fff;
 }
 .up-action-btn--outline { background:none;border:1.5px solid var(--color-accent);color:var(--color-accent); }
+.up-action-btn:disabled { opacity:0.5;cursor:default; }
+.up-action-btn--subscribed { background:none;border:1.5px solid var(--color-accent);color:var(--color-accent); }
 
 .up-section-title { padding:14px 16px 8px;font-size:14px;font-weight:700;color:var(--color-ink); }
 

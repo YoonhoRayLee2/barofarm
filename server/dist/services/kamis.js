@@ -140,6 +140,7 @@ async function getPriceHistory(itemCode, kindName, days = 30) {
         conn.release();
     }
 }
+// '무'처럼 1글자 품목은 단어 경계(공백 or 문자열 끝/시작)만 허용
 function itemMatches(productName, itemName) {
     if (itemName.length === 1) {
         return new RegExp(`(^|\\s)${itemName}(\\s|$)`).test(productName);
@@ -148,9 +149,11 @@ function itemMatches(productName, itemName) {
 }
 async function matchMarketPrice(productName, category) {
     const prices = await getTodayPrices();
+    // 매칭 후보: productName에 itemName이 포함되는 TRACKED_ITEMS 항목
     const candidates = TRACKED_ITEMS.filter((t) => itemMatches(productName, t.itemName));
     if (candidates.length === 0)
         return null;
+    // category 우선, 그 다음 itemName 길이 내림차순
     candidates.sort((a, b) => {
         const aCat = category && a.category === category ? 1 : 0;
         const bCat = category && b.category === category ? 1 : 0;
@@ -166,6 +169,7 @@ async function getPriceTrend(itemCode, kindName) {
     if (history.length < 2)
         return null;
     const current = history[history.length - 1].price;
+    // 30일 전 기준점: 30일 이상 데이터가 있으면 30일 전 값, 없으면 가장 오래된 값
     const pastIdx = history.length >= 30 ? history.length - 30 : 0;
     const past = history[pastIdx].price;
     const changePct = Math.round(((current - past) / past) * 100);

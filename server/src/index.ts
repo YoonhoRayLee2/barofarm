@@ -20,6 +20,8 @@ import hanaroStoresRouter from './routes/hanaro-stores';
 import adminRouter from './routes/admin';
 import { createGroupDealsRouter } from './routes/group-deals';
 import recommendationsRouter from './routes/recommendations';
+import timelinesRouter from './routes/timelines';
+import notificationsRouter from './routes/notifications';
 import registerAuctionSocket from './socket/auction';
 import registerChatSocket from './socket/chat';
 import pool from './db/mysql';
@@ -103,6 +105,8 @@ app.use('/api/hanaro-stores', hanaroStoresRouter);
 app.use('/admin', adminRouter);
 app.use('/api/group-deals', createGroupDealsRouter(io));
 app.use('/api/recommendations', recommendationsRouter);
+app.use('/api/timelines', timelinesRouter);
+app.use('/api/notifications', notificationsRouter);
 
 registerAuctionSocket(io);
 registerChatSocket(io);

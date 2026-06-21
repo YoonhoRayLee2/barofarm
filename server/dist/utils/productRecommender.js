@@ -3,8 +3,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getRecommendations = getRecommendations;
 exports.getRecommendationsByCategories = getRecommendationsByCategories;
+exports.getRecommendations = getRecommendations;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 // 서버 시작 시 1회 로드, 이후 메모리 캐시

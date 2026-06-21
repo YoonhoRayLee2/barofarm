@@ -452,6 +452,24 @@ export async function toggleFavorite({ userId, liveId }) {
   });
 }
 
+/**
+ * 단골(구독) 맺기 — subscriberId는 서버가 인증 토큰에서 취득한다.
+ * @param {number|string} sellerId
+ * @returns {Promise<{ ok: boolean }>}
+ */
+export async function subscribe(sellerId) {
+  return request(`/api/users/${encodeURIComponent(sellerId)}/subscribe`, { method: 'POST' });
+}
+
+/**
+ * 단골(구독) 해제.
+ * @param {number|string} sellerId
+ * @returns {Promise<{ ok: boolean }>}
+ */
+export async function unsubscribe(sellerId) {
+  return request(`/api/users/${encodeURIComponent(sellerId)}/subscribe`, { method: 'DELETE' });
+}
+
 /* ─── User-scoped ───────────────────────────────────────────────────── */
 
 /**

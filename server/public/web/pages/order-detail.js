@@ -463,7 +463,19 @@ export default async function load(params) {
       `;
     }
 
-    container.innerHTML = card + stepperHtml + feeHtml + shippingFeeHtml + trackingHtml + deliveryHtml + carbonHtml + actionHtml + recommendationsHtml;
+    /* Timeline placeholder — filled async after render */
+    const timelineHtml = `
+      <section class="od-timeline" id="od-timeline">
+        <div class="od-timeline__header">
+          <h2 class="od-timeline__title">🌾 농장 소식</h2>
+        </div>
+        <div class="od-timeline__body" id="od-timeline-body">
+          <div class="od-timeline__loading">불러오는 중...</div>
+        </div>
+      </section>
+    `;
+
+    container.innerHTML = card + stepperHtml + feeHtml + shippingFeeHtml + trackingHtml + deliveryHtml + carbonHtml + timelineHtml + actionHtml + recommendationsHtml;
 
     /* Bind fee help button */
     const feeHelpBtn = container.querySelector('.od-fee__help');
@@ -490,6 +502,9 @@ export default async function load(params) {
     if (!isSeller) {
       loadRecommendations(container, auctionId);
     }
+
+    /* Load timeline async */
+    loadTimeline(container, auctionId, user, isSeller, carbon);
 
     /* Bind action */
     const actionBtn = container.querySelector('#od-action');
@@ -681,4 +696,178 @@ async function loadRecommendations(container, auctionId) {
     console.error('[order-detail] loadRecommendations error:', err);
     section.querySelector('.od-recommendations__loading').textContent = '추천 상품 로드 실패';
   }
+}
+
+/* ── Timeline (농장 소식) ─────────────────────────────────── */
+
+const TIMELINE_STAGE_META = {
+  harvest:  { icon: '🌱', label: '수확' },
+  packing:  { icon: '📦', label: '포장' },
+  departed: { icon: '🚚', label: '출발' },
+  arrived:  { icon: '🏠', label: '도착' },
+};
+
+/** 모듈 메모리: arrived 애니메이션 1회 플래그 (auctionId 키) */
+const _arrivedAnimated = new Set();
+
+async function loadTimeline(container, auctionId, user, isSeller, carbon) {
+  const section = container.querySelector('#od-timeline');
+  const body    = container.querySelector('#od-timeline-body');
+  if (!section || !body) return;
+
+  let items = [];
+  try {
+    const res = await fetch(`/api/timelines/${encodeURIComponent(auctionId)}?userId=${encodeURIComponent(user.id)}`);
+    if (res.ok) {
+      const json = await res.json();
+      items = Array.isArray(json.items) ? json.items : [];
+    }
+  } catch { /* keep empty */ }
+
+  renderTimelineBody(body, items, auctionId, user, isSeller, carbon);
+}
+
+function renderTimelineBody(body, items, auctionId, user, isSeller, carbon) {
+  if (!items.length) {
+    body.innerHTML = isSeller
+      ? `<p class="od-tl-empty">아직 농장 소식이 없어요. 첫 소식을 올려볼까요?</p>${buildUploadForms(auctionId, user, body, carbon)}`
+      : `<p class="od-tl-empty">아직 농장 소식이 없어요.</p>`;
+    if (isSeller) bindUploadForms(body, auctionId, user, carbon);
+    return;
+  }
+
+  const hasArrived = items.some(it => it.stage === 'arrived');
+
+  const cards = items.map(it => {
+    const meta = TIMELINE_STAGE_META[it.stage] || { icon: '📌', label: it.stage };
+    const photoHtml = it.photoUrl
+      ? `<img class="od-tl-card__photo" src="${escapeAttr(it.photoUrl)}" alt="${escapeHtml(meta.label)} 사진" loading="lazy">`
+      : '';
+    const noteHtml = it.farmerNote
+      ? `<p class="od-tl-card__note">${escapeHtml(it.farmerNote)}</p>`
+      : '';
+    const uploadBtnHtml = isSeller
+      ? `<button class="od-tl-upload-btn" data-stage="${escapeAttr(it.stage)}">사진 올리기</button>`
+      : '';
+    return `
+      <div class="od-tl-card">
+        <div class="od-tl-card__icon-col">
+          <span class="od-tl-card__icon">${meta.icon}</span>
+          <div class="od-tl-card__line"></div>
+        </div>
+        <div class="od-tl-card__main">
+          <div class="od-tl-card__label">${meta.label}</div>
+          ${photoHtml}
+          ${noteHtml}
+          <div class="od-tl-card__date">${formatDate(it.createdAt)}</div>
+          ${uploadBtnHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  /* 판매자용: 아직 올리지 않은 stage 업로드 폼 */
+  const uploadedStages = new Set(items.map(it => it.stage));
+  const remainForms = isSeller ? buildUploadForms(auctionId, user, body, carbon, uploadedStages) : '';
+
+  /* arrived 배지 */
+  let arrivedBadge = '';
+  if (hasArrived && carbon) {
+    const trees = Math.max(1, Math.floor(carbon.savedCo2g / 22000));
+    arrivedBadge = `
+      <div class="od-tl-arrived-badge" id="od-tl-arrived-badge">
+        <span>🌳 이 주문으로 나무 ${trees.toLocaleString('ko-KR')}그루만큼 절감!</span>
+        <button class="od-tl-forest-btn" id="od-tl-forest-btn">내 숲에서 보기</button>
+      </div>
+    `;
+  }
+
+  body.innerHTML = cards + remainForms + arrivedBadge;
+
+  /* 내 숲 버튼 */
+  const forestBtn = body.querySelector('#od-tl-forest-btn');
+  if (forestBtn) {
+    forestBtn.addEventListener('click', () => {
+      import('/app/scripts/router.js').then(m => m.navigate('/app/my-forest'));
+    });
+  }
+
+  /* arrived 최초 등장 애니메이션 */
+  if (hasArrived && !_arrivedAnimated.has(auctionId)) {
+    _arrivedAnimated.add(auctionId);
+    const badge = body.querySelector('#od-tl-arrived-badge');
+    if (badge) {
+      badge.classList.add('od-tl-arrived-badge--anim');
+      setTimeout(() => badge.classList.remove('od-tl-arrived-badge--anim'), 1200);
+    }
+  }
+
+  if (isSeller) bindUploadForms(body, auctionId, user, carbon, uploadedStages);
+}
+
+function buildUploadForms(auctionId, user, body, carbon, uploadedStages) {
+  const ALL_STAGES = ['harvest', 'packing', 'departed', 'arrived'];
+  const remaining = uploadedStages
+    ? ALL_STAGES.filter(s => !uploadedStages.has(s))
+    : ALL_STAGES;
+  if (!remaining.length) return '';
+
+  return remaining.map(stage => {
+    const meta = TIMELINE_STAGE_META[stage];
+    return `
+      <div class="od-tl-upload-form" data-upload-stage="${escapeAttr(stage)}">
+        <div class="od-tl-upload-form__label">${meta.icon} ${meta.label} 소식 올리기</div>
+        <label class="od-tl-file-label">
+          <input type="file" class="od-tl-file-input" accept="image/*" data-stage="${escapeAttr(stage)}">
+          📷 사진 선택 (선택)
+        </label>
+        <input type="text" class="od-tl-note-input" data-stage="${escapeAttr(stage)}" placeholder="한마디 입력 (선택)">
+        <button class="od-tl-submit-btn" data-stage="${escapeAttr(stage)}">올리기</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function bindUploadForms(body, auctionId, user, carbon, uploadedStages) {
+  body.querySelectorAll('.od-tl-submit-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const stage = btn.dataset.stage;
+      const form  = body.querySelector(`.od-tl-upload-form[data-upload-stage="${stage}"]`);
+      if (!form) return;
+
+      const fileInput = form.querySelector('.od-tl-file-input');
+      const noteInput = form.querySelector('.od-tl-note-input');
+      const note = noteInput ? noteInput.value.trim() : '';
+      const file = fileInput && fileInput.files && fileInput.files[0];
+
+      if (!note && !file) {
+        const { showToast } = await import('/app/components/toast.js');
+        showToast('사진이나 한마디를 입력해주세요', { duration: 1800 });
+        return;
+      }
+
+      btn.disabled = true;
+      try {
+        const fd = new FormData();
+        fd.append('auction_id', String(auctionId));
+        fd.append('stage', stage);
+        fd.append('userId', String(user.id));
+        if (note) fd.append('farmer_note', note);
+        if (file) fd.append('photo', file);
+
+        const res = await fetch('/api/timelines', { method: 'POST', body: fd });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        /* 재조회 후 리렌더 */
+        const refreshRes = await fetch(`/api/timelines/${encodeURIComponent(auctionId)}?userId=${encodeURIComponent(user.id)}`);
+        const json = refreshRes.ok ? await refreshRes.json() : { items: [] };
+        const items = Array.isArray(json.items) ? json.items : [];
+        renderTimelineBody(body, items, auctionId, user, true, carbon);
+      } catch (err) {
+        btn.disabled = false;
+        const { showToast } = await import('/app/components/toast.js');
+        showToast('업로드에 실패했습니다', { duration: 2000 });
+      }
+    });
+  });
 }

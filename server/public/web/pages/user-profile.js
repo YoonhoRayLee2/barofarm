@@ -8,6 +8,7 @@ import { showToast } from '/app/components/toast.js';
 import { personIconSVG } from '/app/scripts/person-icon.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
 import { formatPrice } from '/app/scripts/format.js';
+import { subscribe, unsubscribe } from '/app/scripts/api.js';
 
 const _cssId = 'page-css-user-profile';
 if (!document.getElementById(_cssId)) {
@@ -42,10 +43,11 @@ export default async function load(params) {
       <div class="up-stats" id="up-stats">
         <div class="up-stat"><span class="up-stat__num" id="up-sales">—</span><span class="up-stat__label">판매</span></div>
         <div class="up-stat"><span class="up-stat__num" id="up-followers">—</span><span class="up-stat__label">팔로워</span></div>
-        <div class="up-stat"><span class="up-stat__num" id="up-following">—</span><span class="up-stat__label">팔로잉</span></div>
+        <div class="up-stat"><span class="up-stat__num" id="up-subscribers">—</span><span class="up-stat__label">단골</span></div>
       </div>
     </div>
     <div class="up-actions">
+      ${!isMe ? `<button class="up-action-btn up-action-btn--subscribe" id="up-subscribe" disabled>단골 맺기</button>` : ''}
       ${!isMe ? `<button class="up-action-btn" id="up-msg">메시지 보내기</button>` : ''}
     </div>
     <div class="up-section-title">판매 완료</div>
@@ -79,6 +81,7 @@ export default async function load(params) {
 
   // 프로필 + 팔로우 상태 로드
   let isFollowing = false;
+  let isSubscribed = false;
   try {
     const res = await fetch(`/api/users/${targetId}/public-profile?viewerId=${me.id}`);
     if (res.ok) {
@@ -86,7 +89,7 @@ export default async function load(params) {
       page.querySelector('#up-name').textContent = profile.displayName || '사용자';
       page.querySelector('#up-sales').textContent = profile.salesCount ?? 0;
       page.querySelector('#up-followers').textContent = profile.followerCount ?? 0;
-      page.querySelector('#up-following').textContent = profile.followingCount ?? 0;
+      page.querySelector('#up-subscribers').textContent = profile.subscriberCount ?? 0;
 
       const avatarEl = page.querySelector('#up-avatar');
       if (profile.avatarUrl) {
@@ -97,7 +100,9 @@ export default async function load(params) {
       }
 
       isFollowing = !!profile.isFollowing;
+      isSubscribed = !!profile.isSubscribed;
       updateFollowBtn(isFollowing);
+      updateSubscribeBtn(isSubscribed);
     }
   } catch { /* non-critical */ }
 
@@ -136,6 +141,54 @@ export default async function load(params) {
     followBtn.textContent = following ? '팔로잉' : '팔로우';
     followBtn.className = 'up-follow-btn' + (following ? ' up-follow-btn--following' : '');
     followBtn.disabled = false;
+  }
+
+  // 단골(구독) 버튼
+  const subscribeBtn = page.querySelector('#up-subscribe');
+  if (subscribeBtn) {
+    updateSubscribeBtn(isSubscribed);
+    subscribeBtn.addEventListener('click', async () => {
+      subscribeBtn.disabled = true;
+      try {
+        if (isSubscribed) {
+          await unsubscribe(targetId);
+        } else {
+          await subscribe(targetId);
+        }
+        isSubscribed = !isSubscribed;
+        updateSubscribeBtn(isSubscribed);
+        // 단골 수 갱신
+        const subEl = page.querySelector('#up-subscribers');
+        if (subEl) {
+          const cur = Number(subEl.textContent) || 0;
+          subEl.textContent = String(Math.max(0, cur + (isSubscribed ? 1 : -1)));
+        }
+        // 단골 등록 시 서버가 자동 팔로우 → 팔로우 상태 동기화
+        if (isSubscribed && !isFollowing) {
+          isFollowing = true;
+          updateFollowBtn(true);
+          const followersEl = page.querySelector('#up-followers');
+          if (followersEl) {
+            followersEl.textContent = String((Number(followersEl.textContent) || 0) + 1);
+          }
+        }
+        showToast(isSubscribed ? '단골로 등록했어요' : '단골을 해제했어요', {
+          variant: 'success', duration: 1600,
+        });
+      } catch {
+        showToast('처리에 실패했습니다', { duration: 2000 });
+      } finally {
+        subscribeBtn.disabled = false;
+      }
+    });
+  }
+
+  function updateSubscribeBtn(subscribed) {
+    if (!subscribeBtn) return;
+    subscribeBtn.textContent = subscribed ? '단골 해제' : '단골 맺기';
+    subscribeBtn.className = 'up-action-btn up-action-btn--subscribe'
+      + (subscribed ? ' up-action-btn--subscribed' : '');
+    subscribeBtn.disabled = false;
   }
 
   // 판매 완료 목록

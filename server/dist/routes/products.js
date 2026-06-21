@@ -9,6 +9,7 @@ const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const mysql_1 = __importDefault(require("../db/mysql"));
 const tier_1 = require("../services/tier");
+const notifications_1 = require("../services/notifications");
 const UPLOADS_DIR = path_1.default.join(__dirname, '..', '..', 'public', 'uploads', 'products');
 fs_1.default.mkdirSync(UPLOADS_DIR, { recursive: true });
 const upload = (0, multer_1.default)({
@@ -32,7 +33,7 @@ function unlockTmpFiles(files) {
     (files.image ?? []).forEach(f => fs_1.default.unlink(f.path, () => { }));
     (files.images ?? []).forEach(f => fs_1.default.unlink(f.path, () => { }));
 }
-function formatProduct(row, extraImages = []) {
+function formatProduct(row, extraImages = [], viewerIsSubscriber = false) {
     return {
         id: row.id,
         sellerId: row.seller_id,
@@ -47,21 +48,27 @@ function formatProduct(row, extraImages = []) {
         status: row.status,
         createdAt: row.created_at,
         images: extraImages,
+        isSeasonalBundle: (row.is_seasonal_bundle ?? 0) === 1,
+        subscriberPrice: viewerIsSubscriber ? (row.subscriber_price ?? null) : null,
+        seasonLabel: row.season_label ?? null,
     };
 }
 const router = (0, express_1.Router)();
 // POST /api/products — 상품 등록
 router.post('/', uploadFields, async (req, res) => {
-    const { sellerId, name, description, price, category, features, attributes } = req.body;
+    const { sellerId, name, description, price, category, features, attributes, isSeasonalBundle, subscriberPrice, seasonLabel } = req.body;
     const files = (req.files ?? {});
     if (!sellerId || !name || !price) {
         unlockTmpFiles(files);
         res.status(400).json({ error: 'sellerId, name, price는 필수입니다.' });
         return;
     }
+    const isBundleVal = isSeasonalBundle ? 1 : 0;
+    const subPriceVal = subscriberPrice != null ? Number(subscriberPrice) : null;
+    const seasonLabelVal = seasonLabel ?? null;
     try {
-        const [result] = await mysql_1.default.execute(`INSERT INTO products (seller_id, name, description, price, category, features, attributes)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`, [sellerId, name, description ?? null, Number(price), category ?? null, features ?? null, attributes ?? null]);
+        const [result] = await mysql_1.default.execute(`INSERT INTO products (seller_id, name, description, price, category, features, attributes, is_seasonal_bundle, subscriber_price, season_label)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [sellerId, name, description ?? null, Number(price), category ?? null, features ?? null, attributes ?? null, isBundleVal, subPriceVal, seasonLabelVal]);
         const productId = result.insertId;
         let imageUrl = null;
         // 대표이미지
@@ -86,6 +93,19 @@ router.post('/', uploadFields, async (req, res) => {
         }
         const [productRows] = await mysql_1.default.execute('SELECT * FROM products WHERE id = ?', [productId]);
         const [imgRows] = await mysql_1.default.execute('SELECT image_url FROM product_images WHERE product_id = ? ORDER BY sort_order', [productId]);
+        // 제철 꾸러미 등록 시 단골 fan-out 알림
+        if (isBundleVal === 1) {
+            const [subRows] = await mysql_1.default.execute('SELECT subscriber_id FROM subscriptions WHERE seller_id = ? AND status = \'active\'', [sellerId]);
+            const subscriberIds = subRows.map((r) => r.subscriber_id);
+            if (subscriberIds.length > 0) {
+                (0, notifications_1.createNotificationsBulk)(subscriberIds, {
+                    type: 'seasonal_bundle',
+                    title: '단골 농부의 제철 꾸러미가 열렸어요',
+                    body: seasonLabelVal || name,
+                    link: `/app/product-detail/${productId}`,
+                }).catch((err) => console.error('[products] fan-out notification error:', err));
+            }
+        }
         res.status(201).json(formatProduct(productRows[0], imgRows.map(r => r.image_url)));
     }
     catch (err) {
@@ -137,6 +157,7 @@ router.get('/', async (req, res) => {
 });
 // GET /api/products/:id — 상품 상세
 router.get('/:id', async (req, res) => {
+    const viewerId = Number(req.query.viewerId) || 0;
     try {
         const [productRows] = await mysql_1.default.execute('SELECT * FROM products WHERE id = ?', [Number(req.params.id)]);
         const product = productRows[0];
@@ -145,7 +166,12 @@ router.get('/:id', async (req, res) => {
             return;
         }
         const [imgRows] = await mysql_1.default.execute('SELECT image_url FROM product_images WHERE product_id = ? ORDER BY sort_order', [product.id]);
-        res.json(formatProduct(product, imgRows.map(r => r.image_url)));
+        let viewerIsSubscriber = false;
+        if (viewerId && product.is_seasonal_bundle) {
+            const [subCheck] = await mysql_1.default.execute('SELECT 1 FROM subscriptions WHERE subscriber_id = ? AND seller_id = ? AND status = \'active\' LIMIT 1', [viewerId, product.seller_id]);
+            viewerIsSubscriber = subCheck.length > 0;
+        }
+        res.json(formatProduct(product, imgRows.map(r => r.image_url), viewerIsSubscriber));
     }
     catch (err) {
         console.error('[products] GET/:id error:', err);

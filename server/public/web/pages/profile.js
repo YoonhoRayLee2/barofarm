@@ -6,7 +6,7 @@
  *   PROF-1  Hero header (avatar + stats 3-up + edit buttons)
  *   PROF-2  Collector / Dealer tab toggle
  *   PROF-3  Interest pills
- *   PROF-4  Badge grid 6-up (미구현)
+ *   PROF-4  Badge grid 6-up (활동 배지 — public-profile badges 기반)
  *   PROF-5  Average delivery widget
  *   PROF-6  Collector tab content (icon actions + menu)
  *   PROF-7  Dealer tab content (revenue + menu)
@@ -249,6 +249,68 @@ function buildInterests(interests) {
   return wrap;
 }
 
+/* ── Build: PROF-4 badge grid (6-up) ──────────────────────── */
+function buildBadges(badges) {
+  const wrap = document.createElement('div');
+  wrap.className = 'profile-badges';
+
+  const heading = document.createElement('div');
+  heading.className = 'profile-badges__heading';
+  heading.textContent = '활동 배지';
+  wrap.appendChild(heading);
+
+  const grid = document.createElement('div');
+  grid.className = 'profile-badges__grid';
+
+  const list = Array.isArray(badges) ? badges : [];
+  list.forEach((b) => {
+    const earned = !!b.earned;
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'profile-badge' + (earned ? '' : ' profile-badge--locked');
+    item.setAttribute('aria-label', `${b.label} 배지 조건 보기`);
+    item.innerHTML = `
+      <div class="profile-badge__emoji">${earned ? esc(b.emoji) : '🔒'}</div>
+      <span class="profile-badge__label">${esc(b.label)}</span>
+    `;
+    item.addEventListener('click', () => showBadgeHelp(b));
+    grid.appendChild(item);
+  });
+
+  wrap.appendChild(grid);
+
+  const note = document.createElement('p');
+  note.className = 'profile-badges__note';
+  note.textContent = '배지를 누르면 획득 조건을 볼 수 있어요.';
+  wrap.appendChild(note);
+
+  return wrap;
+}
+
+/* ── 배지 조건 안내 시트 ──────────────────────────────────── */
+function showBadgeHelp(badge) {
+  const earned = !!badge.earned;
+  const overlay = document.createElement('div');
+  overlay.className = 'tier-help-overlay';
+  overlay.innerHTML = `
+    <div class="tier-help-sheet">
+      <div class="tier-help-handle"></div>
+      <div class="badge-help-emoji">${earned ? esc(badge.emoji) : '🔒'}</div>
+      <h3 class="tier-help-title">${esc(badge.label)}</h3>
+      <p class="badge-help-hint">${esc(badge.hint || '')}</p>
+      ${badge.progress
+        ? `<div class="badge-help-progress">진행도 <strong>${esc(badge.progress)}</strong></div>`
+        : ''}
+      <div class="badge-help-status ${earned ? 'is-earned' : ''}">
+        ${earned ? '✓ 획득 완료' : '아직 획득 전이에요'}
+      </div>
+    </div>
+  `;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => requestAnimationFrame(() => overlay.classList.add('is-open')));
+}
+
 /* ── 관심카테고리 설정 시트 ───────────────────────────────── */
 function openInterestSheet(currentInterests, onSave) {
   const overlay = document.createElement('div');
@@ -456,7 +518,7 @@ function showTierHelp(type) {
     if (e.target === overlay) overlay.remove();
   });
   document.body.appendChild(overlay);
-  requestAnimationFrame(() => overlay.classList.add('is-open'));
+  requestAnimationFrame(() => requestAnimationFrame(() => overlay.classList.add('is-open')));
 }
 
 /* ── 정산계좌 1원 인증 시트 ──────────────────────────────── */
@@ -557,7 +619,7 @@ function showBankVerifySheet(userId, onVerified) {
   renderStep1();
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
   document.body.appendChild(overlay);
-  requestAnimationFrame(() => overlay.classList.add('is-open'));
+  requestAnimationFrame(() => requestAnimationFrame(() => overlay.classList.add('is-open')));
 }
 
 function buildTierCard() {
@@ -670,7 +732,7 @@ function showCarbonHelp() {
   `;
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
   document.body.appendChild(overlay);
-  requestAnimationFrame(() => overlay.classList.add('is-open'));
+  requestAnimationFrame(() => requestAnimationFrame(() => overlay.classList.add('is-open')));
 }
 
 /* ── Build: carbon stats card (collector panel top) ───────── */
@@ -701,7 +763,11 @@ function buildCarbonStats() {
         <span class="profile-carbon__stat-value" data-field="orders">—</span>
       </div>
     </div>
+    <button class="profile-carbon__forest-btn" data-forest-btn>🌳 내 숲 보기</button>
   `;
+  wrap.querySelector('[data-forest-btn]').addEventListener('click', () => {
+    import('/app/scripts/router.js').then(m => m.navigate('/app/my-forest'));
+  });
   return wrap;
 }
 
@@ -1145,9 +1211,11 @@ export default async function load() {
 
   // 판매/팔로워/팔로잉 실수치 조회
   let profileStats = { sales: 0, followers: 0, following: 0 };
+  let profileBadges = [];
   try {
     const s = await api.getPublicProfile(profileUser.id, profileUser.id);
     profileStats = { sales: s.salesCount ?? 0, followers: s.followerCount ?? 0, following: s.followingCount ?? 0 };
+    profileBadges = Array.isArray(s.badges) ? s.badges : [];
   } catch { /* 실패 시 0으로 유지 */ }
 
   const nickname = profileUser.nickname || profileUser.displayName || profileUser.name || '사용자';
@@ -1178,6 +1246,9 @@ export default async function load() {
     ? profileUser.interests
     : (profileUser.interests ? String(profileUser.interests).split(',').filter(Boolean) : []);
   scrollEl.appendChild(buildInterests(interests));
+
+  /* 4. PROF-4 Badge grid (6-up) */
+  scrollEl.appendChild(buildBadges(profileBadges));
 
   /* 6+7. PROF-2 Tab toggle + PROF-6/7 panels */
   const isMe = String(profileUser.id) === String(user.id);

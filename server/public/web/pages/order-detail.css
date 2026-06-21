@@ -1114,3 +1114,219 @@
 .od-rec-card__price--sale {
   color: var(--color-danger);
 }
+
+/* ── Timeline (농장 소식) ──────────────────────────────────── */
+
+.od-timeline {
+  margin: 0 var(--space-4) var(--space-4);
+  background: var(--color-surface);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.od-timeline__header {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.od-timeline__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-ink);
+  margin: 0;
+}
+
+.od-timeline__body {
+  padding: 12px 16px 16px;
+}
+
+.od-timeline__loading {
+  font-size: 13px;
+  color: var(--color-ink-soft);
+  padding: 12px 0;
+}
+
+.od-tl-empty {
+  font-size: 13px;
+  color: var(--color-ink-soft);
+  margin: 0 0 12px;
+}
+
+/* timeline card */
+.od-tl-card {
+  display: flex;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.od-tl-card__icon-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 28px;
+}
+
+.od-tl-card__icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.od-tl-card__line {
+  flex: 1;
+  width: 2px;
+  background: var(--color-line);
+  margin-top: 4px;
+  min-height: 16px;
+}
+
+.od-tl-card:last-of-type .od-tl-card__line {
+  display: none;
+}
+
+.od-tl-card__main {
+  flex: 1;
+  padding-bottom: 12px;
+}
+
+.od-tl-card__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink);
+  margin-bottom: 6px;
+}
+
+.od-tl-card__photo {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+
+.od-tl-card__note {
+  font-size: 13px;
+  color: var(--color-ink-soft);
+  margin: 0 0 4px;
+  white-space: pre-wrap;
+}
+
+.od-tl-card__date {
+  font-size: 11px;
+  color: var(--color-ink-soft);
+  opacity: 0.7;
+}
+
+.od-tl-upload-btn {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-accent);
+  background: none;
+  border: 1px solid var(--color-accent);
+  border-radius: 6px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+/* upload form */
+.od-tl-upload-form {
+  background: var(--color-bg);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.od-tl-upload-form__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink);
+  margin-bottom: 8px;
+}
+
+.od-tl-file-label {
+  display: inline-block;
+  font-size: 12px;
+  color: var(--color-accent);
+  background: none;
+  border: 1px solid var(--color-accent);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.od-tl-file-input {
+  display: none;
+}
+
+.od-tl-note-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  color: var(--color-ink);
+  font-size: 13px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  font-family: var(--font-body);
+}
+
+.od-tl-note-input::placeholder {
+  color: var(--color-ink-soft);
+  opacity: 0.6;
+}
+
+.od-tl-submit-btn {
+  width: 100%;
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 0;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.od-tl-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* arrived badge */
+.od-tl-arrived-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--color-accent);
+  color: #fff;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.od-tl-arrived-badge--anim {
+  animation: od-tl-pop 0.6s cubic-bezier(.36,1.4,.64,1) both;
+}
+
+@keyframes od-tl-pop {
+  from { transform: scale(0.85); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+.od-tl-forest-btn {
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}

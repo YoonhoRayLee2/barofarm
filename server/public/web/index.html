@@ -91,7 +91,8 @@
         document.body.style.height = h + 'px';
 
         // 데스크탑(≥1024px): 앱을 모바일 폰 비율 카드로 띄우고 좌측은 브랜드 패널.
-        if (w >= 1024) {
+        var isDesktop = w >= 1024;
+        if (isDesktop) {
           // iPhone 14 Pro Max 비율(430 x 932 ≈ 9:19.4)로 길쭉한 폰 카드
           var frameH = Math.min(h - 64, 900);
           var frameW = Math.round(frameH * 430 / 932);
@@ -103,6 +104,24 @@
           root.style.height = h + 'px';
           root.style.width  = Math.min(w, Math.round(h * 16 / 9)) + 'px';
         }
+
+        // 데스크탑에서 풀스크린 오버레이(바텀시트·모달)를 폰 카드 영역에 가두기 위해
+        // #app-root 실제 위치/크기를 CSS 변수로 노출. (모바일에서는 뷰포트 전체로 리셋)
+        var docEl = document.documentElement;
+        if (!isDesktop) {
+          docEl.style.removeProperty('--frame-top');
+          docEl.style.removeProperty('--frame-left');
+          docEl.style.removeProperty('--frame-width');
+          docEl.style.removeProperty('--frame-height');
+          return;
+        }
+        requestAnimationFrame(function () {
+          var r = root.getBoundingClientRect();
+          docEl.style.setProperty('--frame-top',    r.top + 'px');
+          docEl.style.setProperty('--frame-left',   r.left + 'px');
+          docEl.style.setProperty('--frame-width',  r.width + 'px');
+          docEl.style.setProperty('--frame-height', r.height + 'px');
+        });
       }
 
       lockFrame();

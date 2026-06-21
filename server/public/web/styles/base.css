@@ -235,6 +235,45 @@ ol {
     max-height: 100%;
   }
 
+  /* 풀스크린 오버레이(바텀시트·모달·다이얼로그)를 폰 카드(#app-root) 영역에 가둠.
+     기본은 position:fixed; inset:0 이라 PC에선 카드 밖으로 삐져나간다.
+     index.html lockFrame()이 노출한 --frame-* 변수로 카드 rect에 맞춘다. */
+  .tier-help-overlay,
+  .pi-overlay,
+  .llm-overlay,
+  .bank-sheet-overlay,
+  .fab-overlay,
+  .confirm-dialog-backdrop,
+  .pes-backdrop,
+  .wnm-backdrop,
+  .ch-create-overlay,
+  .da-form-overlay,
+  .hanaro-search-overlay,
+  .product-sheet-backdrop,
+  .auction-modal-backdrop,
+  .ls-viewer-modal-backdrop,
+  .od-help-overlay,
+  .pd-confirm-overlay,
+  .lb-help-modal {
+    inset: var(--frame-top, 0) auto auto var(--frame-left, 0) !important;
+    width: var(--frame-width, 100vw) !important;
+    height: var(--frame-height, 100dvh) !important;
+    border-radius: 30px;
+    overflow: hidden;
+  }
+
+  /* 시트 너비를 100vw 기준으로 잡는 컴포넌트들은 좁아진 카드 폭(부모 100%)에 맞춤 */
+  .tier-help-sheet,
+  .pi-sheet,
+  .pd-confirm-sheet,
+  .da-form-sheet,
+  .pes-sheet,
+  .fab-sheet,
+  .bank-sheet {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
   #desktop-brand {
     display: flex;
     flex-direction: column;

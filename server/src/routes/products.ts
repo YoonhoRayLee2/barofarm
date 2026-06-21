@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import pool from '../db/mysql';
 import { getBuyerTier, getSellerTier, calcBuyerDiscount, calcSellerFee } from '../services/tier';
+import { createNotificationsBulk } from '../services/notifications';
 
 const UPLOADS_DIR = path.join(__dirname, '..', '..', 'public', 'uploads', 'products');
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -46,6 +47,9 @@ interface ProductRow {
   status: string;
   created_at: string;
   seller_nickname?: string | null;
+  is_seasonal_bundle?: number;
+  subscriber_price?: number | null;
+  season_label?: string | null;
 }
 
 interface ProductImageRow {
@@ -60,21 +64,24 @@ interface InsertResult {
   affectedRows: number;
 }
 
-function formatProduct(row: ProductRow, extraImages: string[] = []) {
+function formatProduct(row: ProductRow, extraImages: string[] = [], viewerIsSubscriber = false) {
   return {
-    id:          row.id,
-    sellerId:    row.seller_id,
-    sellerName:  row.seller_nickname ?? null,
-    name:        row.name,
-    description: row.description,
-    price:       row.price,
-    category:    row.category,
-    imageUrl:    row.image_url,
-    features:    row.features,
-    attributes:  row.attributes,
-    status:      row.status,
-    createdAt:   row.created_at,
-    images:      extraImages,
+    id:                row.id,
+    sellerId:          row.seller_id,
+    sellerName:        row.seller_nickname ?? null,
+    name:              row.name,
+    description:       row.description,
+    price:             row.price,
+    category:          row.category,
+    imageUrl:          row.image_url,
+    features:          row.features,
+    attributes:        row.attributes,
+    status:            row.status,
+    createdAt:         row.created_at,
+    images:            extraImages,
+    isSeasonalBundle:  (row.is_seasonal_bundle ?? 0) === 1,
+    subscriberPrice:   viewerIsSubscriber ? (row.subscriber_price ?? null) : null,
+    seasonLabel:       row.season_label ?? null,
   };
 }
 
@@ -82,7 +89,7 @@ const router = Router();
 
 // POST /api/products — 상품 등록
 router.post('/', uploadFields, async (req: Request, res: Response) => {
-  const { sellerId, name, description, price, category, features, attributes } = req.body;
+  const { sellerId, name, description, price, category, features, attributes, isSeasonalBundle, subscriberPrice, seasonLabel } = req.body;
   const files = (req.files ?? {}) as UploadedFiles;
 
   if (!sellerId || !name || !price) {
@@ -91,11 +98,15 @@ router.post('/', uploadFields, async (req: Request, res: Response) => {
     return;
   }
 
+  const isBundleVal = isSeasonalBundle ? 1 : 0;
+  const subPriceVal = subscriberPrice != null ? Number(subscriberPrice) : null;
+  const seasonLabelVal = seasonLabel ?? null;
+
   try {
     const [result] = await pool.execute(
-      `INSERT INTO products (seller_id, name, description, price, category, features, attributes)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [sellerId, name, description ?? null, Number(price), category ?? null, features ?? null, attributes ?? null],
+      `INSERT INTO products (seller_id, name, description, price, category, features, attributes, is_seasonal_bundle, subscriber_price, season_label)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [sellerId, name, description ?? null, Number(price), category ?? null, features ?? null, attributes ?? null, isBundleVal, subPriceVal, seasonLabelVal],
     ) as [InsertResult, unknown];
 
     const productId: number = result.insertId;
@@ -134,6 +145,23 @@ router.post('/', uploadFields, async (req: Request, res: Response) => {
       'SELECT image_url FROM product_images WHERE product_id = ? ORDER BY sort_order',
       [productId],
     ) as [ProductImageRow[], unknown];
+
+    // 제철 꾸러미 등록 시 단골 fan-out 알림
+    if (isBundleVal === 1) {
+      const [subRows]: any = await pool.execute(
+        'SELECT subscriber_id FROM subscriptions WHERE seller_id = ? AND status = \'active\'',
+        [sellerId],
+      );
+      const subscriberIds: number[] = subRows.map((r: any) => r.subscriber_id);
+      if (subscriberIds.length > 0) {
+        createNotificationsBulk(subscriberIds, {
+          type:  'seasonal_bundle',
+          title: '단골 농부의 제철 꾸러미가 열렸어요',
+          body:  seasonLabelVal || name,
+          link:  `/app/product-detail/${productId}`,
+        }).catch((err: unknown) => console.error('[products] fan-out notification error:', err));
+      }
+    }
 
     res.status(201).json(formatProduct(productRows[0], imgRows.map(r => r.image_url)));
   } catch (err) {
@@ -189,6 +217,7 @@ router.get('/', async (req: Request, res: Response) => {
 
 // GET /api/products/:id — 상품 상세
 router.get('/:id', async (req: Request, res: Response) => {
+  const viewerId = Number(req.query.viewerId as string) || 0;
   try {
     const [productRows] = await pool.execute(
       'SELECT * FROM products WHERE id = ?',
@@ -201,7 +230,17 @@ router.get('/:id', async (req: Request, res: Response) => {
       'SELECT image_url FROM product_images WHERE product_id = ? ORDER BY sort_order',
       [product.id],
     ) as [ProductImageRow[], unknown];
-    res.json(formatProduct(product, imgRows.map(r => r.image_url)));
+
+    let viewerIsSubscriber = false;
+    if (viewerId && product.is_seasonal_bundle) {
+      const [subCheck]: any = await pool.execute(
+        'SELECT 1 FROM subscriptions WHERE subscriber_id = ? AND seller_id = ? AND status = \'active\' LIMIT 1',
+        [viewerId, product.seller_id],
+      );
+      viewerIsSubscriber = subCheck.length > 0;
+    }
+
+    res.json(formatProduct(product, imgRows.map(r => r.image_url), viewerIsSubscriber));
   } catch (err) {
     console.error('[products] GET/:id error:', err);
     res.status(500).json({ error: '상품 조회에 실패했습니다.' });
