@@ -228,7 +228,7 @@ ol {
 
   /* 내부 페이지 루트가 100dvh(뷰포트 전체)를 쓰면 카드보다 길어져 탭바가 잘림.
      데스크탑에서는 #app-root 카드 높이(100%)에 맞춘다. */
-  #app-root > * {
+  #app-root > *:not(.fab-overlay):not(.fab-sheet) {
     height: 100% !important;
     max-height: 100%;
   }
