@@ -568,10 +568,16 @@ export default async function load() {
     const hasAnyLive = liveLives.length > 0;
     catCircles.forEach((btn) => {
       const cat = btn.dataset.cat;
-      const hasLive = cat === '전체' ? hasAnyLive : liveLives.some((l) => l.category === cat);
+      const count = cat === '전체'
+        ? liveLives.length
+        : liveLives.filter((l) => l.category === cat).length;
+      const hasLive = count > 0;
       btn.classList.toggle('has-live', hasLive);
       const badge = btn.querySelector('.cat-circle__live-badge');
-      if (badge) badge.style.display = hasLive ? 'flex' : 'none';
+      if (badge) {
+        badge.style.display = hasLive ? 'flex' : 'none';
+        badge.textContent = hasLive ? `LIVE ${count}` : 'LIVE';
+      }
     });
   }
 

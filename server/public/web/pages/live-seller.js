@@ -226,6 +226,19 @@ export default async function load(params) {
           try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             videoEl.srcObject = stream;
+            // 마이크 토글 (getUserMedia 폴백 경로)
+            const micBtnFb = document.getElementById('ls-mic-btn');
+            if (micBtnFb) {
+              micBtnFb.addEventListener('click', () => {
+                const tracks = stream.getAudioTracks();
+                if (!tracks.length) return;
+                const nextOn = !tracks[0].enabled;
+                tracks.forEach((t) => { t.enabled = nextOn; });
+                micBtnFb.textContent = nextOn ? '🎙' : '🔇';
+                micBtnFb.classList.toggle('is-muted', !nextOn);
+                micBtnFb.title = nextOn ? '마이크' : '마이크 음소거됨';
+              });
+            }
           } catch (mediaErr) {
             showToast('카메라/마이크 접근 실패: ' + (mediaErr.message || mediaErr), 'error');
           }
@@ -239,45 +252,36 @@ export default async function load(params) {
         const camControls = document.getElementById('ls-cam-controls');
         if (camControls) camControls.style.display = '';
 
-        let _zoomRange = livekitMod.getZoomRange ? livekitMod.getZoomRange() : null;
-        let _zoomCurrent = 1;
-
-        const updateZoomLabel = () => {
-          const lbl = document.getElementById('ls-zoom-label');
-          if (lbl) lbl.textContent = _zoomCurrent.toFixed(1) + '×';
-        };
-        updateZoomLabel();
-
-        document.getElementById('ls-zoom-in-btn')?.addEventListener('click', async () => {
-          const step = 0.5;
-          const max = _zoomRange?.max ?? 5;
-          _zoomCurrent = Math.min(max, _zoomCurrent + step);
-          updateZoomLabel();
-          if (livekitMod.setZoom) await livekitMod.setZoom(_zoomCurrent).catch(() => {});
-        });
-
-        document.getElementById('ls-zoom-out-btn')?.addEventListener('click', async () => {
-          const step = 0.5;
-          const min = _zoomRange?.min ?? 1;
-          _zoomCurrent = Math.max(min, _zoomCurrent - step);
-          updateZoomLabel();
-          if (livekitMod.setZoom) await livekitMod.setZoom(_zoomCurrent).catch(() => {});
-        });
-
         const flipBtn = document.getElementById('ls-flip-btn');
         if (flipBtn && livekitMod.switchCamera) {
           flipBtn.addEventListener('click', async () => {
             flipBtn.disabled = true;
             try {
               await livekitMod.switchCamera(room);
-              _zoomCurrent = 1;
-              _zoomRange = livekitMod.getZoomRange ? livekitMod.getZoomRange() : null;
-              updateZoomLabel();
               if (livekitMod.attachLocalVideo) livekitMod.attachLocalVideo(room, videoEl);
             } catch (err) {
               showToast('카메라 전환 실패: ' + (err.message || String(err)), 'error');
             } finally {
               flipBtn.disabled = false;
+            }
+          });
+        }
+
+        // 마이크 토글 (LiveKit 경로)
+        const micBtn = document.getElementById('ls-mic-btn');
+        if (micBtn && livekitMod.setMicrophoneEnabled) {
+          let micOn = true;
+          micBtn.addEventListener('click', async () => {
+            micBtn.disabled = true;
+            try {
+              micOn = await livekitMod.setMicrophoneEnabled(room, !micOn);
+              micBtn.textContent = micOn ? '🎙' : '🔇';
+              micBtn.classList.toggle('is-muted', !micOn);
+              micBtn.title = micOn ? '마이크' : '마이크 음소거됨';
+            } catch (err) {
+              showToast('마이크 전환 실패: ' + (err.message || String(err)), 'error');
+            } finally {
+              micBtn.disabled = false;
             }
           });
         }
@@ -1032,7 +1036,6 @@ export default async function load(params) {
   });
 
   const chatInput = page.querySelector('#ls-chat-input');
-  const sendBtn = page.querySelector('#ls-send-btn');
 
   function sendChatMsg() {
     const msg = chatInput.value.trim();
@@ -1041,7 +1044,6 @@ export default async function load(params) {
     chatInput.value = '';
   }
 
-  if (sendBtn) sendBtn.addEventListener('click', sendChatMsg);
   chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) sendChatMsg(); });
 
   page.querySelector('#ls-end-btn').addEventListener('click', async () => {

@@ -283,6 +283,20 @@ export function classifyConnectError(err) {
  * @param {import('livekit-client').Room} room
  * @returns {Promise<{ facingMode: 'user' | 'environment' }>}
  */
+/**
+ * 마이크 송출 on/off 토글.
+ * @param {import('livekit-client').Room} room
+ * @param {boolean} enabled  true=송출, false=음소거
+ * @returns {Promise<boolean>} 적용된 enabled 상태
+ */
+export async function setMicrophoneEnabled(room, enabled) {
+  if (!room?.localParticipant) {
+    throw new Error('[livekit] setMicrophoneEnabled: localParticipant 없음');
+  }
+  await room.localParticipant.setMicrophoneEnabled(enabled);
+  return enabled;
+}
+
 export async function switchCamera(room) {
   const LK = getLK();
 

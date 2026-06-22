@@ -1355,6 +1355,21 @@ export default async function load(params) {
   const shareBtnBottom = page.querySelector('#lb-share-btn2');
   if (shareBtnBottom) shareBtnBottom.addEventListener('click', doShare);
 
+  // Heart (like) button — 이모지 바와 동일하게 ❤️ 리액션 전송 + 로컬 피드백
+  const heartBtn = page.querySelector('#lb-heart-btn');
+  if (heartBtn) {
+    heartBtn.addEventListener('click', () => {
+      if (!socket) return;
+      Sock.sendEmojiReact(socket, {
+        liveId,
+        emoji: '❤️',
+        userId: String(user.id),
+        userName: user.nickname || user.username || '익명',
+      });
+      spawnFloatingEmoji('❤️');
+    });
+  }
+
   // Products button
   page.querySelector('#lb-products-btn').addEventListener('click', () => openProductSheet('history'));
 
