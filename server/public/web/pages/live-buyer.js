@@ -98,8 +98,8 @@ export default async function load(params) {
     <div class="lb-host">
       <div class="lb-avatar" id="lb-seller-avatar"></div>
       <div class="lb-host-info">
-        <div class="lb-host-sub" id="lb-seller-sub">${liveInfo?.title || '라이브 방송 중'}</div>
         <div class="lb-host-name" id="lb-seller-name">판매자</div>
+        <div class="lb-host-sub" id="lb-seller-sub">${liveInfo?.title || '라이브 방송 중'}</div>
       </div>
     </div>
     <div class="lb-meta">
@@ -721,19 +721,29 @@ export default async function load(params) {
   let _sellerId = null; // 채팅 아이콘 표시용
   async function loadSellerInfo() {
     try {
-      const live = await api.getLive(liveId);
-      const subEl0 = page.querySelector('#lb-seller-sub');
-      if (subEl0 && live.title) subEl0.textContent = live.title;
+      const live = liveInfo || await api.getLive(liveId);
       const sellerId = live.sellerId || live.seller_id;
+      const nameEl = page.querySelector('#lb-seller-name');
+      const subEl = page.querySelector('#lb-seller-sub');
+      const avatarEl = page.querySelector('#lb-seller-avatar');
+
+      // 방송 제목 + 예고 일시
+      if (subEl) {
+        let subText = live.title || '';
+        if (live.status === 'upcoming' && live.scheduledAt) {
+          const d = new Date(live.scheduledAt);
+          const mo = d.getMonth() + 1, day = d.getDate();
+          const hh = String(d.getHours()).padStart(2, '0'), mm = String(d.getMinutes()).padStart(2, '0');
+          subText = `${subText ? subText + ' · ' : ''}${mo}/${day} ${hh}:${mm} 예정`;
+        }
+        if (subText) subEl.textContent = subText;
+      }
+
       if (!sellerId) return;
       _sellerId = String(sellerId);
       const sellerUser = await api.getUser(sellerId);
-      const nameEl = page.querySelector('#lb-seller-name');
-      const avatarEl = page.querySelector('#lb-seller-avatar');
-      const subEl = page.querySelector('#lb-seller-sub');
       const displayName = sellerUser.nickname || sellerUser.displayName || sellerUser.username || '판매자';
       if (nameEl) nameEl.textContent = displayName;
-      if (subEl) subEl.textContent = live.title || '라이브 방송 중';
       if (avatarEl) {
         if (sellerUser.avatarUrl) {
           avatarEl.innerHTML = `<img src="${escapeHtml(sellerUser.avatarUrl)}" alt="${escapeHtml(displayName)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
@@ -741,12 +751,11 @@ export default async function load(params) {
           avatarEl.innerHTML = personIconSVG(36);
         }
       }
-      // 팔로우 버튼 — 본인 라이브가 아닐 때만
       if (_sellerId !== String(user.id)) {
         attachFollowButton(_sellerId);
       }
     } catch (_e) {
-      // graceful fallback — keep defaults
+      // graceful fallback
     }
   }
   loadSellerInfo();
