@@ -513,12 +513,14 @@
 }
 .product-sheet__header {
   display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
 }
 .product-sheet__title { font-size: 16px; font-weight: 800; color: var(--color-ink); }
 .product-sheet__close-x { background: none; border: none; color: var(--color-ink-mute); font-size: 18px; cursor: pointer; }
 
 .product-sheet__tabs {
   display: flex; gap: 4px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  flex-shrink: 0;
 }
 .product-sheet__tab {
   flex-shrink: 0;
@@ -537,16 +539,18 @@
   font-size: 11px; font-weight: 800;
 }
 .product-sheet__content {
-  flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
-  min-height: 80px;
+  flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+  min-height: 0;
 }
 .product-sheet__notice {
   font-size: 11px; color: var(--color-ink-mute); line-height: 1.5; text-align: center;
+  flex-shrink: 0;
 }
 .product-sheet__close-btn {
   width: 100%; height: 46px; border-radius: 10px;
   background: var(--color-surface-alt); border: 1px solid var(--color-line);
   color: var(--color-ink-soft); font-weight: 700; font-size: 14px; cursor: pointer;
+  flex-shrink: 0;
 }
 
 .ps-empty { font-size: 13px; color: var(--color-ink-mute); text-align: center; padding: 24px 0; }
