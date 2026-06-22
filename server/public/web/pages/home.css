@@ -555,6 +555,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  position: relative;
 }
 .home-gd-card__thumb img {
   width: 100%;

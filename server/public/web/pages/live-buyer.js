@@ -98,12 +98,15 @@ export default async function load(params) {
     <div class="lb-host">
       <div class="lb-avatar" id="lb-seller-avatar"></div>
       <div class="lb-host-info">
-        <div class="lb-host-sub" id="lb-seller-sub">라이브 방송 중</div>
+        <div class="lb-host-sub" id="lb-seller-sub">${liveInfo?.title || '라이브 방송 중'}</div>
         <div class="lb-host-name" id="lb-seller-name">판매자</div>
       </div>
     </div>
     <div class="lb-meta">
-      <div class="lb-live-badge"><span class="dot"></span>LIVE</div>
+      ${liveInfo?.status === 'upcoming'
+        ? `<div class="lb-live-badge lb-upcoming-badge">📅 예고</div>`
+        : `<div class="lb-live-badge"><span class="dot"></span>LIVE</div>`
+      }
       <button class="lb-glass-btn" id="lb-viewers-btn" aria-label="시청자 목록" title="시청자">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
@@ -719,6 +722,8 @@ export default async function load(params) {
   async function loadSellerInfo() {
     try {
       const live = await api.getLive(liveId);
+      const subEl0 = page.querySelector('#lb-seller-sub');
+      if (subEl0 && live.title) subEl0.textContent = live.title;
       const sellerId = live.sellerId || live.seller_id;
       if (!sellerId) return;
       _sellerId = String(sellerId);

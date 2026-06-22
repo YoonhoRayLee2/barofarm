@@ -83,6 +83,11 @@
   animation: dot-pulse 1.4s ease-in-out infinite;
 }
 @keyframes dot-pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+.lb-upcoming-badge {
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(8px);
+  font-size: 11px;
+}
 .lb-glass-btn {
   width: 32px; height: 32px; border-radius: 50%;
   border: 1px solid rgba(237,241,226,0.18);

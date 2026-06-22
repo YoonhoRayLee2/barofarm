@@ -64,7 +64,7 @@ export function createLiveCard(live, opts = {}) {
 
   const thumbContent = live.thumbnailUrl
     ? `<img class="live-card__thumb-img" src="${escapeHtml(live.thumbnailUrl)}" alt="" loading="lazy" />`
-    : `<div class="live-card__thumb-fallback" style="position:absolute;inset:0;line-height:0">${thumbFallback(live.category || '기타')}</div>`;
+    : `<div class="live-card__thumb-fallback" style="width:100%;height:100%;line-height:0;flex-shrink:0">${thumbFallback(live.category || '기타')}</div>`;
 
   card.innerHTML = `
     <div class="live-card__thumb">
