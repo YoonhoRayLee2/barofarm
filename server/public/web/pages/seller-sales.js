@@ -10,6 +10,7 @@ import { navigate, replace } from '/app/scripts/router.js';
 import { personIconSVG } from '/app/scripts/person-icon.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
 import { formatPrice, formatDateShort } from '/app/scripts/format.js';
+import { catIcon } from '/app/components/brand-assets.js';
 
 const _cssId = 'page-css-seller-sales';
 if (!document.getElementById(_cssId)) {
@@ -249,7 +250,7 @@ export default async function load() {
             <div class="sg-item__thumb">
               ${item.imageUrl
                 ? `<img src="${escapeAttr(item.imageUrl)}" alt="" loading="lazy">`
-                : `<span class="sg-item__thumb-fallback">🌿</span>`}
+                : `<span class="sg-item__thumb-fallback" style="display:flex;align-items:center;justify-content:center;background:#EAF2DC">${catIcon(item.category || '채소', 26)}</span>`}
             </div>
             <div class="sg-item__body">
               <span class="sg-item__name">${escapeHtml(item.productName || '상품')}</span>

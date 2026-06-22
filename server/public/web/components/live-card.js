@@ -5,6 +5,8 @@
  * @module components/live-card
  */
 
+import { thumbFallback } from '/app/components/brand-assets.js';
+
 // Inject CSS once
 const _cssId = 'component-css-live-card';
 if (!document.getElementById(_cssId)) {
@@ -62,7 +64,7 @@ export function createLiveCard(live, opts = {}) {
 
   const thumbContent = live.thumbnailUrl
     ? `<img class="live-card__thumb-img" src="${escapeHtml(live.thumbnailUrl)}" alt="" loading="lazy" />`
-    : `<div class="live-card__thumb-placeholder"><span class="live-card__thumb-label">photo</span></div>`;
+    : `<div class="live-card__thumb-fallback" style="position:absolute;inset:0;line-height:0">${thumbFallback(live.category || '기타')}</div>`;
 
   card.innerHTML = `
     <div class="live-card__thumb">

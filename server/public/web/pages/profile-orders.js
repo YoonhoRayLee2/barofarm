@@ -15,6 +15,7 @@ import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
 import { formatPrice, formatYmd } from '/app/scripts/format.js';
+import { catIcon } from '/app/components/brand-assets.js';
 
 const _cssId = 'page-css-profile-orders';
 if (!document.getElementById(_cssId)) {
@@ -256,7 +257,7 @@ export default async function load() {
           <div class="orders-item__thumb">
             ${imgSrc
               ? `<img src="${escapeAttr(imgSrc)}" alt="${escapeHtml(order.productName)}" loading="lazy">`
-              : `<span class="orders-item__thumb-fallback">🌿</span>`}
+              : `<span class="orders-item__thumb-fallback" style="display:flex;align-items:center;justify-content:center;background:#EAF2DC">${catIcon(order.category || '채소', 26)}</span>`}
           </div>
           <div class="orders-item__body">
             <div class="orders-item__name">${escapeHtml(order.productName || '상품')}</div>

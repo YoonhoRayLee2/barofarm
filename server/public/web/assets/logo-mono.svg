@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="212" height="48" viewBox="0 0 212 48" fill="none" role="img" aria-label="바로팜">
+  <rect width="48" height="48" rx="14" fill="#1C1208"></rect>
+  <g transform="translate(9.1 9.1) scale(0.62)">
+    <path d="M24 43 V26" stroke="#FFFFFF" stroke-width="2.8" stroke-linecap="round" fill="none"></path>
+    <path d="M24 31 C22 22.5 15.5 18 8 18 C8 26.5 14.5 32 24 31 Z" fill="#FFFFFF"></path>
+    <path d="M24.5 28 C26.5 18 33.5 12.5 42 12.5 C42 22.5 34.5 29 24.5 28 Z" fill="#FFFFFF"></path>
+    <circle cx="24" cy="24.5" r="2.4" fill="#FFFFFF"></circle>
+  </g>
+  <text x="62" y="33" font-family="Pretendard, -apple-system, system-ui, sans-serif" font-weight="900" font-size="29" letter-spacing="-1.2" fill="#1C1208">NH바로팜</text>
+</svg>

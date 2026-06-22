@@ -12,6 +12,7 @@
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace, setCleanup } from '/app/scripts/router.js';
 import * as Sock from '/app/scripts/socket.js';
+import { thumbFallback } from '/app/components/brand-assets.js';
 import { showToast } from '/app/components/toast.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
 
@@ -180,7 +181,7 @@ export default async function load() {
 
     const thumbHtml = deal.imageUrl
       ? `<img src="${escapeAttr(deal.imageUrl)}" alt="" loading="lazy">`
-      : `<span class="gdl-card__emoji">${emoji}</span>`;
+      : `<span class="gdl-card__fallback" style="position:absolute;inset:0;line-height:0">${thumbFallback(deal.category || '기타')}</span>`;
 
     card.innerHTML = `
       <div class="gdl-card__thumb">

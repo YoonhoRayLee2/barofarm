@@ -14,6 +14,7 @@ import { showConfirmDialog } from '/app/components/confirm-dialog.js';
 import { personIconSVG } from '/app/scripts/person-icon.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
 import { formatPriceRaw } from '/app/scripts/format.js';
+import { thumbFallback } from '/app/components/brand-assets.js';
 
 /* ── CSS injection ─────────────────────────────────────────── */
 const _cssId = 'page-css-product-detail';
@@ -163,7 +164,7 @@ export default async function load(params = {}) {
   function renderMainImage() {
     if (!allImages.length) {
       galleryMain.innerHTML =
-        '<div class="pd-gallery__main-placeholder" aria-hidden="true">🛒</div>';
+        `<div class="pd-gallery__main-placeholder" aria-hidden="true" style="width:100%;height:100%;line-height:0;overflow:hidden">${thumbFallback(product.category || '기타')}</div>`;
       return;
     }
     const url = allImages[currentImgIndex];

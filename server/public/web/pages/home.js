@@ -13,6 +13,7 @@ import { createLiveCard } from '/app/components/live-card.js';
 import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 import { showToast } from '/app/components/toast.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
+import { thumbFallback } from '/app/components/brand-assets.js';
 
 // Inject CSS once
 const _cssId = 'page-css-home';
@@ -483,7 +484,7 @@ export default async function load() {
 
       const thumbHtml = deal.imageUrl
         ? `<img src="${escapeAttr(deal.imageUrl)}" alt="" loading="lazy">`
-        : `<span class="home-gd-card__emoji">${emoji}</span>`;
+        : `<span class="home-gd-card__fallback" style="position:absolute;inset:0;line-height:0">${thumbFallback(deal.category || '기타')}</span>`;
 
       card.innerHTML = `
         <div class="home-gd-card__thumb">${thumbHtml}</div>

@@ -21,6 +21,7 @@ import { personIconSVG } from '/app/scripts/person-icon.js';
 import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 import { showToast } from '/app/components/toast.js';
 import { createLiveCard } from '/app/components/live-card.js';
+import { avatar as bfAvatar, avatarHue } from '/app/components/brand-assets.js';
 
 /* ── CSS injection ─────────────────────────────────────────── */
 const _cssId = 'page-css-profile';
@@ -111,7 +112,9 @@ function buildTopbar(nickname) {
 
   const avatar = document.createElement('div');
   avatar.className = 'profile-topbar__avatar';
-  avatar.innerHTML = svgPersonSilhouette(28);
+  avatar.style.background = avatarHue(nickname || '바로팜');
+  avatar.style.overflow = 'hidden';
+  avatar.innerHTML = `<span style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Pretendard',sans-serif;font-weight:800;font-size:14px">${String(nickname || '바').trim().charAt(0).toUpperCase()}</span>`;
 
   const name = document.createElement('span');
   name.className = 'profile-topbar__name';
@@ -151,7 +154,9 @@ function buildHero(user, stats) {
   if (user && user.avatarUrl) {
     avatarWrap.innerHTML = `<img src="${esc(user.avatarUrl)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
   } else {
-    avatarWrap.innerHTML = svgPersonSilhouette(52);
+    const nm = (user && (user.nickname || user.username || user.name)) || '바로팜';
+    avatarWrap.style.background = avatarHue(nm);
+    avatarWrap.innerHTML = `<span style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Pretendard',sans-serif;font-weight:800;font-size:30px">${esc(String(nm).trim().charAt(0).toUpperCase())}</span>`;
   }
   hero.appendChild(avatarWrap);
 

@@ -122,13 +122,15 @@ select {
   padding: var(--space-3);
   width: 100%;
   outline: none;
-  transition: border-color var(--dur-fast) var(--ease-in-out);
+  transition: border-color var(--dur-fast) var(--ease-in-out),
+              box-shadow var(--dur-fast) var(--ease-in-out);
 }
 
 input:focus,
 textarea:focus,
 select:focus {
   border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-tint);
 }
 
 input:focus-visible,

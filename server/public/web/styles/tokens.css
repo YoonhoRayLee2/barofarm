@@ -45,7 +45,7 @@
   --cat-기타: #607D8B;
 
   /* Typography Families */
-  --font-display: 'Gowun Dodum', 'Pretendard', sans-serif;
+  --font-display: 'Pretendard', -apple-system, sans-serif;
   --font-body:    'Pretendard', -apple-system, sans-serif;
   --font-mono:    ui-monospace, 'JetBrains Mono', monospace;
 
@@ -174,7 +174,7 @@
   --cat-기타: #607D8B;
 
   /* Typography Families */
-  --font-display: 'Gowun Dodum', 'Pretendard', sans-serif;
+  --font-display: 'Pretendard', -apple-system, sans-serif;
   --font-body:    'Pretendard', -apple-system, sans-serif;
   --font-mono:    ui-monospace, 'JetBrains Mono', monospace;
 

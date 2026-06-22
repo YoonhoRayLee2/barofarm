@@ -38,11 +38,17 @@ export default async function load() {
 
   page.innerHTML = `
     <div class="login-card">
-      <div class="login-logo-area">
-        <div class="login-logo-icon">
-          <img src="/app/assets/app-logo.png" alt="NH바로팜" class="login-logo-img" />
+      <div class="login-brand">
+        <div class="login-mark">
+          <svg viewBox="0 0 48 48" fill="none" aria-hidden="true">
+            <path d="M24 43 V26" stroke="rgba(255,255,255,.92)" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M24 31 C22 22.5 15.5 18 8 18 C8 26.5 14.5 32 24 31 Z" fill="#fff"/>
+            <path d="M24.5 28 C26.5 18 33.5 12.5 42 12.5 C42 22.5 34.5 29 24.5 28 Z" fill="#fff"/>
+            <circle cx="24" cy="24.5" r="2.4" fill="rgba(255,255,255,.92)"/>
+          </svg>
         </div>
-        <p class="login-subtitle">산지직송 라이브 경매</p>
+        <h1 class="login-wordmark"><span class="nh">NH</span>바로팜</h1>
+        <p class="login-tagline">산지직송 라이브 경매</p>
       </div>
 
       <form class="login-form" id="login-form" novalidate>
