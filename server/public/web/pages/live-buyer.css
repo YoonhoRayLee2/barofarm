@@ -588,3 +588,46 @@
 .ps-info-title { font-size: 15px; font-weight: 800; color: var(--color-ink); }
 .ps-info-seller { font-size: 13px; color: var(--color-ink-soft); }
 .ps-info-notice { font-size: 12px; color: var(--color-ink-mute); line-height: 1.6; margin-top: 4px; }
+
+/* ── 종료된 방송 안내 ───────────────────────────────────── */
+.live-ended-page {
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg, #0e1a12);
+  padding: 24px;
+}
+.live-ended-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  max-width: 320px;
+}
+.live-ended-icon { font-size: 56px; margin-bottom: 6px; }
+.live-ended-title {
+  font-family: var(--font-display, sans-serif);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-ink, #fff);
+}
+.live-ended-desc {
+  font-size: 14px;
+  color: var(--color-ink-soft, rgba(255,255,255,0.6));
+  line-height: 1.5;
+}
+.live-ended-btn {
+  margin-top: 16px;
+  padding: 13px 28px;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--grad-accent, #2d8a3e);
+  border: none;
+  color: var(--color-bg, #fff);
+  font-family: var(--font-body, sans-serif);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.live-ended-btn:active { opacity: 0.85; }
