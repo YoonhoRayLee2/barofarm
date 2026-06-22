@@ -131,7 +131,7 @@ export default async function load(params) {
 
     const heroHtml = d.imageUrl
       ? `<img class="gdd-hero__img" src="${escapeAttr(d.imageUrl)}" alt="">`
-      : `<div class="gdd-hero__fallback" style="position:absolute;inset:0;line-height:0">${thumbFallback(d.category || '기타')}</div>`;
+      : `<div class="gdd-hero__fallback" style="width:100%;height:100%;line-height:0;flex-shrink:0">${thumbFallback(d.category || '기타')}</div>`;
 
     const sellerAvatarHtml = d.sellerAvatar
       ? `<img class="gdd-seller__avatar-img" src="${escapeAttr(d.sellerAvatar)}" alt="">`

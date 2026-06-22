@@ -181,7 +181,7 @@ export default async function load() {
 
     const thumbHtml = deal.imageUrl
       ? `<img src="${escapeAttr(deal.imageUrl)}" alt="" loading="lazy">`
-      : `<span class="gdl-card__fallback" style="position:absolute;inset:0;line-height:0">${thumbFallback(deal.category || '기타')}</span>`;
+      : `<span class="gdl-card__fallback" style="width:100%;height:100%;line-height:0;flex-shrink:0;display:block">${thumbFallback(deal.category || '기타')}</span>`;
 
     card.innerHTML = `
       <div class="gdl-card__thumb">
