@@ -389,13 +389,23 @@ router.post('/:id/purchase', async (req: Request, res: Response) => {
     if (product.seller_id === buyerId) { res.status(400).json({ error: 'cannot buy own product' }); return; }
     if (product.stock < quantity) { res.status(409).json({ error: 'insufficient stock' }); return; }
 
-    // 2. 구매자 배송지 확인 (delivery_addresses 테이블 — 기본 배송지 or 첫 번째)
+    // 2. 구매자 배송지 확인
+    //    - 일반배송: delivery_addresses 테이블에 주소가 있으면 OK
+    //    - 하나로마트 반값택배: users.delivery_option='hanaro' + 마트 주소가 설정돼 있으면 OK
     const [addrRows] = await pool.execute(
       'SELECT address, detail FROM delivery_addresses WHERE user_id = ? ORDER BY is_default DESC, id ASC LIMIT 1',
       [buyerId],
     ) as [unknown[], unknown];
     const addrRow = (addrRows as Array<{ address: string; detail: string | null }>)[0];
-    if (!addrRow) {
+
+    const [optRows] = await pool.execute(
+      'SELECT delivery_option, hanaro_mart_addr FROM users WHERE id = ?',
+      [buyerId],
+    ) as [unknown[], unknown];
+    const opt = (optRows as Array<{ delivery_option: string | null; hanaro_mart_addr: string | null }>)[0];
+    const hasHanaro = opt?.delivery_option === 'hanaro' && !!opt?.hanaro_mart_addr;
+
+    if (!addrRow && !hasHanaro) {
       res.status(400).json({ error: 'delivery address required' });
       return;
     }

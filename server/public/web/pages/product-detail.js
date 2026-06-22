@@ -298,7 +298,7 @@ export default async function load(params = {}) {
       if (selectedQty < maxStock) { selectedQty++; qtyValEl.textContent = selectedQty; }
     });
     page.querySelector('#pd-buy-btn').addEventListener('click', async () => {
-      // 배송지 조회: delivery-addresses API에서 기본 배송지 가져오기
+      // 배송지 조회: 일반배송(delivery-addresses) 또는 하나로마트 반값택배(users.deliveryOption)
       let deliveryAddr = null;
       try {
         const res = await fetch(`/api/delivery-addresses?userId=${encodeURIComponent(currentUser.id)}`);
@@ -310,6 +310,16 @@ export default async function load(params = {}) {
           }
         }
       } catch { /* ignore */ }
+
+      // 하나로마트 반값택배 설정 시 마트 주소를 배송지로 인정
+      if (!deliveryAddr) {
+        try {
+          const u = await api.getUser(currentUser.id);
+          if (u && u.deliveryOption === 'hanaro' && u.hanaroMartAddr) {
+            deliveryAddr = `[하나로마트 수령] ${u.hanaroMartName || ''} ${u.hanaroMartAddr}`.trim();
+          }
+        } catch { /* ignore */ }
+      }
 
       if (!deliveryAddr) {
         showToast('배송지를 먼저 등록해주세요');
