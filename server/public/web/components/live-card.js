@@ -77,6 +77,11 @@ export function createLiveCard(live, opts = {}) {
         <span>👁</span>
         <span class="live-card__viewers-count">${viewers}</span>
       </div>
+      ${(live.currentPrice || live.startPrice) && !isUpcoming ? `
+      <div class="live-card__price-bar">
+        <div class="live-card__price-label">현재가</div>
+        <div class="live-card__price-value">${(live.currentPrice || live.startPrice).toLocaleString()}<span>원</span></div>
+      </div>` : ''}
       <button class="live-card__fav-btn${_favorited ? ' is-active' : ''}" aria-label="관심 ${_favorited ? '해제' : '추가'}">
         ${_favorited ? '♥' : '♡'}
       </button>

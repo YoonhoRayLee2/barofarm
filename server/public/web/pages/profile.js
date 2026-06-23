@@ -1247,6 +1247,36 @@ export default async function load() {
     avatarWrap: hero.avatarWrap,
   }));
 
+  /* 2-b. Stats card (낙찰/경매중/찜/포인트) */
+  const statsCard = document.createElement('div');
+  statsCard.className = 'profile-stats-card';
+  statsCard.innerHTML = `
+    <div class="profile-stat"><div class="profile-stat__num" id="ps-won">—</div><div class="profile-stat__label">낙찰</div></div>
+    <div class="profile-stat profile-stat--divider"><div class="profile-stat__num" id="ps-bidding">—</div><div class="profile-stat__label">경매중</div></div>
+    <div class="profile-stat profile-stat--divider"><div class="profile-stat__num" id="ps-fav">—</div><div class="profile-stat__label">찜</div></div>
+    <div class="profile-stat profile-stat--divider"><div class="profile-stat__num" id="ps-pts">0P</div><div class="profile-stat__label">포인트</div></div>
+  `;
+  scrollEl.appendChild(statsCard);
+
+  // 비동기 조회 (실패 시 — 유지)
+  ;(async () => {
+    try {
+      const res = await fetch(`/api/users/${encodeURIComponent(profileUser.id)}/bids`);
+      if (!res.ok) return;
+      const bids = await res.json();
+      const list = Array.isArray(bids) ? bids : (Array.isArray(bids?.bids) ? bids.bids : []);
+      const wonEl = statsCard.querySelector('#ps-won');
+      const biddingEl = statsCard.querySelector('#ps-bidding');
+      if (wonEl) wonEl.textContent = String(list.filter(b => b.status === 'won' || b.status === '낙찰').length);
+      if (biddingEl) biddingEl.textContent = String(list.filter(b => b.status === 'active' || b.status === 'live' || b.status === '진행중').length);
+    } catch { /* — 유지 */ }
+
+    try {
+      const favEl = statsCard.querySelector('#ps-fav');
+      if (favEl && profileUser.favoritesCount != null) favEl.textContent = String(profileUser.favoritesCount);
+    } catch { /* — 유지 */ }
+  })();
+
   /* 3. PROF-3 Interest pills */
   const interests = Array.isArray(profileUser.interests)
     ? profileUser.interests

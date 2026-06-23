@@ -179,6 +179,44 @@
   color: var(--color-ink);
 }
 
+/* ── Stats card (낙찰/경매중/찜/포인트) ──────────────────── */
+.profile-stats-card {
+  background: var(--color-surface);
+  border-radius: 14px;
+  padding: 16px;
+  margin: 0 14px 12px;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 1px 2px rgba(20,30,15,0.06);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+.profile-stats-card .profile-stat {
+  text-align: center;
+  padding: 4px 0;
+  cursor: default;
+  background: none;
+}
+.profile-stats-card .profile-stat:active {
+  background: none;
+}
+.profile-stat--divider {
+  border-left: 1px solid var(--color-line);
+}
+.profile-stats-card .profile-stat__num {
+  font-size: 19px;
+  font-weight: 900;
+  color: var(--color-accent);
+  font-family: var(--font-display);
+  line-height: var(--lh-tight);
+}
+.profile-stats-card .profile-stat__label {
+  font-size: 11px;
+  color: var(--color-ink-mute);
+  margin-top: 2px;
+  font-weight: 600;
+}
+
 /* ── Interest pills (PROF-3) ──────────────────────────────── */
 .profile-interests {
   padding: 0 var(--space-4) var(--space-3);

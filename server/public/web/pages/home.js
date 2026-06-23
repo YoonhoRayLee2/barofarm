@@ -92,7 +92,17 @@ export default async function load() {
   header.className = 'home-header';
   header.innerHTML = `
     <div class="home-header__brand">
-      <img src="/app/assets/home-logo.png" alt="NH바로팜" class="home-header__logo" />
+      <div class="home-header__brand-icon">
+        <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+          <path d="M5 8h4l3 13h13l3-9H10" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="13" cy="26" r="2" fill="#fff"/>
+          <circle cx="23" cy="26" r="2" fill="#fff"/>
+        </svg>
+      </div>
+      <div>
+        <div class="home-header__title">NH바로팜</div>
+        <div class="home-header__subtitle">산지직송 라이브경매</div>
+      </div>
     </div>
     <div class="home-header__actions">
       <button class="home-header__icon-btn" aria-label="알림">
@@ -160,6 +170,33 @@ export default async function load() {
   });
   page.appendChild(catRow);
   const catCircles = catRow.querySelectorAll('.cat-circle-btn');
+
+  // ---- Live / Upcoming tab bar ----
+  let activeTab = 'live';
+  const tabBar = document.createElement('div');
+  tabBar.className = 'home-tab-bar';
+  tabBar.innerHTML = `
+    <button class="home-tab-btn is-active" data-tab="live">지금 경매<span class="home-tab-badge" id="home-live-count-badge"></span></button>
+    <button class="home-tab-btn" data-tab="upcoming">예고</button>
+  `;
+  page.appendChild(tabBar);
+
+  function updateTabBadge() {
+    const badge = tabBar.querySelector('#home-live-count-badge');
+    if (!badge) return;
+    const count = livesList.filter((l) => !l.status || l.status === 'live').length;
+    badge.textContent = count > 0 ? String(count) : '';
+  }
+
+  tabBar.querySelectorAll('.home-tab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (activeTab === btn.dataset.tab) return;
+      activeTab = btn.dataset.tab;
+      tabBar.querySelectorAll('.home-tab-btn').forEach((b) => b.classList.toggle('is-active', b === btn));
+      renderFeed();
+      feed.scrollTop = 0;
+    });
+  });
 
   // ---- Market price ticker ----
   const tickerWrap = document.createElement('div');
@@ -523,8 +560,15 @@ export default async function load() {
 
   function renderFeed() {
     if (!isProductsTab) {
-      renderLiveSection();
-      renderUpcomingSection();
+      if (activeTab === 'live') {
+        sectionLive.classList.remove('is-hidden');
+        sectionUpcoming.classList.add('is-hidden');
+        renderLiveSection();
+      } else {
+        sectionLive.classList.add('is-hidden');
+        renderUpcomingSection();
+      }
+      updateTabBadge();
     }
     renderProductsSection();
   }
