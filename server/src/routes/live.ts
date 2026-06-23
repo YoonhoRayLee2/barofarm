@@ -472,12 +472,14 @@ export function createLiveRouter(io: Server) {
       return;
     }
 
-    const { productName, startPrice, mode, durationSec, stockTotal } = req.body as {
+    const { productName, startPrice, mode, durationSec, stockTotal, unitCount, unitLabel } = req.body as {
       productName?: string;
       startPrice?: number;
       mode?: string;
       durationSec?: number;
       stockTotal?: number;
+      unitCount?: number;
+      unitLabel?: string;
     };
 
     console.log('[auction:create] body=', req.body, 'file=', req.file ? { name: req.file.filename, size: req.file.size } : null);
@@ -489,6 +491,26 @@ export function createLiveRouter(io: Server) {
       if (req.file) fs.unlink(req.file.path, () => {});
       res.status(400).json({ error: 'productName, startPrice 는 필수입니다.' });
       return;
+    }
+
+    // unitCount 검증 (전달된 경우만)
+    if (unitCount !== undefined) {
+      const uc = Number(unitCount);
+      if (!Number.isInteger(uc) || uc < 1) {
+        if (req.file) fs.unlink(req.file.path, () => {});
+        res.status(400).json({ error: 'unitCount 는 1 이상의 정수여야 합니다.' });
+        return;
+      }
+    }
+
+    // 시작가는 100원 단위로 제한 (blind/giveaway 는 시작가 미사용)
+    if (resolvedMode !== 'giveaway' && resolvedMode !== 'blind') {
+      const sp = Number(startPrice);
+      if (!Number.isInteger(sp) || sp < 0 || sp % 100 !== 0) {
+        if (req.file) fs.unlink(req.file.path, () => {});
+        res.status(400).json({ error: 'startPrice 는 0 이상의 100원 단위 정수여야 합니다.' });
+        return;
+      }
     }
 
     // 모드별 durationSec 검증
@@ -539,6 +561,9 @@ export function createLiveRouter(io: Server) {
       }
     }
 
+    const resolvedUnitCount = unitCount !== undefined ? Number(unitCount) : 1;
+    const resolvedUnitLabel = unitLabel !== undefined ? String(unitLabel) : '';
+
     createAuction(auctionId, {
       liveId,
       productName: String(productName),
@@ -548,13 +573,15 @@ export function createLiveRouter(io: Server) {
       durationSec: resolvedDuration,
       stockTotal: resolvedMode === 'fcfs' ? Number(stockTotal) : undefined,
       imageUrl,
+      unitCount: resolvedUnitCount,
+      unitLabel: resolvedUnitLabel,
     });
 
     // DB에도 저장 (영속화)
     try {
       await pool.query(
-        `INSERT INTO auctions (id, seller_id, live_id, product_name, start_price, current_price, mode, image_url, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+        `INSERT INTO auctions (id, seller_id, live_id, product_name, start_price, current_price, mode, image_url, status, unit_count, unit_label)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
         [
           auctionId,
           Number(live.sellerId),
@@ -564,6 +591,8 @@ export function createLiveRouter(io: Server) {
           resolvedMode === 'giveaway' ? 0 : Number(startPrice),
           resolvedMode,
           imageUrl ?? null,
+          resolvedUnitCount,
+          resolvedUnitLabel,
         ],
       );
     } catch (e) {

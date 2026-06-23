@@ -183,6 +183,12 @@
   letter-spacing: -0.3px;
 }
 
+.od-card__price-sub {
+  font-size: var(--fs-xs);
+  color: var(--color-ink-soft);
+  margin-top: 2px;
+}
+
 .od-card__meta {
   display: flex;
   gap: 8px;

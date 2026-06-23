@@ -50,6 +50,9 @@ export interface AuctionState {
   giveawayParticipants?: GiveawayParticipant[];
   // 상품 이미지
   imageUrl?: string;
+  // 단위 수량·단위명
+  unitCount: number;
+  unitLabel: string;
 }
 
 export const lives = new Map<string, LiveState>();
@@ -102,11 +105,13 @@ interface CreateAuctionParams {
   durationSec?: number;
   stockTotal?: number;
   imageUrl?: string;
+  unitCount?: number;
+  unitLabel?: string;
 }
 
 export function createAuction(
   id: string,
-  { liveId, productName, startPrice, sellerId, mode = 'normal', durationSec = 30, stockTotal, imageUrl }: CreateAuctionParams,
+  { liveId, productName, startPrice, sellerId, mode = 'normal', durationSec = 30, stockTotal, imageUrl, unitCount, unitLabel }: CreateAuctionParams,
 ): void {
   const state: AuctionState = {
     id,
@@ -121,6 +126,8 @@ export function createAuction(
     mode,
     durationSec,
     imageUrl,
+    unitCount: unitCount ?? 1,
+    unitLabel: unitLabel ?? '',
   };
 
   if (mode === 'fcfs') {
@@ -191,6 +198,8 @@ function endAuctionState(
     void: isVoid,
     endedAt: Date.now(),
     imageUrl: auc.imageUrl ?? null,
+    unitCount: auc.unitCount,
+    unitLabel: auc.unitLabel,
     participants: auc.mode === 'giveaway' ? (auc.giveawayParticipants ?? []) : undefined,
   });
 

@@ -199,6 +199,9 @@ export default async function load(params) {
     const status   = data.deliveryStatus || 'payment_complete';
     const idx      = stepIndex(status);
 
+    const unitCount    = Number(data.unitCount || 1);
+    const payableTotal = Number(data.finalPrice || 0) * unitCount;
+
     /* Title */
     const titleEl = page.querySelector('#od-title');
     if (titleEl) titleEl.textContent = isSeller ? '판매 상세' : '주문 상세';
@@ -206,6 +209,12 @@ export default async function load(params) {
     const dateStr   = data.endsAt ? formatDate(data.endsAt) : '—';
     const modeLabel = data.mode === 'blind' ? '블라인드' : data.mode === 'fcfs' ? '선착순' : '경매';
     const imgSrc    = data.imageUrl || null;
+
+    const unitLabel = `${unitCount}${data.unitLabel || '개'}`;
+    const priceHtml = unitCount >= 2
+      ? `<div class="od-card__price">${formatPrice(payableTotal)}</div>
+         <div class="od-card__price-sub">(단가 ${Number(data.finalPrice || 0).toLocaleString('ko-KR')}원 × ${escapeHtml(unitLabel)})</div>`
+      : `<div class="od-card__price">${formatPrice(data.finalPrice)}</div>`;
 
     /* Card */
     const card = `
@@ -217,7 +226,7 @@ export default async function load(params) {
         </div>
         <div class="od-card__body">
           <div class="od-card__name">${escapeHtml(data.productName || '상품')}</div>
-          <div class="od-card__price">${formatPrice(data.finalPrice)}</div>
+          ${priceHtml}
           <div class="od-card__meta">
             <span class="od-card__mode">${modeLabel}</span>
             <span class="od-card__date">${dateStr}</span>
@@ -257,15 +266,14 @@ export default async function load(params) {
       const discountRate = Number(data.buyerDiscountRate || 0);
       const feeRate      = Number(data.sellerFeeRate || 0);
       const feeAmt       = Number(data.sellerFeeAmt || 0);
-      const finalPrice   = Number(data.finalPrice || 0);
-      const settleAmt    = Math.max(0, finalPrice - feeAmt);
+      const settleAmt    = Math.max(0, payableTotal - feeAmt);
 
       if (!isSeller) {
         const showDiscount = discountAmt > 0;
         const shippingFeeStatus = data.shippingFeeStatus || 'none';
         const shippingFee = Number(data.shippingFee || 0);
         const shippingFeePaid = shippingFeeStatus === 'paid';
-        const netPay = Math.max(0, finalPrice - discountAmt) + (shippingFeePaid ? shippingFee : 0);
+        const netPay = Math.max(0, payableTotal - discountAmt) + (shippingFeePaid ? shippingFee : 0);
         feeHtml = `
           <section class="od-fee">
             <div class="od-fee__title-row">

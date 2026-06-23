@@ -283,25 +283,23 @@
 
 /* Actions bar */
 .lb-actions {
-  display: flex; gap: 8px; align-items: center;
-  padding: 10px 0 4px;
+  display: flex; align-items: center; gap: 8px; padding: 10px 0 6px;
 }
 .lb-chat-input {
-  flex: 1; height: 40px;
-  background: var(--color-bg-alt);
+  flex: 1; height: 42px;
+  background: var(--color-surface-alt);
   border: 1px solid var(--color-line);
   border-radius: 999px; padding: 0 18px;
-  color: var(--color-ink); font-size: max(16px, 13px); outline: none;
+  color: var(--color-ink); font-size: 13px; outline: none; font-family: inherit;
 }
 .lb-chat-input::placeholder { color: var(--color-ink-mute); }
 .lb-icon-btn {
-  width: 40px; height: 40px; flex-shrink: 0;
+  width: 42px; height: 42px; flex-shrink: 0;
   border: 1px solid var(--color-line);
-  background: var(--color-surface);
+  background: var(--color-surface-alt);
   border-radius: 50%; color: var(--color-ink-soft);
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; font-size: 16px;
-  box-shadow: var(--elev-1);
+  cursor: pointer; font-size: 18px; line-height: 1;
 }
 
 /* ── Giveaway mode ──────────────────────────────────── */
@@ -513,7 +511,7 @@
   border-radius: 20px 20px 0 0;
   padding: 18px 16px max(20px, env(safe-area-inset-bottom)); max-height: 72vh;
   display: flex; flex-direction: column; gap: 12px;
-  width: min(100vw, calc(100dvh * 390 / 844)); max-width: 480px;
+  width: 100%; max-width: 480px;
   align-self: center;
 }
 .product-sheet__header {
@@ -567,6 +565,7 @@
   background: var(--color-bg); border: 1px solid var(--color-line);
 }
 .ps-sold-row--mine { border-color: var(--color-accent); background: var(--color-accent-tint); }
+.ps-row--clickable { cursor: pointer; }
 
 .ps-product-thumb, .ps-sold-thumb, .ps-history-thumb {
   width: 44px; height: 44px; border-radius: 8px; object-fit: cover; flex-shrink: 0;
@@ -640,3 +639,29 @@
   cursor: pointer;
 }
 .live-ended-btn:active { opacity: 0.85; }
+
+/* ---- Image zoom overlay ---- */
+.lb-img-zoom-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+.lb-img-zoom-overlay--visible {
+  opacity: 1;
+}
+.lb-img-zoom-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+/* ===== Unit total display ===== */
+.lb-unit-total { font-size: 14px; color: var(--color-accent); font-weight: 600; margin-top: var(--space-1); text-align: center; }
+.won-card__unit-total { font-size: 14px; color: var(--color-accent); font-weight: 600; margin: var(--space-1) 0; }

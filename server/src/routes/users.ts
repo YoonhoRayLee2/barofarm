@@ -707,6 +707,9 @@ router.get('/:id/bids', async (req: Request, res: Response) => {
          b.auction_id      AS auction_id,
          b.price           AS bid_price,
          a.current_price   AS final_price,
+         a.unit_count,
+         a.unit_label,
+         a.current_price * a.unit_count AS total_price,
          b.created_at      AS bid_at,
          a.product_name,
          a.top_bidder_id,
@@ -723,6 +726,9 @@ router.get('/:id/bids', async (req: Request, res: Response) => {
       auction_id: number;
       bid_price: number;
       final_price: number;
+      unit_count: number;
+      unit_label: string;
+      total_price: number;
       bid_at: string;
       product_name: string;
       top_bidder_id: number | null;
@@ -737,6 +743,9 @@ router.get('/:id/bids', async (req: Request, res: Response) => {
         productName: b.product_name,
         bidPrice:    b.bid_price,
         finalPrice:  isWinner ? Number(b.final_price) : null,
+        unitCount:   b.unit_count,
+        unitLabel:   b.unit_label,
+        totalPrice:  isWinner ? Number(b.total_price) : null,
         isWinner,
         bidAt:       b.bid_at,
       };
@@ -763,6 +772,9 @@ router.get('/:id/orders', async (req: Request, res: Response) => {
          a.id              AS auction_id,
          a.product_name,
          a.current_price   AS final_price,
+         a.current_price * a.unit_count AS total_price,
+         a.unit_count,
+         a.unit_label,
          a.image_url,
          a.ends_at         AS order_at,
          a.mode,
@@ -788,6 +800,9 @@ router.get('/:id/orders', async (req: Request, res: Response) => {
       auction_id: number;
       product_name: string;
       final_price: number;
+      total_price: number;
+      unit_count: number;
+      unit_label: string;
       image_url: string | null;
       order_at: string;
       mode: string | null;
@@ -804,6 +819,9 @@ router.get('/:id/orders', async (req: Request, res: Response) => {
       auctionId:      r.auction_id,
       productName:    r.product_name,
       finalPrice:     Number(r.final_price),
+      totalPrice:     Number(r.total_price),
+      unitCount:      Number(r.unit_count),
+      unitLabel:      r.unit_label,
       imageUrl:       r.image_url ?? null,
       orderAt:        r.order_at,
       mode:           r.mode ?? null,

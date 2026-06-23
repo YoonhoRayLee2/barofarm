@@ -10,7 +10,7 @@
 
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { requestCameraPermission, requestMicPermission } from '/app/scripts/native-bridge.js';
-import { replace, setCleanup } from '/app/scripts/router.js';
+import { replace, navigate, setCleanup } from '/app/scripts/router.js';
 import * as api from '/app/scripts/api.js';
 import { endFcfsAuction } from '/app/scripts/api.js';
 import * as Sock from '/app/scripts/socket.js';
@@ -172,6 +172,29 @@ export default async function load(params) {
     overlay.classList.add('is-hidden');
   }
 
+  function showCameraNoiseOverlay() {
+    let el = page.querySelector('.ls-noise-overlay');
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'ls-noise-overlay';
+      el.innerHTML = `
+        <div class="ls-noise-scanlines"></div>
+        <div class="ls-noise-msg">
+          <span class="ls-noise-icon">📡</span>
+          <span class="ls-noise-title">화면 신호가 불안정해요</span>
+          <span class="ls-noise-sub">카메라 연결을 확인하는 중...</span>
+        </div>`;
+      // insert after videoEl so it overlays it, but before topbar/panels
+      videoEl.insertAdjacentElement('afterend', el);
+    }
+    el.classList.remove('is-hidden');
+  }
+
+  function hideCameraNoiseOverlay() {
+    const el = page.querySelector('.ls-noise-overlay');
+    if (el) el.classList.add('is-hidden');
+  }
+
   function showOverlay(text) {
     setOverlayText(text || '연결 중...');
     overlay.classList.remove('is-hidden');
@@ -215,17 +238,31 @@ export default async function load(params) {
 
       if (livekitMod) {
         room = await livekitMod.connectRoom({ url: serverUrl, token });
-        const published = await livekitMod.publishCamera(room);
-        localTracks = [published.cameraTrack, published.micTrack].filter(Boolean);
-        livekitMod.attachLocalVideo(room, videoEl);
+        let cameraOk = false;
+        try {
+          const published = await livekitMod.publishCamera(room);
+          localTracks = [published.cameraTrack, published.micTrack].filter(Boolean);
+          livekitMod.attachLocalVideo(room, videoEl);
+          cameraOk = true;
+          hideCameraNoiseOverlay();
+        } catch (camErr) {
+          if (camErr.cameraFailed) {
+            console.warn('[live-seller] camera completely failed, showing noise overlay');
+            showCameraNoiseOverlay();
+          } else {
+            throw camErr;
+          }
+        }
       } else {
         // Fallback: getUserMedia directly for browser preview
         if (!window.isSecureContext || !navigator.mediaDevices) {
           showToast('카메라 사용을 위해 HTTPS 또는 localhost 접속이 필요합니다', 'info');
+          showCameraNoiseOverlay();
         } else {
           try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             videoEl.srcObject = stream;
+            hideCameraNoiseOverlay();
             // 마이크 토글 (getUserMedia 폴백 경로)
             const micBtnFb = document.getElementById('ls-mic-btn');
             if (micBtnFb) {
@@ -240,7 +277,9 @@ export default async function load(params) {
               });
             }
           } catch (mediaErr) {
+            console.warn('[live-seller] getUserMedia failed, showing noise overlay:', mediaErr?.name);
             showToast('카메라/마이크 접근 실패: ' + (mediaErr.message || mediaErr), 'error');
+            showCameraNoiseOverlay();
           }
         }
       }
@@ -507,6 +546,18 @@ export default async function load(params) {
       } else {
         currentPrice.textContent = (auction.currentPrice || auction.startPrice || 0).toLocaleString() + '원';
       }
+      // 단위 배지
+      let unitBadge = currentPrice.parentElement.querySelector('.ls-unit-badge');
+      if (auction.unitCount >= 2) {
+        if (!unitBadge) {
+          unitBadge = document.createElement('span');
+          unitBadge.className = 'ls-unit-badge';
+          currentPrice.parentElement.appendChild(unitBadge);
+        }
+        unitBadge.textContent = `${auction.unitCount}${auction.unitLabel || '개'}`;
+      } else if (unitBadge) {
+        unitBadge.remove();
+      }
     }
 
     if (bidder) {
@@ -639,11 +690,16 @@ export default async function load(params) {
         </div>
       `;
     } else {
+      const unitPrice = auction.finalPrice || auction.price || auction.currentPrice || 0;
+      const unitCount = auction.unitCount || 1;
+      const priceText = unitCount >= 2
+        ? `${(unitPrice * unitCount).toLocaleString('ko-KR')}원 (단가 ${unitPrice.toLocaleString('ko-KR')}원 × ${unitCount}${auction.unitLabel || '개'})`
+        : `${unitPrice.toLocaleString('ko-KR')}원`;
       backdrop.innerHTML = `
         <div class="won-card">
           <div class="won-card__emoji">🏆</div>
           <div class="won-card__title">낙찰!</div>
-          <div class="won-card__price">${(auction.finalPrice || auction.price || auction.currentPrice || 0).toLocaleString()}원</div>
+          <div class="won-card__price">${priceText}</div>
           <div class="won-card__winner">${escapeHtml(auction.winnerName || '-')}</div>
         </div>
       `;
@@ -682,7 +738,16 @@ export default async function load(params) {
 
         <div class="auction-modal__field" id="am-start-price-field">
           <label class="auction-modal__label">시작가 (원)</label>
-          <input class="auction-modal__input" id="am-start-price" type="number" placeholder="예: 15000" min="0" />
+          <input class="auction-modal__input" id="am-start-price" type="number" placeholder="예: 15000" min="0" step="100" />
+        </div>
+
+        <div class="auction-modal__field auction-modal__field--unit" id="am-unit-field">
+          <label class="auction-modal__label">구매 단위 <span class="auction-modal__label-hint">(선택)</span></label>
+          <div class="auction-modal__unit-row">
+            <input class="auction-modal__input auction-modal__input--unit-count" id="am-unit-count" type="number" placeholder="수량 예: 20" min="1" step="1" />
+            <input class="auction-modal__input auction-modal__input--unit-label" id="am-unit-label" type="text" placeholder="단위명 예: 박스" maxlength="10" />
+          </div>
+          <div class="auction-modal__field-hint">낙찰 시 총 결제 = 낙찰단가 × 수량</div>
         </div>
 
         <div class="auction-modal__field">
@@ -816,15 +881,25 @@ export default async function load(params) {
       captureBtn.classList.remove('is-hidden');
     });
 
-    backdrop.querySelector('#am-cancel').addEventListener('click', () => {
+    // 모달 닫기 — backdrop-filter 레이어 제거 시 Chrome이 하위 레이어를
+    // 리페인트하지 않아 UI가 사라지는 합성 버그가 있어, 닫은 뒤 강제 리페인트한다.
+    function closeModal() {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       backdrop.remove();
-    });
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+      // 강제 리페인트: bottomPanel을 한 프레임 토글해 합성 레이어를 갱신시킨다.
+      requestAnimationFrame(() => {
+        const prev = bottomPanel.style.transform;
+        bottomPanel.style.transform = 'translateZ(0)';
+        // 다음 프레임에 원복하여 리페인트 트리거
+        requestAnimationFrame(() => { bottomPanel.style.transform = prev; });
+      });
+    }
+
+    backdrop.querySelector('#am-cancel').addEventListener('click', closeModal);
     backdrop.addEventListener('click', (e) => {
-      if (e.target === backdrop) {
-        if (previewUrl) URL.revokeObjectURL(previewUrl);
-        backdrop.remove();
-      }
+      e.stopPropagation();
+      if (e.target === backdrop) closeModal();
     });
 
     // Mode radio toggle
@@ -836,6 +911,8 @@ export default async function load(params) {
 
     const startPriceField = backdrop.querySelector('#am-start-price-field');
 
+    const unitField = backdrop.querySelector('#am-unit-field');
+
     function switchMode(mode) {
       optsNormal.classList.toggle('is-hidden', mode !== 'normal');
       optsFcfs.classList.toggle('is-hidden', mode !== 'fcfs');
@@ -843,6 +920,8 @@ export default async function load(params) {
       optsGiveaway.classList.toggle('is-hidden', mode !== 'giveaway');
       // 블라인드/무료나눔은 시작가 없음 (0원 고정)
       startPriceField.classList.toggle('is-hidden', mode === 'blind' || mode === 'giveaway');
+      // 단위 필드: normal/blind만 표시 (fcfs는 stockTotal과 분리, giveaway는 불필요)
+      unitField.classList.toggle('is-hidden', mode === 'fcfs' || mode === 'giveaway');
     }
 
     modeRadios.forEach((r) => r.addEventListener('change', () => switchMode(r.value)));
@@ -857,8 +936,14 @@ export default async function load(params) {
         showToast('상품명과 시작가를 올바르게 입력하세요.', 'error');
         return;
       }
+      if (!isPriceless && startPrice % 100 !== 0) {
+        showToast('시작가는 100원 단위로 입력하세요.', 'error');
+        return;
+      }
 
-      const payload = { productName, startPrice, mode };
+      const unitCount = parseInt(backdrop.querySelector('#am-unit-count')?.value, 10) || 1;
+      const unitLabel = (backdrop.querySelector('#am-unit-label')?.value || '').trim();
+      const payload = { productName, startPrice, mode, unitCount, unitLabel };
 
       if (mode === 'normal') {
         payload.durationSec = parseInt(backdrop.querySelector('input[name="am-dur-normal"]:checked').value, 10);
@@ -935,7 +1020,10 @@ export default async function load(params) {
     setTimeout(() => { if (!_fired) { _fired = true; offOnce(); _showViewerModal(_viewerNames); } }, 300);
   });
 
-  page.querySelector('#ls-auction-btn').addEventListener('click', openAuctionModal);
+  page.querySelector('#ls-auction-btn').addEventListener('click', () => {
+    if (page.querySelector('.auction-modal-backdrop')) return;
+    openAuctionModal();
+  });
 
   // 판매내역 시트
   page.querySelector('#ls-sold-btn').addEventListener('click', () => {
@@ -945,19 +1033,24 @@ export default async function load(params) {
     backdrop.setAttribute('role', 'dialog');
 
     const totalRevenue = sellerEndedAuctions
-      .reduce((sum, a) => sum + (a.finalPrice || a.currentPrice || 0), 0);
+      .reduce((sum, a) => sum + (a.finalPrice || a.currentPrice || 0) * (a.unitCount || 1), 0);
 
     const rowEls = sellerEndedAuctions.length === 0
       ? [Object.assign(document.createElement('div'), { className: 'ps-empty', textContent: '아직 판매된 상품이 없습니다.' })]
       : sellerEndedAuctions.slice().reverse().map(a => {
           const isVoid = !a.winnerName;
           const winner = escapeHtml(a.winnerName || '');
-          const price = (a.finalPrice || a.currentPrice || 0).toLocaleString();
+          const unitPrice = a.finalPrice || a.currentPrice || 0;
+          const unitCount = a.unitCount || 1;
+          const price = unitCount >= 2
+            ? `${(unitPrice * unitCount).toLocaleString('ko-KR')}원 (단가 ${unitPrice.toLocaleString('ko-KR')}원 × ${unitCount}${a.unitLabel || '개'})`
+            : `${unitPrice.toLocaleString('ko-KR')}원`;
           const ts = a.endedAt ? new Date(a.endedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '';
           const isBlind = a.mode === 'blind';
 
           const row = document.createElement('div');
-          row.className = 'ps-sold-row';
+          row.className = 'ps-sold-row' + (!isVoid && (a.id || a.auctionId) ? ' ps-row--clickable' : '');
+          if (!isVoid && (a.id || a.auctionId)) row.dataset.auctionId = String(a.id || a.auctionId);
           const thumbSrc = a.imageUrl || '';
           row.innerHTML = `
             ${thumbSrc
@@ -965,7 +1058,7 @@ export default async function load(params) {
               : `<div class="ps-sold-thumb ps-sold-thumb--empty">${isVoid ? '—' : winner.charAt(0)}</div>`}
             <div class="ps-sold-info">
               <div class="ps-sold-name">${escapeHtml(a.productName || '-')}${isBlind ? ' <span class="ps-mode-badge">블라인드</span>' : ''}</div>
-              <div class="ps-sold-meta">${isVoid ? '유찰' : `${winner} · ${price}원`}${ts ? ` · ${ts}` : ''}</div>
+              <div class="ps-sold-meta">${isVoid ? '유찰' : `${winner} · ${price}`}${ts ? ` · ${ts}` : ''}</div>
               ${isBlind && a.id ? '<button class="ps-blind-bids-btn" data-id="' + escapeAttr(String(a.id)) + '">입찰 내역 보기</button>' : ''}
             </div>
           `;
@@ -1032,7 +1125,17 @@ export default async function load(params) {
     }
     backdrop.querySelector('.product-sheet__close-x').addEventListener('click', close);
     backdrop.querySelector('.product-sheet__close-btn').addEventListener('click', close);
-    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) { close(); return; }
+      if (e.target.closest('.ps-blind-bids-btn')) return;
+      const row = e.target.closest('.ps-sold-row[data-auction-id]');
+      if (row) {
+        const auctionId = row.dataset.auctionId;
+        if (!auctionId) return;
+        close();
+        navigate('/app/order-detail/' + auctionId);
+      }
+    });
   });
 
   const chatInput = page.querySelector('#ls-chat-input');
@@ -1073,7 +1176,7 @@ export default async function load(params) {
   setCleanup(async () => {
     unsubFns.forEach((fn) => fn());
     if (socket) socket.disconnect();
-    if (room && livekitMod) await livekitMod.disconnect(room, localTracks).catch(() => {});
+    if (room && livekitMod) { try { livekitMod.disconnect(room, localTracks); } catch (_) {} }
     if (videoEl.srcObject) {
       videoEl.srcObject.getTracks().forEach((t) => t.stop());
       videoEl.srcObject = null;

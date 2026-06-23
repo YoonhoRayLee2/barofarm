@@ -152,6 +152,7 @@ export default async function load(params) {
           <span class="lb-product__price" id="lb-product-price"></span>
           <span class="lb-product__step" id="lb-price-step" style="display:none"></span>
         </div>
+        <div id="lb-unit-total" class="lb-unit-total" style="display:none"></div>
         <div class="lb-product__bidder" id="lb-product-bidder" style="display:none"></div>
       </div>
       <div class="lb-product__timer-slot" id="lb-timer-slot"></div>
@@ -492,6 +493,18 @@ export default async function load(params) {
     blindBidWrap.appendChild(blindBidComp.el);
   }
 
+  function updateUnitTotal(auction, price) {
+    const el = page.querySelector('#lb-unit-total');
+    if (!el) return;
+    if (auction && auction.unitCount >= 2) {
+      const total = (price * auction.unitCount).toLocaleString('ko-KR');
+      el.textContent = `예상 결제 ${total}원 (단가 × ${auction.unitCount}${auction.unitLabel || '개'})`;
+      el.style.display = '';
+    } else {
+      el.style.display = 'none';
+    }
+  }
+
   function updateAuctionUI(auction) {
     currentAuction = auction;
 
@@ -503,9 +516,9 @@ export default async function load(params) {
     const noAuctionCtaEl = page.querySelector('#lb-no-auction-cta');
 
     if (!auction) {
-      if (productNameEl) productNameEl.textContent = '경매 대기 중...';
+      if (productNameEl) productNameEl.textContent = '다음 경매 준비 중...';
       if (productPriceEl) productPriceEl.textContent = '';
-      if (productThumbEl) productThumbEl.innerHTML = '';
+      if (productThumbEl) productThumbEl.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--color-surface-secondary,#f5f5f5);border-radius:8px"><span style="color:var(--color-text-tertiary,#999);font-size:12px">준비 중</span></div>';
       if (bidControlsEl) bidControlsEl.style.display = 'none';
       if (noAuctionCtaEl) noAuctionCtaEl.style.display = '';
       timer.el.style.display = 'none';
@@ -548,8 +561,10 @@ export default async function load(params) {
     if (mode === 'normal') {
       if (productPriceEl) productPriceEl.textContent = basePrice.toLocaleString() + '원';
       updateSlideBid();
+      updateUnitTotal(auction, basePrice);
     } else if (mode === 'fcfs') {
-      if (productPriceEl) productPriceEl.textContent = (auction.currentPrice || auction.startPrice || 0).toLocaleString() + '원';
+      const fcfsPrice = auction.currentPrice || auction.startPrice || 0;
+      if (productPriceEl) productPriceEl.textContent = fcfsPrice.toLocaleString() + '원';
       const total = auction.stockTotal || 0;
       const sold = auction.stockSold || 0;
       if (!buyButtonComp) {
@@ -558,16 +573,19 @@ export default async function load(params) {
         buyButtonComp.setProduct({
           productName: auction.productName,
           productSub: auction.sellerName,
-          price: auction.currentPrice || auction.startPrice || 0,
+          price: fcfsPrice,
         });
         buyButtonComp.update(total, sold);
         if (sold >= total) buyButtonComp.disable('매진');
       }
+      updateUnitTotal(null, 0); // fcfs는 단위 총액 미표시
     } else if (mode === 'blind') {
       if (productPriceEl) productPriceEl.textContent = '비공개 입찰';
       if (!blindBidComp) setupBlindMode();
+      updateUnitTotal(null, 0);
     } else if (mode === 'giveaway') {
       if (productPriceEl) productPriceEl.textContent = '🎁 무료나눔';
+      updateUnitTotal(null, 0);
     }
 
     // 현재 최고 응찰자
@@ -576,7 +594,7 @@ export default async function load(params) {
       const name = auction.topBidderName || '';
       if (name && mode === 'normal') {
         bidderEl.style.display = '';
-        bidderEl.textContent = `👤 ${name} 응찰 중`;
+        bidderEl.textContent = `👤 현재 최고가 ${name}`;
       } else {
         bidderEl.style.display = 'none';
       }
@@ -696,12 +714,17 @@ export default async function load(params) {
         </div>
       `;
     } else {
-      const price = (auction.finalPrice || auction.price || auction.currentPrice || 0).toLocaleString();
+      const finalPrice = auction.finalPrice || auction.price || auction.currentPrice || 0;
+      const price = finalPrice.toLocaleString();
+      const unitTotalHtml = auction.unitCount >= 2
+        ? `<div class="won-card__unit-total">총 결제금액: ${(finalPrice * auction.unitCount).toLocaleString()}원 (단가 × ${auction.unitCount}${auction.unitLabel || '개'})</div>`
+        : '';
       backdrop.innerHTML = `
         <div class="won-card">
           <div class="won-card__emoji">🏆</div>
           <div class="won-card__winner-name">${escapeHtml(auction.winnerName)}님 낙찰!</div>
           <div class="won-card__price">${price}원</div>
+          ${unitTotalHtml}
           <div class="won-card__title">${escapeHtml(auction.productName || '')}</div>
           <button class="won-card__confirm-btn" id="won-confirm-btn">확인</button>
         </div>
@@ -936,7 +959,11 @@ export default async function load(params) {
             const isVoid = !a.winnerName;
             const winner = escapeHtml(a.winnerName || '—');
             const name = escapeHtml(a.productName || '-');
-            const price = (a.finalPrice || a.currentPrice || 0).toLocaleString();
+            const unitPrice = a.finalPrice || a.currentPrice || 0;
+            const unitCount = a.unitCount || 1;
+            const price = unitCount >= 2
+              ? `${(unitPrice * unitCount).toLocaleString('ko-KR')}원 (단가 ${unitPrice.toLocaleString('ko-KR')}원 × ${unitCount}${a.unitLabel || '개'})`
+              : `${unitPrice.toLocaleString('ko-KR')}원`;
             const ts = a.endedAt ? new Date(a.endedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '';
             const iMeWon = !isVoid && (
               (String(a.winnerId || a.winner || '') === myId) ||
@@ -946,12 +973,13 @@ export default async function load(params) {
             const thumbHtml = thumbSrc
               ? `<img class="ps-sold-thumb" src="${escapeHtml(thumbSrc)}" alt="" />`
               : `<div class="ps-sold-thumb ps-sold-thumb--empty">${isVoid ? '—' : winner.charAt(0)}</div>`;
+            const aidAttr = (!isVoid && (a.id || a.auctionId)) ? ` data-auction-id="${escapeHtml(String(a.id || a.auctionId))}"` : '';
             return `
-              <div class="ps-sold-row${iMeWon ? ' ps-sold-row--mine' : ''}">
+              <div class="ps-sold-row${iMeWon ? ' ps-sold-row--mine' : ''}${aidAttr ? ' ps-row--clickable' : ''}"${aidAttr}>
                 ${thumbHtml}
                 <div class="ps-sold-info">
                   <div class="ps-sold-name">${name}${iMeWon ? ' <span class="ps-won-badge">낙찰</span>' : ''}</div>
-                  <div class="ps-sold-meta">${isVoid ? '유찰' : `${winner} · ${price}원`}${ts ? ` · ${ts}` : ''}</div>
+                  <div class="ps-sold-meta">${isVoid ? '유찰' : `${winner} · ${price}`}${ts ? ` · ${ts}` : ''}</div>
                 </div>
               </div>
             `;
@@ -965,7 +993,8 @@ export default async function load(params) {
             const name = escapeHtml(b.productName || '-');
             const price = (b.finalPrice || 0).toLocaleString();
             const ts = b.createdAt ? new Date(b.createdAt).toLocaleString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '';
-            return `<div class="ps-history-row"><div class="ps-history-info"><div class="ps-history-name">${name}</div><div class="ps-history-meta">${price}원${ts ? ` · ${ts}` : ''}</div></div></div>`;
+            const aid = b.auctionId ? ` data-auction-id="${escapeHtml(String(b.auctionId))}"` : '';
+            return `<div class="ps-history-row ps-row--clickable"${aid}><div class="ps-history-info"><div class="ps-history-name">${name}</div><div class="ps-history-meta">${price}원${ts ? ` · ${ts}` : ''}</div></div></div>`;
           }).join('');
           content.innerHTML = rows;
         } else {
@@ -973,6 +1002,7 @@ export default async function load(params) {
         }
         // 실시간 데이터와 API 데이터를 합쳐 표시
         (async () => {
+          const tabAtFetchStart = activeTab;
           let apiItems = [];
           try {
             const token = await api.getToken();
@@ -981,6 +1011,9 @@ export default async function load(params) {
             const res = await fetch(`/api/users/${encodeURIComponent(user.id)}/bids`, { headers });
             if (res.ok) apiItems = (await res.json()) || [];
           } catch (_e) { /* API 실패 시 로컬 데이터만 사용 */ }
+
+          // 탭이 바뀌었으면 DOM 교체 스킵
+          if (activeTab !== tabAtFetchStart) return;
 
           // 로컬 + API 병합 (로컬 우선, 최신순)
           const localItems = myPurchases.map(p => ({
@@ -1002,7 +1035,13 @@ export default async function load(params) {
           }
           content.innerHTML = combined.map(b => {
             const name = escapeHtml(b.productName || b.auctionName || '-');
-            const price = (b.finalPrice || b.price || 0).toLocaleString();
+            const unitCount = b.unitCount || 1;
+            const unitPrice = b.finalPrice || b.price || 0;
+            const totalAmount = (b.totalPrice != null) ? b.totalPrice : unitPrice;
+            const price = totalAmount.toLocaleString('ko-KR');
+            const unitNote = unitCount >= 2
+              ? `<div class="ps-history-meta">단가 ${unitPrice.toLocaleString('ko-KR')}원 × ${unitCount}${b.unitLabel || '개'}</div>`
+              : '';
             const ts = b.createdAt
               ? new Date(b.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
               : '';
@@ -1010,11 +1049,13 @@ export default async function load(params) {
             const imgHtml = imgSrc
               ? `<img class="ps-history-thumb" src="${escapeHtml(imgSrc)}" alt="" />`
               : `<div class="ps-history-thumb ps-history-thumb--empty"></div>`;
+            const aid = (b.auctionId || b.auction_id) ? ` data-auction-id="${escapeHtml(String(b.auctionId || b.auction_id))}"` : '';
             return `
-              <div class="ps-history-row">
+              <div class="ps-history-row ps-row--clickable"${aid}>
                 ${imgHtml}
                 <div class="ps-history-info">
                   <div class="ps-history-name">${name}</div>
+                  ${unitNote}
                   ${ts ? `<div class="ps-history-meta">${ts}</div>` : ''}
                 </div>
                 <div class="ps-history-price">${price}원</div>
@@ -1049,7 +1090,14 @@ export default async function load(params) {
     backdrop.querySelector('.product-sheet__close-x').addEventListener('click', closeSheet);
     backdrop.querySelector('.product-sheet__close-btn').addEventListener('click', closeSheet);
     backdrop.addEventListener('click', (e) => {
-      if (e.target === backdrop) closeSheet();
+      if (e.target === backdrop) { closeSheet(); return; }
+      const row = e.target.closest('.ps-sold-row[data-auction-id], .ps-history-row[data-auction-id]');
+      if (row) {
+        const auctionId = row.dataset.auctionId;
+        if (!auctionId) return;
+        closeSheet();
+        navigate('/app/order-detail/' + auctionId);
+      }
     });
 
     // page에 append해야 body reflow 없이 화면 밀림 방지
@@ -1137,11 +1185,15 @@ export default async function load(params) {
 
     // 낙찰 시 채팅에 시스템 메시지
     if (!auction.void && auction.winnerName) {
-      const price = (auction.finalPrice || auction.currentPrice || 0).toLocaleString();
+      const unitPrice = auction.finalPrice || auction.currentPrice || 0;
+      const unitCount = auction.unitCount || 1;
+      const priceText = unitCount >= 2
+        ? `${(unitPrice * unitCount).toLocaleString('ko-KR')}원 (단가 ${unitPrice.toLocaleString('ko-KR')}원 × ${unitCount}${auction.unitLabel || '개'})`
+        : `${unitPrice.toLocaleString('ko-KR')}원`;
       chatOverlay.push({
         userId: 'system',
         userName: '시스템',
-        message: `🏆 ${auction.productName ? auction.productName + ' · ' : ''}${auction.winnerName}님 ${price}원 낙찰`,
+        message: `🏆 ${auction.productName ? auction.productName + ' · ' : ''}${auction.winnerName}님 ${priceText} 낙찰`,
         system: true,
       });
     }
@@ -1154,6 +1206,7 @@ export default async function load(params) {
                    (winnerName && winnerName === myDisplayName);
     if (iMeWon && (auction.finalPrice || auction.currentPrice) && auction.mode !== 'fcfs') {
       myPurchases.push({
+        auctionId: auction.id || auction.auctionId || currentAuctionId,
         productName: auction.productName || '',
         finalPrice: auction.finalPrice || auction.currentPrice || 0,
         createdAt: auction.endedAt || Date.now(),
@@ -1341,6 +1394,35 @@ export default async function load(params) {
     unsubPurchaseMade, unsubBidBlindAck, unsubBidRejected, unsubLiveEnded,
     unsubEmoji,
   );
+
+  // ---- Image zoom overlay ----
+  const imgZoomOverlay = document.createElement('div');
+  imgZoomOverlay.className = 'lb-img-zoom-overlay';
+  imgZoomOverlay.style.pointerEvents = 'none';
+  imgZoomOverlay.innerHTML = '<img class="lb-img-zoom-img" src="" alt="" />';
+  page.appendChild(imgZoomOverlay);
+  const imgZoomImg = imgZoomOverlay.querySelector('.lb-img-zoom-img');
+
+  function openImgZoom(src) {
+    if (!src) return;
+    imgZoomImg.src = src;
+    imgZoomOverlay.style.pointerEvents = 'auto';
+    imgZoomOverlay.classList.add('lb-img-zoom-overlay--visible');
+  }
+  function closeImgZoom() {
+    imgZoomOverlay.style.pointerEvents = 'none';
+    imgZoomOverlay.classList.remove('lb-img-zoom-overlay--visible');
+    imgZoomImg.src = '';
+  }
+  imgZoomOverlay.addEventListener('click', closeImgZoom);
+
+  // 이벤트 위임: #lb-product-thumb img 와 .ps-product-thumb (product-sheet)
+  page.addEventListener('click', (e) => {
+    const thumbImg = e.target.closest('#lb-product-thumb img');
+    const psThumb = e.target.closest('.ps-product-thumb:not(.ps-product-thumb--empty)');
+    if (thumbImg) { openImgZoom(thumbImg.src); return; }
+    if (psThumb && psThumb.tagName === 'IMG') { openImgZoom(psThumb.src); }
+  });
 
   // ---- Event listeners ----
   page.querySelector('#lb-back-btn').addEventListener('click', () => window.history.back());

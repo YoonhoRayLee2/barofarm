@@ -73,7 +73,7 @@ router.post('/', async (req: Request, res: Response) => {
   try {
     const [aRows] = await pool.query<any[]>(
       `SELECT seller_id, top_bidder_id, delivery_status, product_name,
-              current_price, buyer_discount_amt, shipping_fee, shipping_fee_status
+              current_price, unit_count, buyer_discount_amt, shipping_fee, shipping_fee_status
          FROM auctions WHERE id = ?`,
       [auctionId],
     );
@@ -93,8 +93,8 @@ router.post('/', async (req: Request, res: Response) => {
     );
     if (actRows.length) return res.status(409).json({ error: 'refund already in progress' });
 
-    // 환불금액 = 실결제 상품가(현재가 - 할인) + 결제된 배송비
-    const itemPaid = Number(a.current_price) - Number(a.buyer_discount_amt ?? 0);
+    // 환불금액 = 실결제 상품가(단가 × 단위수 - 할인) + 결제된 배송비
+    const itemPaid = Number(a.current_price) * Number(a.unit_count ?? 1) - Number(a.buyer_discount_amt ?? 0);
     const shippingPaid = a.shipping_fee_status === 'paid' ? Number(a.shipping_fee ?? 0) : 0;
     const refundAmount = Math.max(0, itemPaid + shippingPaid);
 

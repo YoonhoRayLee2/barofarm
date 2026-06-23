@@ -67,11 +67,18 @@ export async function publishCamera(room) {
     console.log('[livekit] camera: back (environment)');
   } catch (err) {
     console.warn('[livekit] back camera unavailable, falling back:', err?.name || err?.message);
-    cameraTrack = await LK.createLocalVideoTrack({
-      facingMode: { ideal: 'environment' },
-      resolution: LK.VideoPresets.h720.resolution,
-    });
-    console.log('[livekit] camera: fallback (default)');
+    try {
+      cameraTrack = await LK.createLocalVideoTrack({
+        facingMode: { ideal: 'environment' },
+        resolution: LK.VideoPresets.h720.resolution,
+      });
+      console.log('[livekit] camera: fallback (default)');
+    } catch (err2) {
+      console.error('[livekit] camera: all attempts failed', err2?.name || err2?.message);
+      const e = new Error('[livekit] 카메라를 사용할 수 없습니다: ' + (err2?.message || err2));
+      e.cameraFailed = true;
+      throw e;
+    }
   }
 
   const micTrack = await LK.createLocalAudioTrack({

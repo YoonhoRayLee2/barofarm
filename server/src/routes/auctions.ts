@@ -41,6 +41,8 @@ interface AuctionRow {
   seller_fee_amt: number;
   shipping_fee: number;
   shipping_fee_status: ShippingFeeStatus;
+  unit_count?: number;
+  unit_label?: string;
 }
 
 const AUCTION_QUERY = `
@@ -54,7 +56,8 @@ const AUCTION_QUERY = `
     b.delivery_option, b.hanaro_mart_name, b.hanaro_mart_addr,
     a.tracking_company, a.tracking_number,
     a.buyer_tier, a.buyer_discount_rate, a.buyer_discount_amt, a.seller_fee_rate, a.seller_fee_amt,
-    a.shipping_fee, a.shipping_fee_status
+    a.shipping_fee, a.shipping_fee_status,
+    a.unit_count, a.unit_label
   FROM auctions a
   LEFT JOIN users s ON s.id = a.seller_id
   LEFT JOIN users b ON b.id = a.top_bidder_id
@@ -102,6 +105,8 @@ function formatAuction(row: AuctionRow) {
     sellerFeeAmt:       Number(row.seller_fee_amt),
     shippingFee:        Number(row.shipping_fee ?? 0),
     shippingFeeStatus:  row.shipping_fee_status ?? 'none',
+    unitCount:          Number(row.unit_count ?? 1),
+    unitLabel:          row.unit_label ?? '',
   };
 }
 

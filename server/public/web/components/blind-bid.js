@@ -136,7 +136,11 @@ export function createBlindBid({ onSubmit }) {
     modal.className = 'blind-bid-result';
     modal.dataset.theme = 'light';
     const winnerDisplay = escapeHtml(auction.winnerName || auction.winner || auction.winnerId || '-');
-    const priceDisplay  = (auction.price || auction.finalPrice || auction.currentPrice || 0).toLocaleString();
+    const unitPrice     = auction.price || auction.finalPrice || auction.currentPrice || 0;
+    const unitCount     = auction.unitCount || 1;
+    const priceDisplay  = unitCount >= 2
+      ? `${(unitPrice * unitCount).toLocaleString('ko-KR')}원 (단가 ${unitPrice.toLocaleString('ko-KR')}원 × ${unitCount}${auction.unitLabel || '개'})`
+      : `${unitPrice.toLocaleString('ko-KR')}원`;
     const isVoid = auction.void === true || (!auction.winner && !auction.winnerId && !auction.winnerName);
 
     modal.innerHTML = `
@@ -146,7 +150,7 @@ export function createBlindBid({ onSubmit }) {
           <div class="blind-bid-result__void">입찰자가 없어 유찰되었습니다</div>
         ` : `
           <div class="blind-bid-result__winner">낙찰자: <strong>${winnerDisplay}</strong></div>
-          <div class="blind-bid-result__price">낙찰가: <strong>${priceDisplay}원</strong></div>
+          <div class="blind-bid-result__price">낙찰가: <strong>${priceDisplay}</strong></div>
         `}
         <button class="blind-bid-result__toggle" id="bbr-toggle">입찰 내역 보기</button>
         <div class="blind-bid-result__bids" id="bbr-bids" style="display:none"></div>

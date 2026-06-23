@@ -40,8 +40,9 @@ export async function endAuction(state: AuctionState): Promise<void> {
         getBuyerTier(Number(state.topBidder)),
         getSellerTier(Number(state.sellerId)),
       ]);
-      const discount = calcBuyerDiscount(finalPrice, bTier);
-      const fee      = calcSellerFee(finalPrice, sTier);
+      const payableTotal = finalPrice * (state.unitCount || 1);
+      const discount = calcBuyerDiscount(payableTotal, bTier);
+      const fee      = calcSellerFee(payableTotal, sTier);
       buyerTier         = bTier;
       discountAmt       = discount.discountAmt;
       buyerDiscountRate = discount.buyerDiscountRate;
@@ -52,8 +53,8 @@ export async function endAuction(state: AuctionState): Promise<void> {
     await db.query(
       `INSERT INTO auctions
          (id, seller_id, live_id, product_name, start_price, current_price, mode, image_url, status, delivery_status, top_bidder_id, ends_at,
-          buyer_tier, buyer_discount_rate, buyer_discount_amt, seller_fee_rate, seller_fee_amt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ended', 'payment_complete', ?, NOW(), ?, ?, ?, ?, ?)
+          buyer_tier, buyer_discount_rate, buyer_discount_amt, seller_fee_rate, seller_fee_amt, unit_count, unit_label)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ended', 'payment_complete', ?, NOW(), ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          current_price      = VALUES(current_price),
          top_bidder_id      = VALUES(top_bidder_id),
@@ -65,7 +66,9 @@ export async function endAuction(state: AuctionState): Promise<void> {
          buyer_discount_rate = VALUES(buyer_discount_rate),
          buyer_discount_amt  = VALUES(buyer_discount_amt),
          seller_fee_rate    = VALUES(seller_fee_rate),
-         seller_fee_amt     = VALUES(seller_fee_amt)`,
+         seller_fee_amt     = VALUES(seller_fee_amt),
+         unit_count         = VALUES(unit_count),
+         unit_label         = VALUES(unit_label)`,
       [
         state.id,
         Number(state.sellerId),
@@ -77,6 +80,7 @@ export async function endAuction(state: AuctionState): Promise<void> {
         state.imageUrl ?? null,
         state.topBidder ?? null,
         buyerTier, buyerDiscountRate, discountAmt, sellerFeeRate, feeAmt,
+        state.unitCount, state.unitLabel,
       ],
     );
     // 낙찰자가 있으면 bids 테이블에도 기록

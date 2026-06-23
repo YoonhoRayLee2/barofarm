@@ -27,9 +27,9 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
   pointer-events: auto;
-  /* 상단 그라디언트 페이드: 오래된 메시지가 자연스럽게 사라짐 */
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 18%);
-  mask-image: linear-gradient(to bottom, transparent 0%, black 18%);
+  /* 상단 그라디언트 페이드: 오래된 메시지가 자연스럽게 사라짐 (좁게 — 가독성 우선) */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 7%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 7%);
 }
 
 .chat-overlay__list::-webkit-scrollbar { display: none; }
