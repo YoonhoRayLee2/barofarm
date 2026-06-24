@@ -2,14 +2,14 @@ import { Server } from 'socket.io';
 import { lives, auctions, endFcfsAuction } from '../store/memory';
 import { endAuction } from '../services/livekit-service';
 
-// liveId → Map<socketId, userName>
-const viewerCounts = new Map<string, Map<string, string>>();
+// liveId → Map<socketId, { userName: string; avatarUrl: string | null }>
+const viewerCounts = new Map<string, Map<string, { userName: string; avatarUrl: string | null }>>();
 
 export default function registerAuctionSocket(io: Server): void {
   io.on('connection', (socket) => {
 
     // join: { liveId, userId?, userName?, role? } — 라이브 방 입장
-    socket.on('join', ({ liveId, userId, userName, role }: { liveId: string; userId?: string; userName?: string; role?: string }) => {
+    socket.on('join', ({ liveId, userId, userName, avatarUrl, role }: { liveId: string; userId?: string; userName?: string; avatarUrl?: string; role?: string }) => {
       socket.join(liveId);
       if (!viewerCounts.has(liveId)) viewerCounts.set(liveId, new Map());
       const room = viewerCounts.get(liveId)!;
@@ -19,7 +19,7 @@ export default function registerAuctionSocket(io: Server): void {
       const live = lives.get(liveId);
       const isSeller = role === 'seller' || (live && userId && String(live.sellerId) === String(userId));
       if (!isSeller) {
-        room.set(socket.id, userName || '시청자');
+        room.set(socket.id, { userName: userName || '시청자', avatarUrl: avatarUrl || null });
       }
 
       const viewers = Array.from(room.values());

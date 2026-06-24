@@ -107,13 +107,13 @@ export default async function load(params) {
         ? `<div class="lb-live-badge lb-upcoming-badge">📅 예고</div>`
         : `<div class="lb-live-badge"><span class="dot"></span>LIVE</div>`
       }
-      <button class="lb-glass-btn" id="lb-viewers-btn" aria-label="시청자 목록" title="시청자">
+      <button class="lb-glass-btn lb-viewers-chip" id="lb-viewers-btn" aria-label="시청자 목록" title="시청자">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
           <circle cx="12" cy="12" r="3"/>
         </svg>
+        <span id="lb-viewer-count">0</span>
       </button>
-      <span id="lb-viewer-count" style="display:none">0</span>
       <button class="lb-glass-btn" id="lb-mute-btn" title="음소거">🔇</button>
       <button class="lb-glass-btn" id="lb-back-btn" title="나가기">✕</button>
     </div>
@@ -509,21 +509,25 @@ export default async function load(params) {
     }
   }
 
+  // ---- Cached static element refs (queried once at mount) ----
+  const productNameEl = page.querySelector('#lb-product-name');
+  const productPriceEl = page.querySelector('#lb-product-price');
+  const productThumbEl = page.querySelector('#lb-product-thumb');
+  const timerSlot = page.querySelector('#lb-timer-slot');
+  const bidControlsEl = page.querySelector('#lb-bid-controls');
+  const noAuctionCtaEl = page.querySelector('#lb-no-auction-cta');
+  const productCardEl = page.querySelector('#lb-product');
+  const modeChipsEl = page.querySelector('#lb-mode-chips');
+  const emojiBarEl = page.querySelector('#lb-emoji-bar');
+  const bidderEl = page.querySelector('#lb-product-bidder');
+  const priceStepEl = page.querySelector('#lb-price-step');
+
+  // Thumbnail: create <img> once, swap .src only
+  let _lastThumbUrl = null;
+  let _thumbImg = null;
+
   function updateAuctionUI(auction) {
     currentAuction = auction;
-
-    const productNameEl = page.querySelector('#lb-product-name');
-    const productPriceEl = page.querySelector('#lb-product-price');
-    const productThumbEl = page.querySelector('#lb-product-thumb');
-    const timerSlot = page.querySelector('#lb-timer-slot');
-    const bidControlsEl = page.querySelector('#lb-bid-controls');
-    const noAuctionCtaEl = page.querySelector('#lb-no-auction-cta');
-
-    // 경매 중이 아닐 때 숨길 요소들
-    const productCardEl = page.querySelector('#lb-product');
-    const modeChipsEl = page.querySelector('#lb-mode-chips');
-    const emojiBarEl = page.querySelector('#lb-emoji-bar');
-    const bidderEl0 = page.querySelector('#lb-product-bidder');
 
     if (!auction) {
       if (bidControlsEl) bidControlsEl.style.display = 'none';
@@ -531,7 +535,7 @@ export default async function load(params) {
       if (productCardEl) productCardEl.style.display = 'none';
       if (modeChipsEl) modeChipsEl.style.display = 'none';
       if (emojiBarEl) emojiBarEl.style.display = 'none';
-      if (bidderEl0) bidderEl0.style.display = 'none';
+      if (bidderEl) bidderEl.style.display = 'none';
       timer.el.style.display = 'none';
       basePrice = 0;
       currentAuctionId = null;
@@ -552,20 +556,32 @@ export default async function load(params) {
     currentAuctionId = auction.id || auction.auctionId || currentAuctionId;
     basePrice = auction.currentPrice || auction.startPrice || 0;
 
-    if (productNameEl) productNameEl.textContent = auction.productName || '';
-    const priceStepEl = page.querySelector('#lb-price-step');
+    if (productNameEl) {
+      const next = auction.productName || '';
+      if (productNameEl.textContent !== next) productNameEl.textContent = next;
+    }
     if (priceStepEl) {
       const tick = getTickAmount(basePrice);
       priceStepEl.textContent = `+${tick.toLocaleString()}원`;
     }
 
-    // Thumbnail
+    // Thumbnail — create <img> once, swap .src only when URL changes
     if (productThumbEl) {
       const imgUrl = auction.imageUrl || auction.thumbUrl || '';
-      if (imgUrl) {
-        productThumbEl.innerHTML = `<img src="${escapeHtml(imgUrl)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" />`;
-      } else {
-        productThumbEl.innerHTML = '';
+      if (imgUrl !== _lastThumbUrl) {
+        if (imgUrl) {
+          if (!_thumbImg) {
+            _thumbImg = document.createElement('img');
+            _thumbImg.alt = '';
+            _thumbImg.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:8px;';
+            productThumbEl.appendChild(_thumbImg);
+          }
+          _thumbImg.src = imgUrl;
+        } else if (_thumbImg) {
+          _thumbImg.remove();
+          _thumbImg = null;
+        }
+        _lastThumbUrl = imgUrl;
       }
     }
 
@@ -573,7 +589,10 @@ export default async function load(params) {
     if (mode !== currentMode) switchBidMode(mode);
 
     if (mode === 'normal') {
-      if (productPriceEl) productPriceEl.textContent = basePrice.toLocaleString() + '원';
+      if (productPriceEl) {
+        const next = basePrice.toLocaleString() + '원';
+        if (productPriceEl.textContent !== next) productPriceEl.textContent = next;
+      }
       updateSlideBid();
       updateUnitTotal(auction, basePrice);
     } else if (mode === 'fcfs') {
@@ -603,7 +622,6 @@ export default async function load(params) {
     }
 
     // 현재 최고 응찰자
-    const bidderEl = page.querySelector('#lb-product-bidder');
     if (bidderEl) {
       const name = auction.topBidderName || '';
       if (name && mode === 'normal') {
@@ -1190,10 +1208,11 @@ export default async function load(params) {
   socket = Sock.connect();
   const _buyerName = user.nickname || user.username || '시청자';
   // 초기 연결 + 재연결 시 모두 룸 재입장
-  socket.on('connect', () => {
+  function onSocketConnect() {
     Sock.identifyUser(socket, user.id);
-    Sock.joinRoom(socket, liveId, String(user.id), _buyerName);
-  });
+    Sock.joinRoom(socket, liveId, String(user.id), _buyerName, undefined, user.avatarUrl || null);
+  }
+  socket.on('connect', onSocketConnect);
 
   const unsubAuctionUpdate = Sock.onAuctionUpdate(socket, (auction) => {
     updateAuctionUI(auction);
@@ -1315,7 +1334,14 @@ export default async function load(params) {
     backdrop.setAttribute('role', 'dialog');
     backdrop.setAttribute('aria-modal', 'true');
     const namesHtml = names.length
-      ? names.map(n => `<li class="ls-viewer-modal__item">${escapeHtml(n)}</li>`).join('')
+      ? names.map(v => {
+          const name = typeof v === 'string' ? v : (v && v.userName) || '';
+          const avatar = typeof v === 'object' && v ? v.avatarUrl : null;
+          const avatarHtml = avatar
+            ? `<img class="ls-viewer-modal__avatar" src="${escapeHtml(avatar)}" alt="" />`
+            : `<span class="ls-viewer-modal__avatar ls-viewer-modal__avatar--placeholder">${personIconSVG(20)}</span>`;
+          return `<li class="ls-viewer-modal__item">${avatarHtml}<span class="ls-viewer-modal__name">${escapeHtml(name)}</span></li>`;
+        }).join('')
       : '<li class="ls-viewer-modal__empty">시청자가 없습니다</li>';
     backdrop.innerHTML = `
       <div class="ls-viewer-modal">
@@ -1415,6 +1441,7 @@ export default async function load(params) {
     unsubBlindBidCount, unsubGiveawayCount, unsubGiveawayJoinAck, unsubViewerJoin,
     unsubPurchaseMade, unsubBidBlindAck, unsubBidRejected, unsubLiveEnded,
     unsubEmoji,
+    () => socket.off('connect', onSocketConnect),
   );
 
   // ---- Image zoom overlay ----

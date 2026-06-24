@@ -50,6 +50,19 @@ export function createChatOverlay() {
   /** @type {HTMLElement[]} */
   const msgNodes = [];
   let userScrolledUp = false;
+  let _scrollPending = false;
+  let _rafId = 0;
+
+  // 버스트 push 시 scrollToBottom을 프레임당 1회로 합침(reflow 배칭)
+  function scheduleScrollToBottom() {
+    if (_scrollPending) return;
+    _scrollPending = true;
+    _rafId = requestAnimationFrame(() => {
+      _scrollPending = false;
+      _rafId = 0;
+      if (!userScrolledUp) scrollToBottom();
+    });
+  }
 
   function isAtBottom() {
     return list.scrollTop + list.clientHeight >= list.scrollHeight - 48;
@@ -96,13 +109,16 @@ export function createChatOverlay() {
     msgNodes.push(msgEl);
 
     if (!userScrolledUp) {
-      scrollToBottom();
+      scheduleScrollToBottom();
     } else {
       newBadge.style.display = 'flex';
     }
   }
 
   function destroy() {
+    if (_rafId) cancelAnimationFrame(_rafId);
+    _rafId = 0;
+    _scrollPending = false;
     msgNodes.length = 0;
     el.remove();
   }

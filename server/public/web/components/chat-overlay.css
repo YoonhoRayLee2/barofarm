@@ -96,9 +96,9 @@
 
 /* ---- 말풍선 ---- */
 .chat-overlay__bubble {
-  background: rgba(0, 0, 0, 0.72);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 14px;
   padding: 5px 11px;

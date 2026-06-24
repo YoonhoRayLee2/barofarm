@@ -18,6 +18,7 @@ import { createTimer } from '/app/components/timer.js';
 import { createChatOverlay } from '/app/components/chat-overlay.js';
 import { showConfirmDialog } from '/app/components/confirm-dialog.js';
 import { showToast as _globalToast } from '/app/components/toast.js';
+import { personIconSVG } from '/app/scripts/person-icon.js';
 
 // Inject page CSS once
 const _cssId = 'page-css-live-seller';
@@ -414,9 +415,10 @@ export default async function load(params) {
   // ---- Socket connection ----
   socket = Sock.connect();
   const _sellerName = user.nickname || user.username || '판매자';
-  socket.on('connect', () => {
-    Sock.joinRoom(socket, liveId, String(user.id), _sellerName, 'seller');
-  });
+  function onSocketConnect() {
+    Sock.joinRoom(socket, liveId, String(user.id), _sellerName, 'seller', user.avatarUrl || null);
+  }
+  socket.on('connect', onSocketConnect);
 
   const unsubAuctionUpdate = Sock.onAuctionUpdate(socket, (auction) => {
     updateAuctionUI(auction);
@@ -456,7 +458,8 @@ export default async function load(params) {
     spawnFloatingEmoji(emoji);
   });
 
-  unsubFns.push(unsubAuctionUpdate, unsubAuctionEnded, unsubChat, unsubViewers, unsubViewerList, unsubGiveawayCount, unsubEmoji);
+  unsubFns.push(unsubAuctionUpdate, unsubAuctionEnded, unsubChat, unsubViewers, unsubViewerList, unsubGiveawayCount, unsubEmoji,
+    () => socket.off('connect', onSocketConnect));
 
   // ---- Auction UI helpers ----
   /** @type {{ id?: string, productName?: string, currentPrice?: number, currentBidder?: string, remaining?: number, mode?: string, stockTotal?: number, stockSold?: number } | null} */
@@ -1010,7 +1013,14 @@ export default async function load(params) {
     let _fired = false;
     function _showViewerModal(names) {
       const namesHtml = names.length
-        ? names.map(n => `<li class="ls-viewer-modal__item">${escapeHtml(n)}</li>`).join('')
+        ? names.map(v => {
+            const name = typeof v === 'string' ? v : (v && v.userName) || '';
+            const avatar = typeof v === 'object' && v ? v.avatarUrl : null;
+            const avatarHtml = avatar
+              ? `<img class="ls-viewer-modal__avatar" src="${escapeHtml(avatar)}" alt="" />`
+              : `<span class="ls-viewer-modal__avatar ls-viewer-modal__avatar--placeholder">${personIconSVG(20)}</span>`;
+            return `<li class="ls-viewer-modal__item">${avatarHtml}<span class="ls-viewer-modal__name">${escapeHtml(name)}</span></li>`;
+          }).join('')
         : '<li class="ls-viewer-modal__empty">시청자가 없습니다</li>';
       const backdrop = document.createElement('div');
       backdrop.className = 'ls-viewer-modal-backdrop';

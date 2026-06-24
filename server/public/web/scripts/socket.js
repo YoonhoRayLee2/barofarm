@@ -34,8 +34,8 @@ export function connect(baseUrl = '') {
  * @param {string} liveId
  * @param {string} userId
  */
-export function joinRoom(socket, liveId, userId, userName, role) {
-  socket.emit('join', { liveId, userId, userName, role });
+export function joinRoom(socket, liveId, userId, userName, role, avatarUrl) {
+  socket.emit('join', { liveId, userId, userName, role, avatarUrl });
 }
 
 /**
@@ -238,7 +238,7 @@ export function onGiveawayJoinAck(socket, cb) {
 /**
  * Subscribe to viewer:list events.
  * @param {Socket} socket
- * @param {(data: { viewers: string[] }) => void} cb
+ * @param {(data: { viewers: Array<{ userName: string, avatarUrl: string|null }> }) => void} cb
  * @returns {() => void} unsubscribe
  */
 export function onViewerList(socket, cb) {
