@@ -82,9 +82,9 @@ export async function publishCamera(room) {
   }
 
   const micTrack = await LK.createLocalAudioTrack({
-    echoCancellation: false,   // 음악 송출 시 색조 왜곡 방지
-    noiseSuppression: false,   // 배경음/음악을 잡음으로 오인해 깎는 문제 방지
-    autoGainControl: false,    // AGC가 음악 다이나믹스를 손상시키는 문제 방지
+    echoCancellation: true,    // 하울링·에코 방지 — 음성 환경 기본
+    noiseSuppression: true,    // 배경 잡음 제거 → 목소리 부각
+    autoGainControl: true,     // 작은 목소리 자동 증폭 → 선명하게 들리게
   });
 
   await room.localParticipant.publishTrack(cameraTrack, {
@@ -92,15 +92,20 @@ export async function publishCamera(room) {
     videoSimulcastLayers: [LK.VideoPresets.h540, LK.VideoPresets.h216],
   });
 
-  const musicPreset = LK.AudioPresets?.musicHighQuality;
-  if (musicPreset) {
+  // 음성 명료도 우선 프리셋: speech(~20 kbps)는 지나치게 협대역이라 답답함.
+  // speechHigh(~40 kbps)는 speech보다 넓은 대역으로 목소리가 선명하고 자연스러우며,
+  // music 계열보다 음성 처리 최적화가 잘 맞음 — P2C 라이브 멘트 환경에 적합.
+  // dtx:true — 무음 구간 대역폭 절약, 음성엔 무해.
+  // red:true  — 패킷 손실 복원, 음질 보호.
+  const speechPreset = LK.AudioPresets?.speechHigh ?? LK.AudioPresets?.speech;
+  if (speechPreset) {
     await room.localParticipant.publishTrack(micTrack, {
-      audioPreset: musicPreset,
-      dtx: false,  // 무음 구간에도 스트림 유지 (음악·배경음 끊김 방지)
-      red: true,   // 패킷 손실 복원 (음질 보호)
+      audioPreset: speechPreset,
+      dtx: true,
+      red: true,
     });
   } else {
-    console.warn('[livekit] AudioPresets.musicHighQuality 없음 — 기본 오디오 설정으로 발행');
+    console.warn('[livekit] AudioPresets.speechHigh/speech 없음 — 기본 오디오 설정으로 발행');
     await room.localParticipant.publishTrack(micTrack);
   }
 
