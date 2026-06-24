@@ -71,7 +71,7 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
-.lb-meta { display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0; }
+.lb-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .lb-live-badge {
   display: inline-flex; align-items: center; gap: 6px;
   background: var(--grad-cta); color: #fff;
@@ -89,11 +89,11 @@
   font-size: 11px;
 }
 .lb-glass-btn {
-  width: 32px; height: 32px; border-radius: 50%;
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
   border: 1px solid rgba(237,241,226,0.18);
   background: rgba(0,0,0,0.4); backdrop-filter: blur(12px);
   color: #fff; display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
+  cursor: pointer; font-size: 14px; line-height: 1;
 }
 
 /* Mute/HD row */

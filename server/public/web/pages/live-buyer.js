@@ -227,8 +227,12 @@ export default async function load(params) {
   actionsBar.innerHTML = `
     <button class="lb-icon-btn" id="lb-products-btn" aria-label="라이브중인 상품" title="상품">📦</button>
     <input class="lb-chat-input" id="lb-chat-input" type="text" placeholder="메시지를 입력해 주세요" maxlength="100" autocomplete="off" />
-    <button class="lb-icon-btn" id="lb-heart-btn" title="좋아요">♡</button>
-    <button class="lb-icon-btn" id="lb-share-btn2" aria-label="공유" title="공유">↗</button>
+    <button class="lb-icon-btn lb-icon-btn--send" id="lb-send-btn" aria-label="메시지 전송" title="전송">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"/>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+      </svg>
+    </button>
   `;
   productPanel.appendChild(actionsBar);
 
@@ -1466,23 +1470,10 @@ export default async function load(params) {
       }).catch(() => {});
     }
   }
-  const shareBtnBottom = page.querySelector('#lb-share-btn2');
-  if (shareBtnBottom) shareBtnBottom.addEventListener('click', doShare);
-
-  // Heart (like) button — 이모지 바와 동일하게 ❤️ 리액션 전송 + 로컬 피드백
-  const heartBtn = page.querySelector('#lb-heart-btn');
-  if (heartBtn) {
-    heartBtn.addEventListener('click', () => {
-      if (!socket) return;
-      Sock.sendEmojiReact(socket, {
-        liveId,
-        emoji: '❤️',
-        userId: String(user.id),
-        userName: user.nickname || user.username || '익명',
-      });
-      spawnFloatingEmoji('❤️');
-    });
-  }
+  void doShare; // 공유 함수는 다른 진입점 대비 유지
+  // 전송 버튼 — 입력창 메시지 전송
+  const sendBtn = page.querySelector('#lb-send-btn');
+  if (sendBtn) sendBtn.addEventListener('click', () => sendChatMsg());
 
   // Products button
   page.querySelector('#lb-products-btn').addEventListener('click', () => openProductSheet('history'));

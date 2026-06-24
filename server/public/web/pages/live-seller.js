@@ -840,7 +840,7 @@ export default async function load(params) {
         <!-- Giveaway: 10초 후 자동 추첨 -->
         <div class="auction-modal__mode-opts is-hidden" id="am-opts-giveaway">
           <div class="am-giveaway-info">
-            🎁 시작 후 10초 동안 참여자를 모집한 뒤,<br>
+            🎁 시작 후 20초 동안 참여자를 모집한 뒤,<br>
             자동으로 한 명을 무작위 추첨합니다.
           </div>
         </div>
@@ -1183,6 +1183,12 @@ export default async function load(params) {
       await api.endLive(liveId, user.id);
     } catch (err) {
       const status = err?.status || err?.response?.status;
+      const msg = String(err?.message || err || '');
+      // 이미 종료/삭제된 라이브(404 또는 not found)는 정상 종료로 간주하고 화면만 닫는다
+      if (status === 404 || /not found/i.test(msg)) {
+        window.history.back();
+        return;
+      }
       if (status === 409) {
         showToast('진행 중인 경매가 있습니다. 경매를 먼저 종료해 주세요.', { variant: 'warn' });
         return;
