@@ -823,6 +823,10 @@ async function loadRecommendations(container, auctionId) {
   const section = container.querySelector('#od-recommendations');
   if (!section) return;
 
+  // 농협몰 추천 한시적 숨김 (2026-06-25)
+  const { isNhmallRecHidden } = await import('/app/scripts/nhmall-rec-flag.js');
+  if (isNhmallRecHidden()) { section.classList.add('is-hidden'); return; }
+
   try {
     const res = await fetch(`/api/auctions/${encodeURIComponent(auctionId)}/recommendations`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

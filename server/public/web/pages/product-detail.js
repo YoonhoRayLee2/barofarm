@@ -450,6 +450,10 @@ async function loadProductRecommendations(page, category) {
   const scrollEl = page.querySelector('#pd-rec-scroll');
   if (!section || !scrollEl) return;
 
+  // 농협몰 추천 한시적 숨김 (2026-06-25)
+  const { isNhmallRecHidden } = await import('/app/scripts/nhmall-rec-flag.js');
+  if (isNhmallRecHidden()) { section.classList.add('is-hidden'); return; }
+
   try {
     const params = category
       ? `categories=${encodeURIComponent(category)}&limit=6`
