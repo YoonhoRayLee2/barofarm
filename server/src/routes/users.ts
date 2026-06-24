@@ -712,10 +712,13 @@ router.get('/:id/bids', async (req: Request, res: Response) => {
          a.current_price * a.unit_count AS total_price,
          b.created_at      AS bid_at,
          a.product_name,
+         a.image_url,
+         s.nickname        AS seller_name,
          a.top_bidder_id,
          b.bidder_id
        FROM bids b
        JOIN auctions a ON a.id = b.auction_id
+       LEFT JOIN users s ON s.id = a.seller_id
        WHERE b.bidder_id = ?
        ORDER BY b.created_at DESC`,
       [userId],
@@ -731,6 +734,8 @@ router.get('/:id/bids', async (req: Request, res: Response) => {
       total_price: number;
       bid_at: string;
       product_name: string;
+      image_url: string | null;
+      seller_name: string | null;
       top_bidder_id: number | null;
       bidder_id: number;
     }>;
@@ -747,6 +752,9 @@ router.get('/:id/bids', async (req: Request, res: Response) => {
         unitLabel:   b.unit_label,
         totalPrice:  isWinner ? Number(b.total_price) : null,
         isWinner,
+        sellerName:  b.seller_name,
+        imageUrl:    b.image_url,
+        createdAt:   b.bid_at,
         bidAt:       b.bid_at,
       };
     });

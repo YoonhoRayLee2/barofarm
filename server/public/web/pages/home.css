@@ -38,6 +38,12 @@
   justify-content: center;
   flex-shrink: 0;
 }
+.home-header__logo {
+  height: 26px;
+  width: auto;
+  display: block;
+  object-fit: contain;
+}
 .home-header__title {
   font-size: 20px;
   font-weight: 900;

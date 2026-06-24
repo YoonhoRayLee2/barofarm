@@ -40,12 +40,6 @@ function getContainer() {
   return container;
 }
 
-const VARIANT_ICONS = {
-  info:    'ℹ️',
-  success: '✅',
-  error:   '❌',
-};
-
 /**
  * Show a toast notification.
  *
@@ -66,7 +60,6 @@ export function showToast(message, opts = {}) {
   toast.className = `toast toast--${variant}`;
   toast.setAttribute('role', 'status');
   toast.innerHTML = `
-    <span class="toast__icon" aria-hidden="true">${VARIANT_ICONS[variant] || VARIANT_ICONS.info}</span>
     <span class="toast__msg">${escapeHtml(String(message))}</span>
   `;
 

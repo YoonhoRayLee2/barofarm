@@ -67,13 +67,18 @@ export default async function load(params) {
   const topBar = document.createElement('div');
   topBar.className = 'live-seller__topbar';
   topBar.innerHTML = `
-    <div class="ls-top-left">
-      <div class="lb-live-badge"><span class="dot"></span>LIVE</div>
-      <button class="ls-viewer-chip" id="ls-viewers" aria-label="시청자 목록">
-        👁 <span id="ls-viewer-count">0</span> 시청 중
-      </button>
+    <div class="ls-host">
+      <div class="ls-avatar" id="ls-seller-avatar"></div>
+      <div class="ls-host-info">
+        <div class="ls-host-name" id="ls-seller-name">판매자</div>
+        <div class="ls-host-sub" id="ls-live-title"></div>
+      </div>
     </div>
     <div class="ls-top-right" id="ls-cam-controls">
+      <div class="lb-live-badge"><span class="dot"></span>LIVE</div>
+      <button class="ls-viewer-chip ls-viewer-chip--icon" id="ls-viewers" aria-label="시청자 목록">
+        👁 <span id="ls-viewer-count">0</span>
+      </button>
       <button class="ls-ctrl-btn" id="ls-flip-btn" title="카메라 전환">🔄</button>
       <button class="ls-ctrl-btn" id="ls-mic-btn" title="마이크">🎙</button>
       <button class="ls-ctrl-btn ls-ctrl-btn--danger" id="ls-end-btn" title="방송 종료">✕</button>
@@ -92,7 +97,7 @@ export default async function load(params) {
   const bottomPanel = document.createElement('div');
   bottomPanel.className = 'live-seller__bottom';
   bottomPanel.innerHTML = `
-    <div class="live-seller__auction-card" id="ls-auction-info">
+    <div class="live-seller__auction-card is-hidden" id="ls-auction-info">
       <div class="live-seller__no-auction" id="ls-no-auction">경매를 등록하세요</div>
       <div class="ls-mode-row is-hidden" id="ls-mode-row">
         <span class="ls-mode-chip" id="ls-mode-chip"></span>
@@ -390,6 +395,15 @@ export default async function load(params) {
     // 조회 실패 시 일단 진행 (메모리에 없어도 시도)
   }
 
+  // 상단바 채우기: 판매자 닉네임 · 방송제목 · 아바타
+  const sellerDisplayName = liveInfo?.sellerName || user.nickname || user.username || '판매자';
+  const _nameEl = page.querySelector('#ls-seller-name');
+  if (_nameEl) _nameEl.textContent = sellerDisplayName;
+  const _titleEl = page.querySelector('#ls-live-title');
+  if (_titleEl) _titleEl.textContent = liveInfo?.title || '라이브 방송 중';
+  const _avatarEl = page.querySelector('#ls-seller-avatar');
+  if (_avatarEl) _avatarEl.textContent = (sellerDisplayName[0] || '판').toUpperCase();
+
   if (liveInfo?.status === 'upcoming') {
     hideOverlay();
     renderUpcomingScreen(liveInfo);
@@ -490,13 +504,16 @@ export default async function load(params) {
     // Remove fcfs-end button if exists
     if (endFcfsBtn) { endFcfsBtn.remove(); endFcfsBtn = null; }
 
+    const auctionCard = page.querySelector('#ls-auction-info');
     if (!auction) {
-      if (noAuction) noAuction.classList.remove('is-hidden');
+      // 경매 중이 아닐 때는 상품 카드 영역 전체를 숨긴다 (하단 액션바는 유지)
+      if (auctionCard) auctionCard.classList.add('is-hidden');
       if (productBlock) productBlock.classList.add('is-hidden');
       timerWrap.classList.add('is-hidden');
       return;
     }
 
+    if (auctionCard) auctionCard.classList.remove('is-hidden');
     if (noAuction) noAuction.classList.add('is-hidden');
     if (productBlock) productBlock.classList.remove('is-hidden');
     if (productName) productName.textContent = auction.productName || '';
@@ -936,6 +953,10 @@ export default async function load(params) {
         showToast('상품명과 시작가를 올바르게 입력하세요.', 'error');
         return;
       }
+      if (!capturedBlob) {
+        showToast('상품 사진을 촬영해 주세요.', 'error');
+        return;
+      }
       if (!isPriceless && startPrice % 100 !== 0) {
         showToast('시작가는 100원 단위로 입력하세요.', 'error');
         return;
@@ -1171,6 +1192,30 @@ export default async function load(params) {
     }
     window.history.back();
   });
+
+  // ---- Image zoom overlay ----
+  const imgZoomOverlay = document.createElement('div');
+  imgZoomOverlay.className = 'ls-img-zoom-overlay';
+  imgZoomOverlay.innerHTML = '<img class="ls-img-zoom-img" src="" alt="" />';
+  page.appendChild(imgZoomOverlay);
+  const imgZoomImg = imgZoomOverlay.querySelector('.ls-img-zoom-img');
+
+  function openImgZoom(src) {
+    if (!src) return;
+    imgZoomImg.src = src;
+    imgZoomOverlay.classList.add('ls-img-zoom-overlay--visible');
+  }
+  function closeImgZoom() {
+    imgZoomOverlay.classList.remove('ls-img-zoom-overlay--visible');
+    imgZoomImg.src = '';
+  }
+  imgZoomOverlay.addEventListener('click', closeImgZoom);
+
+  const lsThumb = page.querySelector('#ls-product-thumb');
+  if (lsThumb) {
+    lsThumb.style.cursor = 'zoom-in';
+    lsThumb.addEventListener('click', () => { if (lsThumb.src) openImgZoom(lsThumb.src); });
+  }
 
   // ---- Cleanup ----
   setCleanup(async () => {

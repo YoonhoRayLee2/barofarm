@@ -65,12 +65,7 @@
 
 .toast--info::before {
   content: 'ⓘ';
-  background: var(--color-info);
-}
-
-.toast__icon {
-  font-size: var(--fs-lg);
-  flex-shrink: 0;
+  background: var(--color-accent);
 }
 
 .toast__msg {

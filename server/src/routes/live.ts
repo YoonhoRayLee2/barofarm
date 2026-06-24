@@ -321,6 +321,7 @@ export function createLiveRouter(io: Server) {
       title: live.title,
       thumbnailUrl: live.thumbnailUrl ?? null,
       status: live.status,
+      scheduledAt: live.scheduledAt ?? null,
       startedAt: live.createdAt,
       currentAuction: currentAuction
         ? {
@@ -485,7 +486,7 @@ export function createLiveRouter(io: Server) {
     console.log('[auction:create] body=', req.body, 'file=', req.file ? { name: req.file.filename, size: req.file.size } : null);
 
     const resolvedMode = (['fcfs', 'blind', 'giveaway'].includes(mode ?? '')) ? mode as 'fcfs' | 'blind' | 'giveaway' : 'normal';
-    const resolvedDuration = resolvedMode === 'giveaway' ? 10 : (durationSec !== undefined ? Number(durationSec) : 30);
+    const resolvedDuration = resolvedMode === 'giveaway' ? 20 : (durationSec !== undefined ? Number(durationSec) : 30);
 
     if (!productName || (resolvedMode !== 'giveaway' && startPrice === undefined)) {
       if (req.file) fs.unlink(req.file.path, () => {});

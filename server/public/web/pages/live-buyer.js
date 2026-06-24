@@ -515,12 +515,19 @@ export default async function load(params) {
     const bidControlsEl = page.querySelector('#lb-bid-controls');
     const noAuctionCtaEl = page.querySelector('#lb-no-auction-cta');
 
+    // 경매 중이 아닐 때 숨길 요소들
+    const productCardEl = page.querySelector('#lb-product');
+    const modeChipsEl = page.querySelector('#lb-mode-chips');
+    const emojiBarEl = page.querySelector('#lb-emoji-bar');
+    const bidderEl0 = page.querySelector('#lb-product-bidder');
+
     if (!auction) {
-      if (productNameEl) productNameEl.textContent = '다음 경매 준비 중...';
-      if (productPriceEl) productPriceEl.textContent = '';
-      if (productThumbEl) productThumbEl.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--color-surface-secondary,#f5f5f5);border-radius:8px"><span style="color:var(--color-text-tertiary,#999);font-size:12px">준비 중</span></div>';
       if (bidControlsEl) bidControlsEl.style.display = 'none';
-      if (noAuctionCtaEl) noAuctionCtaEl.style.display = '';
+      if (noAuctionCtaEl) noAuctionCtaEl.style.display = 'none';
+      if (productCardEl) productCardEl.style.display = 'none';
+      if (modeChipsEl) modeChipsEl.style.display = 'none';
+      if (emojiBarEl) emojiBarEl.style.display = 'none';
+      if (bidderEl0) bidderEl0.style.display = 'none';
       timer.el.style.display = 'none';
       basePrice = 0;
       currentAuctionId = null;
@@ -531,9 +538,12 @@ export default async function load(params) {
       return;
     }
 
-    // Auction active: show bid controls, hide no-auction CTA
+    // Auction active: 숨겼던 요소 복원
     if (bidControlsEl) bidControlsEl.style.display = '';
     if (noAuctionCtaEl) noAuctionCtaEl.style.display = 'none';
+    if (productCardEl) productCardEl.style.display = '';
+    if (modeChipsEl) modeChipsEl.style.display = '';
+    if (emojiBarEl) emojiBarEl.style.display = '';
 
     currentAuctionId = auction.id || auction.auctionId || currentAuctionId;
     basePrice = auction.currentPrice || auction.startPrice || 0;
@@ -762,10 +772,13 @@ export default async function load(params) {
         if (subText) subEl.textContent = subText;
       }
 
+      // 닉네임: getLive 응답의 sellerName 우선 사용 (getUser 실패해도 표기되도록)
+      if (nameEl && live.sellerName) nameEl.textContent = live.sellerName;
+
       if (!sellerId) return;
       _sellerId = String(sellerId);
       const sellerUser = await api.getUser(sellerId);
-      const displayName = sellerUser.nickname || sellerUser.displayName || sellerUser.username || '판매자';
+      const displayName = sellerUser.nickname || sellerUser.displayName || sellerUser.username || live.sellerName || '판매자';
       if (nameEl) nameEl.textContent = displayName;
       if (avatarEl) {
         if (sellerUser.avatarUrl) {
@@ -782,6 +795,9 @@ export default async function load(params) {
     }
   }
   loadSellerInfo();
+
+  // 초기 진입 상태 반영 — 진행 중 경매가 없으면 상품카드/모드칩/이모지바 숨김
+  updateAuctionUI(liveInfo?.currentAuction || null);
 
   // ---- Follow button ----
   let isFollowing = false;
@@ -1043,8 +1059,10 @@ export default async function load(params) {
               ? `<div class="ps-history-meta">단가 ${unitPrice.toLocaleString('ko-KR')}원 × ${unitCount}${b.unitLabel || '개'}</div>`
               : '';
             const ts = b.createdAt
-              ? new Date(b.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+              ? new Date(b.createdAt).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
               : '';
+            const sellerName = b.sellerName ? escapeHtml(b.sellerName) : '';
+            const metaParts = [sellerName, ts].filter(Boolean).join(' · ');
             const imgSrc = b.imageUrl || b.image_url || '';
             const imgHtml = imgSrc
               ? `<img class="ps-history-thumb" src="${escapeHtml(imgSrc)}" alt="" />`
@@ -1055,8 +1073,8 @@ export default async function load(params) {
                 ${imgHtml}
                 <div class="ps-history-info">
                   <div class="ps-history-name">${name}</div>
+                  ${metaParts ? `<div class="ps-history-meta">${metaParts}</div>` : ''}
                   ${unitNote}
-                  ${ts ? `<div class="ps-history-meta">${ts}</div>` : ''}
                 </div>
                 <div class="ps-history-price">${price}원</div>
               </div>

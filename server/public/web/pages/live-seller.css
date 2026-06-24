@@ -7,6 +7,11 @@
 .live-seller__video {
   position: absolute; inset: 0;
   background: linear-gradient(135deg, #1f3526 0%, #4a6b3d 50%, #2a4a30 100%);
+  width: 100%; height: 100%;
+  object-fit: contain;
+  /* 독립 합성 레이어로 승격 — 모달 backdrop-filter 제거 시 리페인트 누락 차단 */
+  transform: translateZ(0);
+  will-change: transform;
 }
 .live-seller__video::after {
   content: '🌿'; position: absolute;
@@ -18,10 +23,28 @@
 .live-seller__topbar {
   position: relative; z-index: 10;
   padding: 12px 16px 24px;
-  display: flex; align-items: flex-start; justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
   background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%);
 }
 .ls-top-left { display: flex; flex-direction: column; gap: 6px; }
+.ls-host { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.ls-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--grad-accent);
+  border: 2px solid rgba(255,255,255,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 14px; color: #fff;
+  flex-shrink: 0;
+}
+.ls-host-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ls-host-name {
+  font-size: 14px; font-weight: 700; color: #fff;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ls-host-sub {
+  font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.6);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .lb-live-badge {
   display: inline-flex; align-items: center; gap: 6px;
   background: var(--grad-cta); color: #fff;
@@ -35,21 +58,21 @@
 }
 @keyframes dot-pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
 .ls-viewer-chip {
-  display: flex; align-items: center; gap: 5px;
-  font-size: 12px; font-weight: 700; color: #fff;
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 700; color: #fff;
   background: rgba(255,255,255,0.1);
   backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255,255,255,0.15);
-  padding: 5px 12px; border-radius: 999px;
+  padding: 4px 9px; border-radius: 999px;
   cursor: pointer; white-space: nowrap;
 }
-.ls-top-right { display: flex; gap: 6px; }
+.ls-top-right { display: flex; align-items: center; justify-content: flex-end; gap: 5px; flex-shrink: 0; }
 .ls-ctrl-btn {
-  width: 38px; height: 38px; border-radius: 50%;
+  width: 30px; height: 30px; border-radius: 50%;
   background: rgba(0,0,0,0.4); backdrop-filter: blur(12px);
   border: 1px solid rgba(255,255,255,0.15);
   color: #fff; display: flex; align-items: center; justify-content: center;
-  cursor: pointer; font-size: 18px;
+  cursor: pointer; font-size: 14px; flex-shrink: 0;
 }
 .ls-ctrl-btn--danger {
   background: rgba(229,86,74,0.4); border-color: rgba(229,86,74,0.6);
@@ -205,33 +228,82 @@
 .won-overlay {
   position: absolute; inset: 0; z-index: 50;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.55);
+  background: var(--color-overlay-dim);
   animation: won-overlay-in 0.25s var(--ease-out) both;
+  transform: translateZ(0);
 }
 @keyframes won-overlay-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from { opacity: 0; transform: translateZ(0) scale(0.96); }
+  to   { opacity: 1; transform: translateZ(0) scale(1); }
 }
 
 /* Won/Giveaway result card (shown after auction ends) */
 .won-card {
-  background: rgba(255,255,255,0.1); backdrop-filter: blur(14px);
-  border: 1px solid rgba(255,255,255,0.18); border-radius: 14px;
-  padding: 20px; text-align: center;
-  display: flex; flex-direction: column; gap: 6px; align-items: center;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  text-align: center;
+  display: flex; flex-direction: column; gap: var(--space-2); align-items: center;
+  min-width: 220px; max-width: 300px;
+  box-shadow: var(--elev-3);
 }
-.won-card--giveaway { border-color: rgba(147,198,108,0.4); }
+.won-card--giveaway { border-color: var(--color-success); }
 .won-card__emoji { font-size: 40px; line-height: 1; }
-.won-card__winner-name { font-size: 26px; font-weight: 900; color: #fff; letter-spacing: -0.5px; }
-.won-card__title { font-size: 15px; font-weight: 700; color: rgba(255,255,255,0.7); }
-.won-card__price { font-family: var(--font-display); font-size: 22px; font-weight: 900; color: #FFD87A; }
-.won-card__winner { font-size: 13px; color: #93c66c; font-weight: 600; }
-.won-card__winner-msg { font-size: 12px; color: rgba(237,241,226,0.8); }
+.won-card__winner-name {
+  font-family: var(--font-display); font-size: var(--fs-2xl); font-weight: 900;
+  color: var(--color-ink); letter-spacing: -0.5px; line-height: var(--lh-tight);
+}
+.won-card__title {
+  font-size: var(--fs-base); font-weight: 600;
+  color: var(--color-ink-soft);
+}
+.won-card__price {
+  font-family: var(--font-display); font-size: var(--fs-price, 28px);
+  font-weight: var(--fw-price, 900); color: var(--color-accent);
+}
+.won-card__unit-total {
+  font-size: var(--fs-sm); color: var(--color-ink-soft); font-weight: 600;
+  margin: var(--space-1) 0;
+}
+.won-card__winner { font-size: var(--fs-sm); color: var(--color-success); font-weight: 700; }
+.won-card__winner-msg { font-size: var(--fs-sm); color: var(--color-ink-soft); }
 .won-card__confirm-btn {
-  margin-top: 4px; padding: 10px 28px;
-  background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
-  border-radius: 999px; color: #fff; font-size: 14px; font-weight: 700;
-  cursor: pointer; font-family: var(--font-body);
+  margin-top: var(--space-2); padding: 10px 28px;
+  background: var(--grad-accent);
+  border: none;
+  border-radius: var(--radius-pill); color: var(--color-surface); font-size: var(--fs-base);
+  font-weight: 700; cursor: pointer; font-family: var(--font-body);
+}
+.won-card__confirm-btn:active { opacity: 0.85; }
+
+/* Won slot machine (giveaway animation) */
+.won-slot { overflow: hidden; height: 2em; display: flex; align-items: center; justify-content: center; }
+.won-slot__name {
+  font-family: var(--font-display); font-size: var(--fs-2xl); font-weight: 900;
+  color: var(--color-ink); transition: color var(--dur-base) var(--ease-out);
+}
+.won-slot__name--winner { color: var(--color-accent); }
+
+/* Image zoom overlay (seller) */
+.ls-img-zoom-overlay {
+  position: absolute; inset: 0;
+  background: var(--color-overlay-dim);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200;
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+.ls-img-zoom-overlay--visible {
+  opacity: 1; pointer-events: auto;
+}
+.ls-img-zoom-img {
+  max-width: 92%; max-height: 88%;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  cursor: zoom-out;
 }
 
 /* Blind bids table */

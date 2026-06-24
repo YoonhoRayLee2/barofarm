@@ -92,17 +92,7 @@ export default async function load() {
   header.className = 'home-header';
   header.innerHTML = `
     <div class="home-header__brand">
-      <div class="home-header__brand-icon">
-        <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
-          <path d="M5 8h4l3 13h13l3-9H10" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="13" cy="26" r="2" fill="#fff"/>
-          <circle cx="23" cy="26" r="2" fill="#fff"/>
-        </svg>
-      </div>
-      <div>
-        <div class="home-header__title">NH바로팜</div>
-        <div class="home-header__subtitle">산지직송 라이브경매</div>
-      </div>
+      <img class="home-header__logo" src="/app/assets/home-logo-bright.png" alt="NH바로팜" />
     </div>
     <div class="home-header__actions">
       <button class="home-header__icon-btn" aria-label="알림">
