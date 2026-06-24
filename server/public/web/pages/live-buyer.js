@@ -133,7 +133,7 @@ export default async function load(params) {
     <span style="font-size:9px;padding:1px 4px;border-radius:3px;border:1px solid rgba(255,255,255,0.4);font-weight:800;">HD</span>
     <span style="opacity:0.8"> 720p</span>
   `;
-  page.appendChild(muteRow);
+  page.querySelector('.lb-host-info').appendChild(muteRow);
 
   // ---- Chat overlay wrapper ----
   const chatWrap = document.createElement('div');

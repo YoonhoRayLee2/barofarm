@@ -82,15 +82,27 @@ export async function publishCamera(room) {
   }
 
   const micTrack = await LK.createLocalAudioTrack({
-    echoCancellation: true,
-    noiseSuppression: true,
+    echoCancellation: false,   // 음악 송출 시 색조 왜곡 방지
+    noiseSuppression: false,   // 배경음/음악을 잡음으로 오인해 깎는 문제 방지
+    autoGainControl: false,    // AGC가 음악 다이나믹스를 손상시키는 문제 방지
   });
 
   await room.localParticipant.publishTrack(cameraTrack, {
     simulcast: true,
     videoSimulcastLayers: [LK.VideoPresets.h540, LK.VideoPresets.h216],
   });
-  await room.localParticipant.publishTrack(micTrack);
+
+  const musicPreset = LK.AudioPresets?.musicHighQuality;
+  if (musicPreset) {
+    await room.localParticipant.publishTrack(micTrack, {
+      audioPreset: musicPreset,
+      dtx: false,  // 무음 구간에도 스트림 유지 (음악·배경음 끊김 방지)
+      red: true,   // 패킷 손실 복원 (음질 보호)
+    });
+  } else {
+    console.warn('[livekit] AudioPresets.musicHighQuality 없음 — 기본 오디오 설정으로 발행');
+    await room.localParticipant.publishTrack(micTrack);
+  }
 
   _cameraTrack = cameraTrack;
   console.log('[livekit] published camera + mic');
