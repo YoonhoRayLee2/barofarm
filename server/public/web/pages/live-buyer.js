@@ -67,7 +67,7 @@ export default async function load(params) {
     endedPage.className = 'live-ended-page';
     endedPage.innerHTML = `
       <div class="live-ended-card">
-        <div class="live-ended-icon">📺</div>
+        <div class="live-ended-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16v-4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10"/><path d="m22 8-6 4 6 4V8z"/><line x1="2" y1="2" x2="22" y2="22"/></svg></div>
         <div class="live-ended-title">종료된 방송입니다</div>
         <div class="live-ended-desc">방송이 이미 종료되었습니다.</div>
         <button class="live-ended-btn" id="lep-home">홈으로 돌아가기</button>
@@ -103,19 +103,21 @@ export default async function load(params) {
       </div>
     </div>
     <div class="lb-meta">
-      ${liveInfo?.status === 'upcoming'
-        ? `<div class="lb-live-badge lb-upcoming-badge">📅 예고</div>`
-        : `<div class="lb-live-badge"><span class="dot"></span>LIVE</div>`
-      }
-      <button class="lb-glass-btn lb-viewers-chip" id="lb-viewers-btn" aria-label="시청자 목록" title="시청자">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-          <circle cx="12" cy="12" r="3"/>
-        </svg>
-        <span id="lb-viewer-count">0</span>
-      </button>
-      <button class="lb-glass-btn" id="lb-mute-btn" title="음소거">🔇</button>
-      <button class="lb-glass-btn" id="lb-back-btn" title="나가기">✕</button>
+      <div class="lb-meta-actions">
+        ${liveInfo?.status === 'upcoming'
+          ? `<div class="lb-live-badge lb-upcoming-badge">📅 예고</div>`
+          : `<div class="lb-live-badge"><span class="dot"></span>LIVE</div>`
+        }
+        <button class="lb-glass-btn lb-viewers-chip" id="lb-viewers-btn" aria-label="시청자 목록" title="시청자">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+          <span id="lb-viewer-count">0</span>
+        </button>
+        <button class="lb-glass-btn" id="lb-mute-btn" title="음소거">🔇</button>
+        <button class="lb-glass-btn" id="lb-back-btn" title="나가기">✕</button>
+      </div>
     </div>
   `;
   page.appendChild(topBar);
@@ -821,13 +823,13 @@ export default async function load(params) {
   // ---- Follow button ----
   let isFollowing = false;
   function attachFollowButton(sellerId) {
-    const nameEl = page.querySelector('#lb-seller-name');
-    if (!nameEl || nameEl.parentElement.querySelector('.lb-follow-btn')) return;
+    const metaEl = page.querySelector('.lb-meta');
+    if (!metaEl || metaEl.querySelector('.lb-follow-btn')) return;
     const followBtn = document.createElement('button');
     followBtn.className = 'lb-follow-btn';
     followBtn.type = 'button';
     followBtn.textContent = '팔로우';
-    nameEl.insertAdjacentElement('afterend', followBtn);
+    metaEl.appendChild(followBtn);
 
     fetch(`/api/users/${encodeURIComponent(sellerId)}/is-following?userId=${encodeURIComponent(user.id)}`)
       .then(r => r.ok ? r.json() : { isFollowing: false })
@@ -1300,7 +1302,7 @@ export default async function load(params) {
     endCard.className = 'live-ended-overlay';
     endCard.innerHTML = `
       <div class="live-ended-card">
-        <div class="live-ended-icon">📺</div>
+        <div class="live-ended-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16v-4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10"/><path d="m22 8-6 4 6 4V8z"/><line x1="2" y1="2" x2="22" y2="22"/></svg></div>
         <div class="live-ended-title">방송이 종료되었습니다</div>
         <div class="live-ended-desc">판매자가 라이브를 종료했습니다</div>
         <button class="live-ended-btn" id="live-ended-confirm">홈으로 돌아가기</button>
