@@ -403,7 +403,13 @@ export default async function load(params) {
   const _titleEl = page.querySelector('#ls-live-title');
   if (_titleEl) _titleEl.textContent = liveInfo?.title || '라이브 방송 중';
   const _avatarEl = page.querySelector('#ls-seller-avatar');
-  if (_avatarEl) _avatarEl.textContent = (sellerDisplayName[0] || '판').toUpperCase();
+  if (_avatarEl) {
+    if (user.avatarUrl) {
+      _avatarEl.innerHTML = `<img src="${escapeHtml(user.avatarUrl)}" alt="${escapeHtml(sellerDisplayName)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
+    } else {
+      _avatarEl.textContent = (sellerDisplayName[0] || '판').toUpperCase();
+    }
+  }
 
   if (liveInfo?.status === 'upcoming') {
     hideOverlay();
