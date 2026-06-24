@@ -610,6 +610,16 @@
   background: var(--color-bg, #0e1a12);
   padding: 24px;
 }
+.live-ended-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-overlay);
+  padding: 24px;
+}
 .live-ended-card {
   display: flex;
   flex-direction: column;
