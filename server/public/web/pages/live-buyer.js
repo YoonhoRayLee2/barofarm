@@ -251,9 +251,6 @@ export default async function load(params) {
   let currentMode = 'normal';
   let currentAuction = null;
   const endedAuctions = [];
-  // 내 구매 내역 (실시간 누적, product-sheet history 탭에 반영)
-  const myPurchases = [];
-
   // ---- Giveaway state ----
   let giveawayParticipants = [];  // 참여자 목록 (슬롯 애니메이션용)
   let giveawayJoined = false;     // 내가 이미 참여했는지
@@ -922,7 +919,7 @@ export default async function load(params) {
   page.addEventListener('touchend', _onTouchEnd, { passive: true });
 
   // ---- Product sheet ----
-  function openProductSheet(initialTab = 'history') {
+  function openProductSheet(initialTab = 'sold') {
     if (page.querySelector('.product-sheet-backdrop')) return; // 중복 방지
     const backdrop = document.createElement('div');
     backdrop.className = 'product-sheet-backdrop';
@@ -945,7 +942,6 @@ export default async function load(params) {
             진행중 <span class="product-sheet__badge" id="ps-product-count">0</span>
           </button>
           <button class="product-sheet__tab" data-tab="sold">경매 결과</button>
-          <button class="product-sheet__tab" data-tab="history">내 구매내역</button>
         </div>
         <div class="product-sheet__content" id="ps-content"></div>
         <div class="product-sheet__notice">
@@ -1024,85 +1020,6 @@ export default async function load(params) {
           }).join('');
           content.innerHTML = rows;
         }
-      } else if (tab === 'history') {
-        // 실시간 로컬 구매 내역이 있으면 즉시 렌더, 동시에 API도 조회
-        if (myPurchases.length > 0) {
-          const rows = myPurchases.slice().reverse().map(b => {
-            const name = escapeHtml(b.productName || '-');
-            const price = (b.finalPrice || 0).toLocaleString();
-            const ts = b.createdAt ? new Date(b.createdAt).toLocaleString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '';
-            const aid = b.auctionId ? ` data-auction-id="${escapeHtml(String(b.auctionId))}"` : '';
-            return `<div class="ps-history-row ps-row--clickable"${aid}><div class="ps-history-info"><div class="ps-history-name">${name}</div><div class="ps-history-meta">${price}원${ts ? ` · ${ts}` : ''}</div></div></div>`;
-          }).join('');
-          content.innerHTML = rows;
-        } else {
-          content.innerHTML = '<div class="ps-empty ps-empty--loading">불러오는 중...</div>';
-        }
-        // 실시간 데이터와 API 데이터를 합쳐 표시
-        (async () => {
-          const tabAtFetchStart = activeTab;
-          let apiItems = [];
-          try {
-            const token = await api.getToken();
-            const headers = { 'Content-Type': 'application/json' };
-            if (token) headers['Authorization'] = `Bearer ${token}`;
-            const res = await fetch(`/api/users/${encodeURIComponent(user.id)}/bids`, { headers });
-            if (res.ok) apiItems = (await res.json()) || [];
-          } catch (_e) { /* API 실패 시 로컬 데이터만 사용 */ }
-
-          // 탭이 바뀌었으면 DOM 교체 스킵
-          if (activeTab !== tabAtFetchStart) return;
-
-          // 로컬 + API 병합 (로컬 우선, 최신순)
-          const localItems = myPurchases.map(p => ({
-            productName: p.productName,
-            finalPrice: p.finalPrice,
-            createdAt: p.createdAt,
-            _local: true,
-          }));
-          // API에 이미 있는 항목은 로컬 캐시에서 제거 (중복 방지)
-          const apiProductNames = new Set(apiItems.map(i => i.productName));
-          const uniqueLocalItems = localItems.filter(i => !apiProductNames.has(i.productName));
-          const combined = [...uniqueLocalItems, ...apiItems].sort((a, b) => {
-            return (new Date(b.createdAt || b.bidAt || 0).getTime()) - (new Date(a.createdAt || a.bidAt || 0).getTime());
-          });
-
-          if (combined.length === 0) {
-            content.innerHTML = '<div class="ps-empty">구매 내역이 없습니다.</div>';
-            return;
-          }
-          content.innerHTML = combined.map(b => {
-            const name = escapeHtml(b.productName || b.auctionName || '-');
-            const unitCount = b.unitCount || 1;
-            const unitPrice = b.finalPrice || b.price || 0;
-            const totalAmount = (b.totalPrice != null) ? b.totalPrice : unitPrice;
-            const price = totalAmount.toLocaleString('ko-KR');
-            const unitNote = unitCount >= 2
-              ? `<div class="ps-history-meta">단가 ${unitPrice.toLocaleString('ko-KR')}원 × ${unitCount}${b.unitLabel || '개'}</div>`
-              : '';
-            const ts = b.createdAt
-              ? new Date(b.createdAt).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-              : '';
-            const sellerName = b.sellerName ? escapeHtml(b.sellerName) : '';
-            const metaParts = [sellerName, ts].filter(Boolean).join(' · ');
-            const imgSrc = b.imageUrl || b.image_url || '';
-            const imgHtml = imgSrc
-              ? `<img class="ps-history-thumb" src="${escapeHtml(imgSrc)}" alt="" />`
-              : `<div class="ps-history-thumb ps-history-thumb--empty"></div>`;
-            const aid = (b.auctionId || b.auction_id) ? ` data-auction-id="${escapeHtml(String(b.auctionId || b.auction_id))}"` : '';
-            return `
-              <div class="ps-history-row ps-row--clickable"${aid}>
-                ${imgHtml}
-                <div class="ps-history-info">
-                  <div class="ps-history-name">${name}</div>
-                  ${metaParts ? `<div class="ps-history-meta">${metaParts}</div>` : ''}
-                  ${unitNote}
-                </div>
-                <div class="ps-history-price">${price}원</div>
-              </div>
-            `;
-          }).join('');
-        })();
       } else if (tab === 'info') {
         const nameEl = page.querySelector('#lb-seller-name');
         const sellerName = (nameEl && nameEl.textContent) || '판매자';
@@ -1239,23 +1156,6 @@ export default async function load(params) {
       });
     }
 
-    // 내가 낙찰자이면 구매내역에도 추가
-    const myDisplayName = user.nickname || user.username;
-    const winnerId = String(auction.winnerId || auction.winner || '');
-    const winnerName = auction.winnerName || auction.currentBidder || '';
-    const iMeWon = (winnerId && winnerId === String(user.id)) ||
-                   (winnerName && winnerName === myDisplayName);
-    if (iMeWon && (auction.finalPrice || auction.currentPrice) && auction.mode !== 'fcfs') {
-      myPurchases.push({
-        auctionId: auction.id || auction.auctionId || currentAuctionId,
-        productName: auction.productName || '',
-        finalPrice: auction.finalPrice || auction.currentPrice || 0,
-        createdAt: auction.endedAt || Date.now(),
-      });
-      const activeHistoryTab = document.querySelector('.product-sheet__tab.is-active[data-tab="history"]');
-      if (activeHistoryTab) activeHistoryTab.click();
-    }
-
     timer.el.style.display = 'none';
     const mode = auction.mode || currentMode;
     if (mode === 'blind') {
@@ -1383,20 +1283,6 @@ export default async function load(params) {
       currentAuction.stockSold = (currentAuction.stockSold || 0) + 1;
       buyButtonComp.update(currentAuction.stockTotal || 0, currentAuction.stockSold);
     }
-    // 내가 구매한 경우 → myPurchases에 즉시 추가 + 시트 갱신
-    const myId = String(user.id);
-    const myName = user.nickname || user.username;
-    const isMine = buyerId ? String(buyerId) === myId : userName === myName;
-    if (isMine && currentAuction) {
-      myPurchases.push({
-        productName: currentAuction.productName || '',
-        finalPrice: currentAuction.currentPrice || currentAuction.startPrice || 0,
-        createdAt: Date.now(),
-      });
-      // 시트가 열려 있고 history 탭이 활성이면 갱신
-      const activeHistoryTab = document.querySelector('.product-sheet__tab.is-active[data-tab="history"]');
-      if (activeHistoryTab) activeHistoryTab.click();
-    }
   });
   const unsubBidBlindAck = Sock.onBidBlindAck(socket, (data) => {
     if (blindBidComp) blindBidComp.ack(data?.price);
@@ -1503,7 +1389,7 @@ export default async function load(params) {
   if (sendBtn) sendBtn.addEventListener('click', () => sendChatMsg());
 
   // Products button
-  page.querySelector('#lb-products-btn').addEventListener('click', () => openProductSheet('history'));
+  page.querySelector('#lb-products-btn').addEventListener('click', () => openProductSheet('sold'));
 
   // Emoji reaction bar
   page.querySelector('#lb-emoji-bar').addEventListener('click', (e) => {

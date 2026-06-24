@@ -34,6 +34,8 @@ if (!process.env.JWT_SECRET) {
 }
 
 const app = express();
+// 리버스 프록시(ALB/Nginx) 1홉 신뢰 — X-Forwarded-For 위조 방지
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 
 const allowedOrigins = process.env.CORS_ORIGINS
