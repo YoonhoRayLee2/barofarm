@@ -7,13 +7,11 @@ import { generateUniqueNickname } from '../services/nickname';
 import { signToken, signRefreshToken, verifyToken } from '../services/jwt';
 import { requireAuth } from '../middleware/auth';
 import { normalizePhone } from '../utils/phone';
+import { LOGIN_WHITELIST } from '../config/login-whitelist';
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
 const router = Router();
-
-// 임시 로그인 화이트리스트 — 해제 시 이 상수/검사 제거
-const LOGIN_WHITELIST = new Set(['kwonjh', 'kwonkwon', '24300237', 'dydy']);
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
