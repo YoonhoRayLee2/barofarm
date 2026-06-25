@@ -12,6 +12,9 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 
 const router = Router();
 
+// 임시 로그인 화이트리스트 — 해제 시 이 상수/검사 제거
+const LOGIN_WHITELIST = new Set(['kwonjh', 'kwonkwon', '24300237', 'dydy']);
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
@@ -89,6 +92,11 @@ router.post('/login', authLimiter, async (req: Request, res: Response): Promise<
 
   if (!username || !password) {
     res.status(400).json({ error: 'username and password are required' });
+    return;
+  }
+
+  if (!LOGIN_WHITELIST.has(username.trim())) {
+    res.status(403).json({ error: '현재 로그인이 제한되어 있습니다.' });
     return;
   }
 
