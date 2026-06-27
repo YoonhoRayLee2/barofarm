@@ -12,6 +12,7 @@ import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
 import { showConfirmDialog } from '/app/components/confirm-dialog.js';
+import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 
 /* CSS lazy-load */
 const _cssId = 'page-css-payment-methods';
@@ -60,6 +61,7 @@ export default async function load() {
   page.querySelector('.pm-header__add').addEventListener('click', openTypePicker);
 
   const listEl = page.querySelector('#pm-list');
+  page.appendChild(createBottomTabBar());
 
   /* ───────────────────── List ───────────────────── */
   async function loadList() {
@@ -76,6 +78,7 @@ export default async function load() {
           <button class="pm-empty__retry" type="button" id="pm-retry">다시 시도</button>
         </div>`;
       listEl.querySelector('#pm-retry').addEventListener('click', loadList);
+      listEl.appendChild(createTabSpacer());
     }
   }
 
@@ -87,6 +90,7 @@ export default async function load() {
           <span class="pm-empty__title">등록된 결제수단이 없습니다</span>
           <span class="pm-empty__desc">우측 상단의 [+ 추가] 버튼으로<br>결제수단을 등록해보세요.</span>
         </div>`;
+      listEl.appendChild(createTabSpacer());
       return;
     }
     const wrap = document.createElement('div');
@@ -94,6 +98,7 @@ export default async function load() {
     list.forEach((pm) => wrap.appendChild(renderCard(pm)));
     listEl.innerHTML = '';
     listEl.appendChild(wrap);
+    listEl.appendChild(createTabSpacer());
   }
 
   function renderCard(pm) {

@@ -12,6 +12,7 @@ import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { replace, navigate } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
 import { showConfirmDialog } from '/app/components/confirm-dialog.js';
+import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 
 /* CSS lazy-load */
 const _cssId = 'page-css-delivery-addresses';
@@ -53,6 +54,7 @@ export default async function load() {
   page.querySelector('.da-header__add').addEventListener('click', () => openAddressForm(null));
 
   const listEl = page.querySelector('#da-list');
+  page.appendChild(createBottomTabBar());
 
   /* ───────────────────── List loader ───────────────────── */
   async function loadList() {
@@ -76,6 +78,7 @@ export default async function load() {
         </div>
       `;
       listEl.querySelector('#da-retry').addEventListener('click', loadList);
+      listEl.appendChild(createTabSpacer());
     }
   }
 
@@ -89,6 +92,7 @@ export default async function load() {
           <span class="da-empty__desc">우측 상단의 [+ 추가] 버튼으로<br>배송지를 등록해보세요.</span>
         </div>
       `;
+      listEl.appendChild(createTabSpacer());
       return;
     }
 
@@ -97,6 +101,7 @@ export default async function load() {
     list.forEach((addr) => wrap.appendChild(renderCard(addr)));
     listEl.innerHTML = '';
     listEl.appendChild(wrap);
+    listEl.appendChild(createTabSpacer());
   }
 
   function renderCard(addr) {

@@ -7,6 +7,7 @@ import { navigate, replace } from '/app/scripts/router.js';
 import { personIconSVG } from '/app/scripts/person-icon.js';
 import * as api from '/app/scripts/api.js';
 import { showToast } from '/app/components/toast.js';
+import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
 import { formatPrice, formatDateDay } from '/app/scripts/format.js';
 
@@ -192,6 +193,8 @@ export default async function load() {
   });
 
   loadList();
+  page.appendChild(createTabSpacer());
+  page.appendChild(createBottomTabBar());
   return page;
 }
 

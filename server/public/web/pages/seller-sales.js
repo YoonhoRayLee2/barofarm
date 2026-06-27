@@ -11,6 +11,7 @@ import { personIconSVG } from '/app/scripts/person-icon.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
 import { formatPrice, formatDateShort } from '/app/scripts/format.js';
 import { catIcon } from '/app/components/brand-assets.js';
+import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 
 const _cssId = 'page-css-seller-sales';
 if (!document.getElementById(_cssId)) {
@@ -77,6 +78,7 @@ export default async function load() {
   page.querySelector('.sales-header__back').addEventListener('click', () => window.history.back());
 
   const contentEl = page.querySelector('#sales-content');
+  page.appendChild(createBottomTabBar());
   const filterEl  = page.querySelector('#sales-status-filter');
   const fromEl    = page.querySelector('#sales-date-from');
   const toEl      = page.querySelector('#sales-date-to');
@@ -159,6 +161,7 @@ export default async function load() {
           <span class="sales-empty__desc">라이브 경매를 진행하여 낙찰되면<br>여기에 기록됩니다.</span>
         </div>
       `;
+      container.appendChild(createTabSpacer());
       return;
     }
 
@@ -278,6 +281,7 @@ export default async function load() {
 
     container.innerHTML = '';
     container.appendChild(wrap);
+    container.appendChild(createTabSpacer());
   }
 
   loadSales();

@@ -11,6 +11,7 @@ import { navigate, replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
 import { escapeHtml } from '/app/scripts/dom.js';
 import { formatPrice, formatDateShort } from '/app/scripts/format.js';
+import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 
 // Inject CSS once
 const _cssId = 'page-css-profile-history';
@@ -116,10 +117,12 @@ export default async function load(params) {
         </div>
       `;
       contentArea.querySelector('#history-retry-btn').addEventListener('click', () => loadTab(tab));
+      contentArea.appendChild(createTabSpacer());
     }
   }
 
   loadTab(activeTab);
+  page.appendChild(createBottomTabBar());
   return page;
 }
 
@@ -144,6 +147,7 @@ function renderLives(container, list) {
         <span class="history-empty__desc">라이브 방송을 시작하면 여기에 기록됩니다.</span>
       </div>
     `;
+    container.appendChild(createTabSpacer());
     return;
   }
 
@@ -171,6 +175,7 @@ function renderLives(container, list) {
   });
   container.innerHTML = '';
   container.appendChild(ul);
+  container.appendChild(createTabSpacer());
 }
 
 function renderBids(container, list) {
@@ -182,6 +187,7 @@ function renderBids(container, list) {
         <span class="history-empty__desc">라이브 방송에 참여하여 입찰하면 여기에 기록됩니다.</span>
       </div>
     `;
+    container.appendChild(createTabSpacer());
     return;
   }
 
@@ -228,5 +234,6 @@ function renderBids(container, list) {
   });
   container.innerHTML = '';
   container.appendChild(ul);
+  container.appendChild(createTabSpacer());
 }
 

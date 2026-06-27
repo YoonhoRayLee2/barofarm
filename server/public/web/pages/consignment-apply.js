@@ -5,6 +5,7 @@
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
+import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 
 const _cssId = 'page-css-consignment-apply';
 if (!document.getElementById(_cssId)) {
@@ -149,6 +150,8 @@ export default async function load() {
 
   // Form submit
   const formEl = page.querySelector('#ca-form');
+  formEl.appendChild(createTabSpacer());
+  page.appendChild(createBottomTabBar());
   formEl.addEventListener('submit', async (e) => {
     e.preventDefault();
     const submitBtn = page.querySelector('#ca-submit');

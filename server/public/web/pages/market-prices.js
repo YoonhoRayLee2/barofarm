@@ -5,6 +5,8 @@
  * @module pages/market-prices
  */
 
+import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
+
 const _cssId = 'page-css-market-prices';
 if (!document.getElementById(_cssId)) {
   const link = document.createElement('link');
@@ -39,6 +41,7 @@ export default async function load(params) {
   page.querySelector('.mp-header__back').addEventListener('click', () => window.history.back());
 
   const scrollEl = page.querySelector('#mp-scroll');
+  page.appendChild(createBottomTabBar());
 
   // Fetch history asynchronously
   (async () => {
@@ -60,6 +63,7 @@ export default async function load(params) {
       } catch {}
 
       renderDetail(scrollEl, { itemCode, kindName, history, meta });
+      scrollEl.appendChild(createTabSpacer());
     } catch {
       scrollEl.innerHTML = `
         <div class="mp-empty">
@@ -67,6 +71,7 @@ export default async function load(params) {
           <span class="mp-empty__desc">잠시 후 다시 시도해 주세요.</span>
         </div>
       `;
+      scrollEl.appendChild(createTabSpacer());
     }
   })();
 

@@ -16,6 +16,7 @@ import { navigate, replace } from '/app/scripts/router.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
 import { formatPrice, formatYmd } from '/app/scripts/format.js';
 import { catIcon } from '/app/components/brand-assets.js';
+import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 
 const _cssId = 'page-css-profile-orders';
 if (!document.getElementById(_cssId)) {
@@ -87,6 +88,7 @@ export default async function load() {
   page.querySelector('.orders-header__back').addEventListener('click', () => window.history.back());
 
   const contentEl = page.querySelector('#orders-content');
+  page.appendChild(createBottomTabBar());
   const filterEl  = page.querySelector('#orders-status-filter');
   const fromEl    = page.querySelector('#orders-date-from');
   const toEl      = page.querySelector('#orders-date-to');
@@ -178,6 +180,7 @@ export default async function load() {
           ${!sellerIdFilter ? '<span class="orders-empty__desc">라이브 경매에 참여하여 낙찰받으면<br>여기에 기록됩니다.</span>' : ''}
         </div>
       `;
+      container.appendChild(createTabSpacer());
       return;
     }
 
@@ -320,6 +323,7 @@ export default async function load() {
 
     container.innerHTML = '';
     container.appendChild(groupsWrap);
+    container.appendChild(createTabSpacer());
   }
 
   loadOrders();

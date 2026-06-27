@@ -13,6 +13,7 @@ import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace, setCleanup } from '/app/scripts/router.js';
 import * as Sock from '/app/scripts/socket.js';
 import { thumbFallback } from '/app/components/brand-assets.js';
+import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 import { showToast } from '/app/components/toast.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
 
@@ -97,6 +98,7 @@ export default async function load() {
   // ── 상태 ──
   let dealsList = [];
   const scrollEl = page.querySelector('#gdl-scroll');
+  page.appendChild(createBottomTabBar());
 
   function buildUrl() {
     if (isMineView) {
@@ -156,6 +158,7 @@ export default async function load() {
         <span class="gdl-empty__desc">${isSeller && !isMineView ? '+ 버튼으로 새 공동구매를 시작해보세요' : ''}</span>
       `;
       scrollEl.appendChild(empty);
+      scrollEl.appendChild(createTabSpacer());
       return;
     }
 
@@ -165,6 +168,7 @@ export default async function load() {
       grid.appendChild(buildCard(deal));
     });
     scrollEl.appendChild(grid);
+    scrollEl.appendChild(createTabSpacer());
   }
 
   function buildCard(deal) {

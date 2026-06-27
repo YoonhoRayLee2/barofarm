@@ -4,6 +4,7 @@
  */
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
+import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 
 const _cssId = 'page-css-consignment-find';
 if (!document.getElementById(_cssId)) {
@@ -96,6 +97,8 @@ export default async function load() {
   }
 
   loadList('');
+  page.appendChild(createTabSpacer());
+  page.appendChild(createBottomTabBar());
   return page;
 }
 

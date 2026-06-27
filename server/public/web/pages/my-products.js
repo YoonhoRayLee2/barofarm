@@ -19,6 +19,7 @@ import { showToast } from '/app/components/toast.js';
 import { showConfirmDialog } from '/app/components/confirm-dialog.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
 import { formatPriceRaw } from '/app/scripts/format.js';
+import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 
 /* ── CSS injection ─────────────────────────────────────────── */
 const _cssId = 'page-css-my-products';
@@ -78,6 +79,7 @@ export default async function load() {
   const backBtn     = page.querySelector('#mp-back');
   const registerBtn = page.querySelector('#mp-register-btn');
   const content     = page.querySelector('#mp-content');
+  page.appendChild(createBottomTabBar());
 
   backBtn.addEventListener('click', () => {
     if (window.history.length > 1) window.history.back();
@@ -94,6 +96,7 @@ export default async function load() {
         <p class="mp-empty__desc">아래 버튼을 눌러 첫 상품을 등록해 보세요.</p>
       </div>
     `;
+    content.appendChild(createTabSpacer());
   }
 
   function renderList(products) {
@@ -106,6 +109,7 @@ export default async function load() {
 
     content.innerHTML = '';
     content.appendChild(list);
+    content.appendChild(createTabSpacer());
   }
 
   function buildItem(product) {
@@ -190,6 +194,7 @@ export default async function load() {
           <p class="mp-empty__desc">${escapeHtml(err.message || String(err))}</p>
         </div>
       `;
+      content.appendChild(createTabSpacer());
     }
   }
 

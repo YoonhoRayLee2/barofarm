@@ -9,6 +9,7 @@ import { getSecureItem, setSecureItem } from '/app/scripts/native-bridge.js';
 import { replace } from '/app/scripts/router.js';
 import * as api from '/app/scripts/api.js';
 import { showToast } from '/app/components/toast.js';
+import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 
 /* ── CSS injection ─────────────────────────────────────────── */
 const _cssId = 'page-css-shipping-policy';
@@ -279,5 +280,7 @@ export default async function load() {
 
   init();
 
+  page.querySelector('.sp-scroll').appendChild(createTabSpacer());
+  page.appendChild(createBottomTabBar());
   return page;
 }

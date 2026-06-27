@@ -7,6 +7,7 @@
 
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { replace } from '/app/scripts/router.js';
+import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 
 const _cssId = 'page-css-my-forest';
 if (!document.getElementById(_cssId)) {
@@ -55,6 +56,7 @@ export default async function load() {
   page.querySelector('.mf-header__back').addEventListener('click', () => window.history.back());
 
   const scroll = page.querySelector('#mf-scroll');
+  page.appendChild(createBottomTabBar());
 
   try {
     const res = await fetch(`/api/users/${encodeURIComponent(user.id)}/carbon-summary`);
@@ -144,8 +146,10 @@ export default async function load() {
         }).join('')}
       </section>
     `;
+    scroll.appendChild(createTabSpacer());
   } catch {
     scroll.innerHTML = `<div class="mf-error">데이터를 불러올 수 없습니다.</div>`;
+    scroll.appendChild(createTabSpacer());
   }
 
   return page;

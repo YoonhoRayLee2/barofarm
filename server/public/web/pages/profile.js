@@ -18,6 +18,7 @@ import { getSecureItem, setSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import * as api from '/app/scripts/api.js';
 import { personIconSVG } from '/app/scripts/person-icon.js';
+import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 import { showToast } from '/app/components/toast.js';
 import { createLiveCard } from '/app/components/live-card.js';
 import { avatar as bfAvatar, avatarHue } from '/app/components/brand-assets.js';
@@ -1298,6 +1299,9 @@ export default async function load() {
   /* 8. LIVE floating bubble */
   scrollEl.appendChild(buildLiveBubble(user));
 
+  /* Tab spacer inside scroll area so content isn't hidden behind tab bar */
+  scrollEl.appendChild(createTabSpacer());
+
   page.appendChild(scrollEl);
 
   /* Help button delegation */
@@ -1305,6 +1309,9 @@ export default async function load() {
     if (e.target.closest('[data-tier-help]'))   showTierHelp(e.target.closest('[data-tier-help]').dataset.tierHelp);
     if (e.target.closest('[data-carbon-help]')) showCarbonHelp();
   });
+
+  /* 9. Bottom tab bar */
+  page.appendChild(createBottomTabBar({ activeTab: 'profile' }));
 
   return page;
 }

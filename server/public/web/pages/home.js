@@ -10,6 +10,7 @@ import { getSecureItem, setSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace, setCleanup } from '/app/scripts/router.js';
 import * as Sock from '/app/scripts/socket.js';
 import { createLiveCard } from '/app/components/live-card.js';
+import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 import { showToast } from '/app/components/toast.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
 import { thumbFallback } from '/app/components/brand-assets.js';
@@ -160,33 +161,6 @@ export default async function load() {
   page.appendChild(catRow);
   const catCircles = catRow.querySelectorAll('.cat-circle-btn');
 
-  // ---- Live / Upcoming tab bar ----
-  let activeTab = 'live';
-  const tabBar = document.createElement('div');
-  tabBar.className = 'home-tab-bar';
-  tabBar.innerHTML = `
-    <button class="home-tab-btn is-active" data-tab="live">지금 경매<span class="home-tab-badge" id="home-live-count-badge"></span></button>
-    <button class="home-tab-btn" data-tab="upcoming">예고</button>
-  `;
-  page.appendChild(tabBar);
-
-  function updateTabBadge() {
-    const badge = tabBar.querySelector('#home-live-count-badge');
-    if (!badge) return;
-    const count = livesList.filter((l) => !l.status || l.status === 'live').length;
-    badge.textContent = count > 0 ? String(count) : '';
-  }
-
-  tabBar.querySelectorAll('.home-tab-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      if (activeTab === btn.dataset.tab) return;
-      activeTab = btn.dataset.tab;
-      tabBar.querySelectorAll('.home-tab-btn').forEach((b) => b.classList.toggle('is-active', b === btn));
-      renderFeed();
-      feed.scrollTop = 0;
-    });
-  });
-
   // ---- Market price ticker ----
   const tickerWrap = document.createElement('div');
   tickerWrap.className = 'home-ticker';
@@ -313,6 +287,9 @@ export default async function load() {
     tickerWrap.classList.add('is-hidden');
     sectionLive.classList.add('is-hidden');
   }
+
+  page.appendChild(createTabSpacer());
+  page.appendChild(createBottomTabBar({ activeTab: isProductsTab ? 'products' : 'home' }));
 
   // ---- State ----
   let livesList = [];
@@ -546,15 +523,9 @@ export default async function load() {
 
   function renderFeed() {
     if (!isProductsTab) {
-      if (activeTab === 'live') {
-        sectionLive.classList.remove('is-hidden');
-        sectionUpcoming.classList.add('is-hidden');
-        renderLiveSection();
-      } else {
-        sectionLive.classList.add('is-hidden');
-        renderUpcomingSection();
-      }
-      updateTabBadge();
+      sectionLive.classList.remove('is-hidden');
+      renderLiveSection();
+      renderUpcomingSection();
     }
     renderProductsSection();
   }

@@ -8,6 +8,7 @@
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { getFcmToken } from '/app/scripts/native-bridge.js';
 import { replace, navigate } from '/app/scripts/router.js';
+import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 
 // Inject CSS once
 const _cssId = 'page-css-settings';
@@ -140,6 +141,9 @@ export default async function load() {
 
   legalSection.querySelector('#settings-terms-btn').addEventListener('click', () => navigate('/app/terms'));
   legalSection.querySelector('#settings-privacy-btn').addEventListener('click', () => navigate('/app/privacy'));
+
+  page.appendChild(createTabSpacer());
+  page.appendChild(createBottomTabBar());
 
   return page;
 }
