@@ -147,7 +147,7 @@ export function createAuction(
   auctions.set(id, state);
 }
 
-function endAuctionState(
+export function endAuctionState(
   auc: AuctionState,
   io: Server,
   onEnd?: (state: AuctionState) => void,

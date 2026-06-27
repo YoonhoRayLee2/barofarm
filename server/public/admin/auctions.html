@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=1280" />
+  <title>경매·라이브 · NH 바로팜 어드민</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <link rel="stylesheet" href="/admin/admin.css" />
+</head>
+<body data-page="auctions">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar__brand">NH <span class="accent">바로팜</span></div>
+      <nav class="sidebar__nav">
+        <a class="sidebar__link" href="/admin">대시보드</a>
+        <a class="sidebar__link" href="/admin/users">사용자</a>
+        <a class="sidebar__link sidebar__link--active" href="/admin/auctions">경매·라이브</a>
+        <a class="sidebar__link" href="/admin/products">상품·거래</a>
+        <a class="sidebar__link" href="/admin/settlements">정산</a>
+      </nav>
+      <a id="logout-btn" class="sidebar__logout" href="#">로그아웃</a>
+    </aside>
+
+    <main class="main">
+      <div class="page-pad">
+        <div class="page-header">
+          <h1>경매·라이브 모니터링</h1>
+        </div>
+        <section>
+          <h2 style="padding:0">진행 중인 라이브</h2>
+          <div id="live-cards" class="live-cards">로딩 중...</div>
+        </section>
+        <section style="margin-top:2rem">
+          <h2 style="padding:0">종료 경매 이력</h2>
+          <div class="search-bar">
+            <select id="auction-status-filter"><option value="">전체 상태</option><option value="ended">종료</option></select>
+            <select id="auction-delivery-filter"><option value="">전체 배송</option><option value="payment_complete">결제완료</option><option value="shipped">배송중</option><option value="purchase_confirmed">구매확정</option><option value="settlement_complete">정산완료</option></select>
+            <button id="auction-search-btn">검색</button>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>ID</th><th>상품명</th><th>낙찰가</th><th>상태</th><th>배송상태</th><th>판매자</th><th>일시</th><th>수수료</th></tr></thead>
+            <tbody id="auctions-tbody"></tbody>
+          </table>
+          <div class="pagination" id="auctions-pagination"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="auction-modal" hidden>
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="auction-modal-title">경매 상세</h3>
+        <button class="modal-close" id="auction-modal-close">✕</button>
+      </div>
+      <div class="modal-meta" id="auction-modal-meta"></div>
+      <div class="modal-body" style="padding-top:0">
+        <div class="modal-section-title">입찰 내역</div>
+        <table class="data-table" style="width:100%;margin:0">
+          <thead><tr><th>입찰ID</th><th>입찰자</th><th>금액</th><th>일시</th><th>처리</th></tr></thead>
+          <tbody id="auction-bids-tbody"></tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <div class="modal-field--row" style="margin-right:auto">
+          <label style="font-size:var(--fs-sm);color:var(--ff-ink-mute)">배송상태</label>
+          <select id="auction-delivery-select">
+            <option value="payment_complete">결제완료</option>
+            <option value="shipped">배송중</option>
+            <option value="purchase_confirmed">구매확정</option>
+            <option value="settlement_complete">정산완료</option>
+          </select>
+          <button id="auction-delivery-save-btn" class="btn-small">저장</button>
+        </div>
+        <button id="auction-force-end-btn" class="btn-small btn-danger" hidden>강제 종료</button>
+        <button id="auction-delete-btn" class="btn-small btn-danger" hidden>삭제</button>
+        <button id="auction-modal-close2" class="btn-small btn-secondary">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/admin/admin.js"></script>
+</body>
+</html>

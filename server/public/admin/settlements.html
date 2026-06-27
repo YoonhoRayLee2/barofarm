@@ -4,55 +4,80 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=1280" />
   <title>정산 관리 · NH 바로팜 어드민</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
   <link rel="stylesheet" href="/admin/admin.css" />
 </head>
 <body data-page="settlements">
-  <nav>
-    <span class="nav-brand">NH 바로팜 어드민</span>
-    <a href="/admin">대시보드</a>
-    <span class="nav-current">정산 관리</span>
-    <a id="logout-btn" href="#">로그아웃</a>
-  </nav>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar__brand">NH <span class="accent">바로팜</span></div>
+      <nav class="sidebar__nav">
+        <a class="sidebar__link" href="/admin">대시보드</a>
+        <a class="sidebar__link" href="/admin/users">사용자</a>
+        <a class="sidebar__link" href="/admin/auctions">경매·라이브</a>
+        <a class="sidebar__link" href="/admin/products">상품·거래</a>
+        <a class="sidebar__link sidebar__link--active" href="/admin/settlements">정산</a>
+      </nav>
+      <a id="logout-btn" class="sidebar__logout" href="#">로그아웃</a>
+    </aside>
 
-  <section class="generate-section">
-    <h2>정산 데이터 생성</h2>
-    <div class="form-row">
-      <input type="date" id="period-start" />
-      <span class="text-muted">~</span>
-      <input type="date" id="period-end" />
-      <button id="generate-btn">자동 생성</button>
-    </div>
-    <p id="generate-msg" class="generate-msg"></p>
-  </section>
+    <main class="main">
+      <section class="generate-section">
+        <h2>정산 데이터 생성</h2>
+        <div class="form-row">
+          <input type="date" id="period-start" />
+          <span class="text-muted">~</span>
+          <input type="date" id="period-end" />
+          <button id="generate-btn">자동 생성</button>
+        </div>
+        <p id="generate-msg" class="generate-msg"></p>
+      </section>
 
-  <h2>정산 목록</h2>
-  <div class="filter-row">
-    <select id="status-filter">
-      <option value="">전체</option>
-      <option value="pending">대기</option>
-      <option value="paid">완료</option>
-    </select>
-    <button id="refresh-btn" class="btn-secondary">새로고침</button>
+      <section class="generate-section">
+        <h2>CSV 내보내기</h2>
+        <div class="form-row">
+          <select id="export-type">
+            <option value="settlements">정산</option>
+            <option value="auctions">경매(낙찰)</option>
+          </select>
+          <input type="date" id="export-from" />
+          <span class="text-muted">~</span>
+          <input type="date" id="export-to" />
+          <button id="export-btn">CSV 다운로드</button>
+        </div>
+        <p id="export-msg" class="generate-msg"></p>
+      </section>
+
+      <h2>정산 목록</h2>
+      <div class="filter-row">
+        <select id="status-filter">
+          <option value="">전체</option>
+          <option value="pending">대기</option>
+          <option value="paid">완료</option>
+        </select>
+        <button id="refresh-btn" class="btn-secondary">새로고침</button>
+      </div>
+
+      <table class="data-table" id="settlements-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>판매자</th>
+            <th>기간</th>
+            <th>경매수</th>
+            <th>총낙찰액</th>
+            <th>수수료</th>
+            <th>실지급액</th>
+            <th>상태</th>
+            <th>처리</th>
+          </tr>
+        </thead>
+        <tbody id="settlements-tbody">
+          <tr class="empty-row"><td colspan="9">불러오는 중...</td></tr>
+        </tbody>
+      </table>
+    </main>
   </div>
-
-  <table class="data-table" id="settlements-table">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>판매자</th>
-        <th>기간</th>
-        <th>경매수</th>
-        <th>총낙찰액</th>
-        <th>수수료</th>
-        <th>실지급액</th>
-        <th>상태</th>
-        <th>처리</th>
-      </tr>
-    </thead>
-    <tbody id="settlements-tbody">
-      <tr class="empty-row"><td colspan="9">불러오는 중...</td></tr>
-    </tbody>
-  </table>
 
   <div id="detail-modal" class="modal-overlay" hidden>
     <div class="modal-box">
@@ -75,7 +100,7 @@
         <tbody id="modal-tbody"></tbody>
       </table>
       <div class="modal-footer">
-        <button id="modal-close-btn2">닫기</button>
+        <button class="btn-small btn-secondary" id="modal-close-btn2">닫기</button>
       </div>
     </div>
   </div>

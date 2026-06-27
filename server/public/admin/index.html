@@ -4,69 +4,77 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=1280" />
   <title>NH 바로팜 어드민</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
   <link rel="stylesheet" href="/admin/admin.css" />
 </head>
 <body data-page="dashboard">
-  <!-- Login screen -->
+  <!-- Login screen (no sidebar, centered card) -->
   <div id="login-screen" hidden>
-    <h1>NH 바로팜 어드민</h1>
+    <h1>NH <span class="accent">바로팜</span> 어드민</h1>
     <input id="login-username" placeholder="아이디" autocomplete="username" />
     <input id="login-password" type="password" placeholder="비밀번호" autocomplete="current-password" />
     <button id="login-btn">로그인</button>
     <p id="login-error"></p>
   </div>
 
-  <!-- Dashboard screen -->
-  <div id="dashboard-screen" hidden>
-    <nav>
-      <span class="nav-brand">NH 바로팜 어드민</span>
-      <span class="nav-current">대시보드</span>
-      <a href="/admin/settlements">정산 관리</a>
-      <a id="logout-btn" href="#">로그아웃</a>
-    </nav>
+  <!-- Dashboard screen (with sidebar) -->
+  <div id="dashboard-screen" class="app-shell" hidden>
+    <aside class="sidebar">
+      <div class="sidebar__brand">NH <span class="accent">바로팜</span></div>
+      <nav class="sidebar__nav">
+        <a class="sidebar__link sidebar__link--active" href="/admin">대시보드</a>
+        <a class="sidebar__link" href="/admin/users">사용자</a>
+        <a class="sidebar__link" href="/admin/auctions">경매·라이브</a>
+        <a class="sidebar__link" href="/admin/products">상품·거래</a>
+        <a class="sidebar__link" href="/admin/settlements">정산</a>
+      </nav>
+      <a id="logout-btn" class="sidebar__logout" href="#">로그아웃</a>
+    </aside>
 
-    <div class="stats-row">
-      <div class="stat-card stat-card--today">
-        <span class="stat-label">오늘 매출</span>
-        <span class="stat-value" id="stat-today-gross">-</span>
-        <span class="stat-sub" id="stat-today-count">-</span>
+    <main class="main">
+      <div class="stats-row">
+        <div class="stat-card stat-card--today">
+          <span class="stat-label">오늘 매출</span>
+          <span class="stat-value" id="stat-today-gross">-</span>
+          <span class="stat-sub" id="stat-today-count">-</span>
+        </div>
+        <div class="stat-card stat-card--month">
+          <span class="stat-label">이번 달 매출</span>
+          <span class="stat-value" id="stat-month-gross">-</span>
+          <span class="stat-sub" id="stat-month-count">-</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">총 누적 낙찰금액</span>
+          <span class="stat-value" id="stat-gross">-</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">총 플랫폼 수수료</span>
+          <span class="stat-value" id="stat-fee">-</span>
+        </div>
+        <div class="stat-card stat-card--alert">
+          <span class="stat-label">미정산 건수</span>
+          <span class="stat-value" id="stat-pending">-</span>
+        </div>
       </div>
-      <div class="stat-card stat-card--month">
-        <span class="stat-label">이번 달 매출</span>
-        <span class="stat-value" id="stat-month-gross">-</span>
-        <span class="stat-sub" id="stat-month-count">-</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-label">총 누적 낙찰금액</span>
-        <span class="stat-value" id="stat-gross">-</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-label">총 플랫폼 수수료</span>
-        <span class="stat-value" id="stat-fee">-</span>
-      </div>
-      <div class="stat-card stat-card--alert">
-        <span class="stat-label">미정산 건수</span>
-        <span class="stat-value" id="stat-pending">-</span>
-      </div>
-    </div>
 
-    <h2>최근 낙찰 내역</h2>
-    <table class="data-table" id="recent-table">
-      <thead>
-        <tr>
-          <th>경매ID</th>
-          <th>판매자</th>
-          <th>상품명</th>
-          <th>낙찰가</th>
-          <th>수수료</th>
-          <th>배송상태</th>
-          <th>일시</th>
-        </tr>
-      </thead>
-      <tbody id="recent-tbody">
-        <tr class="empty-row"><td colspan="7">불러오는 중...</td></tr>
-      </tbody>
-    </table>
+      <h2>최근 낙찰 내역</h2>
+      <table class="data-table" id="recent-table">
+        <thead>
+          <tr>
+            <th>경매ID</th>
+            <th>판매자</th>
+            <th>상품명</th>
+            <th>낙찰가</th>
+            <th>수수료</th>
+            <th>배송상태</th>
+            <th>일시</th>
+          </tr>
+        </thead>
+        <tbody id="recent-tbody">
+          <tr class="empty-row"><td colspan="7">불러오는 중...</td></tr>
+        </tbody>
+      </table>
+    </main>
   </div>
 
   <script src="/admin/admin.js"></script>

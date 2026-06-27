@@ -100,7 +100,7 @@ router.post('/login', authLimiter, async (req: Request, res: Response): Promise<
 
   try {
     const [rows] = await pool.execute(
-      'SELECT id, username, password_hash, nickname, phone, interests FROM users WHERE username = ?',
+      'SELECT id, username, password_hash, nickname, phone, interests, status FROM users WHERE username = ?',
       [username],
     ) as [unknown[], unknown];
 
@@ -111,6 +111,7 @@ router.post('/login', authLimiter, async (req: Request, res: Response): Promise<
       nickname: string;
       phone: string;
       interests: string | null;
+      status: string;
     }>)[0];
 
     if (!user) {
@@ -121,6 +122,11 @@ router.post('/login', authLimiter, async (req: Request, res: Response): Promise<
     const valid = await verifyPassword(password, user.password_hash);
     if (!valid) {
       res.status(401).json({ error: 'Invalid username or password' });
+      return;
+    }
+
+    if (user.status === 'suspended') {
+      res.status(403).json({ error: '정지된 계정입니다' });
       return;
     }
 

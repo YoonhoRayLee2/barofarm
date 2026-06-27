@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=1280" />
+  <title>상품·거래 · NH 바로팜 어드민</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <link rel="stylesheet" href="/admin/admin.css" />
+</head>
+<body data-page="products">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar__brand">NH <span class="accent">바로팜</span></div>
+      <nav class="sidebar__nav">
+        <a class="sidebar__link" href="/admin">대시보드</a>
+        <a class="sidebar__link" href="/admin/users">사용자</a>
+        <a class="sidebar__link" href="/admin/auctions">경매·라이브</a>
+        <a class="sidebar__link sidebar__link--active" href="/admin/products">상품·거래</a>
+        <a class="sidebar__link" href="/admin/settlements">정산</a>
+      </nav>
+      <a id="logout-btn" class="sidebar__logout" href="#">로그아웃</a>
+    </aside>
+
+    <main class="main">
+      <div class="page-pad">
+        <div class="page-header">
+          <h1>상품·거래 관리</h1>
+        </div>
+        <section>
+          <h2 style="padding:0">상품 목록</h2>
+          <div class="search-bar">
+            <input type="text" id="product-search" placeholder="상품명 검색">
+            <select id="product-category-filter">
+              <option value="">전체 카테고리</option>
+              <option value="과일">과일</option>
+              <option value="채소">채소</option>
+              <option value="수산">수산</option>
+              <option value="축산">축산</option>
+              <option value="곡물">곡물</option>
+              <option value="기타">기타</option>
+            </select>
+            <button id="product-search-btn">검색</button>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>ID</th><th>상품명</th><th>카테고리</th><th>판매자</th><th>가격</th><th>상태</th><th>등록일</th><th>삭제</th></tr></thead>
+            <tbody id="products-tbody"></tbody>
+          </table>
+          <div class="pagination" id="products-pagination"></div>
+        </section>
+        <section style="margin-top:2rem">
+          <h2 style="padding:0">환불 신청</h2>
+          <div class="search-bar">
+            <select id="refund-status-filter">
+              <option value="">전체</option>
+              <option value="requested">신청</option>
+              <option value="approved">승인</option>
+              <option value="rejected">거절</option>
+              <option value="completed">완료</option>
+            </select>
+            <button id="refund-search-btn">검색</button>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>ID</th><th>상품</th><th>구매자</th><th>판매자</th><th>환불금액</th><th>상태</th><th>신청일</th><th>처리</th></tr></thead>
+            <tbody id="refunds-tbody"></tbody>
+          </table>
+          <div class="pagination" id="refunds-pagination"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="product-modal" hidden>
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="product-modal-title">상품 수정</h3>
+        <button class="modal-close" id="product-modal-close">✕</button>
+      </div>
+      <div class="modal-body" id="product-modal-body"></div>
+      <div class="modal-footer">
+        <button id="product-save-btn" class="btn-small">저장</button>
+        <button id="product-modal-close2" class="btn-small btn-secondary">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/admin/admin.js"></script>
+</body>
+</html>
