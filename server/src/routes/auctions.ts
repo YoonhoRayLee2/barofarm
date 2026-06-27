@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import pool from '../db/mysql';
 import { getRecommendations } from '../utils/productRecommender';
+import { createNotification } from '../services/notifications';
 
 const router = Router();
 
@@ -301,6 +302,18 @@ router.patch('/:id/delivery-status', async (req: Request, res: Response) => {
         'UPDATE auctions SET delivery_status = ?, tracking_company = ?, tracking_number = ? WHERE id = ?',
         [next, trackingCompany.trim(), trackingNumber.trim(), id],
       );
+      if (row.top_bidder_id) {
+        try {
+          await createNotification(Number(row.top_bidder_id), {
+            type: 'shipping',
+            title: '상품이 발송되었어요',
+            body: `${row.product_name} 상품이 발송되었습니다.`,
+            link: `/app/order-detail/${id}`,
+          });
+        } catch (notifErr) {
+          console.error('[auctions] shipping notification failed:', notifErr);
+        }
+      }
     } else {
       await pool.execute(
         'UPDATE auctions SET delivery_status = ? WHERE id = ?',

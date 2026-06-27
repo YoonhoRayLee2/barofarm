@@ -7,8 +7,8 @@ import { navigate, replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
 import { personIconSVG } from '/app/scripts/person-icon.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
-import { formatPrice } from '/app/scripts/format.js';
-import { subscribe, unsubscribe } from '/app/scripts/api.js';
+import { formatPrice, formatDateShort } from '/app/scripts/format.js';
+import { subscribe, unsubscribe, getSellerReviews } from '/app/scripts/api.js';
 
 const _cssId = 'page-css-user-profile';
 if (!document.getElementById(_cssId)) {
@@ -44,6 +44,7 @@ export default async function load(params) {
         <div class="up-stat"><span class="up-stat__num" id="up-sales">—</span><span class="up-stat__label">판매</span></div>
         <div class="up-stat"><span class="up-stat__num" id="up-followers">—</span><span class="up-stat__label">팔로워</span></div>
         <div class="up-stat"><span class="up-stat__num" id="up-subscribers">—</span><span class="up-stat__label">단골</span></div>
+        <div class="up-stat"><span class="up-stat__num" id="up-rating">—</span><span class="up-stat__label">판매자 평점</span></div>
       </div>
     </div>
     <div class="up-actions">
@@ -52,6 +53,10 @@ export default async function load(params) {
     </div>
     <div class="up-section-title">판매 완료</div>
     <div class="up-grid" id="up-grid">
+      <div class="up-loading"><div class="up-loading__dot"></div><span>불러오는 중...</span></div>
+    </div>
+    <div class="up-section-title">판매자 리뷰</div>
+    <div class="up-reviews" id="up-reviews">
       <div class="up-loading"><div class="up-loading__dot"></div><span>불러오는 중...</span></div>
     </div>
   `;
@@ -90,6 +95,19 @@ export default async function load(params) {
       page.querySelector('#up-sales').textContent = profile.salesCount ?? 0;
       page.querySelector('#up-followers').textContent = profile.followerCount ?? 0;
       page.querySelector('#up-subscribers').textContent = profile.subscriberCount ?? 0;
+      // 평점은 별도 API 호출 후 갱신 (비동기)
+      getSellerReviews(targetId).then(data => {
+        const ratingEl = page.querySelector('#up-rating');
+        if (!ratingEl) return;
+        if (data.count === 0 || data.average == null) {
+          ratingEl.textContent = '없음';
+        } else {
+          ratingEl.textContent = `★ ${Number(data.average).toFixed(1)}`;
+        }
+      }).catch(() => {
+        const ratingEl = page.querySelector('#up-rating');
+        if (ratingEl) ratingEl.textContent = '—';
+      });
 
       const avatarEl = page.querySelector('#up-avatar');
       if (profile.avatarUrl) {
@@ -194,6 +212,9 @@ export default async function load(params) {
   // 판매 완료 목록
   loadSales();
 
+  // 판매자 리뷰
+  loadSellerReviewSection(targetId, page);
+
   async function loadSales() {
     const gridEl = page.querySelector('#up-grid');
     try {
@@ -222,6 +243,36 @@ export default async function load(params) {
       });
     } catch {
       gridEl.innerHTML = '<div class="up-empty">목록을 불러올 수 없습니다</div>';
+    }
+  }
+
+  async function loadSellerReviewSection(sellerId, pageEl) {
+    const container = pageEl.querySelector('#up-reviews');
+    if (!container) return;
+    try {
+      const data = await getSellerReviews(sellerId);
+      if (!data.count || !data.items || data.items.length === 0) {
+        container.innerHTML = '<div class="up-empty">아직 리뷰가 없습니다</div>';
+        return;
+      }
+      container.innerHTML = data.items.map(item => {
+        const stars = Array.from({ length: 5 }, (_, i) =>
+          `<span class="up-star${i < Math.round(item.rating) ? ' up-star--on' : ''}" aria-hidden="true">★</span>`
+        ).join('');
+        const dateStr = formatDateShort(item.createdAt);
+        return `
+          <div class="up-review-item">
+            <div class="up-review-item__head">
+              <span class="up-review-item__stars">${stars}</span>
+              <span class="up-review-item__name">${escapeHtml(item.reviewerName || '익명')}</span>
+              <span class="up-review-item__date">${dateStr}</span>
+            </div>
+            ${item.comment ? `<p class="up-review-item__comment">${escapeHtml(item.comment)}</p>` : ''}
+            ${item.sellerReply ? `<div class="up-review-item__reply"><b>판매자</b> ${escapeHtml(item.sellerReply)}</div>` : ''}
+          </div>`;
+      }).join('');
+    } catch {
+      container.innerHTML = '<div class="up-empty">리뷰를 불러올 수 없습니다</div>';
     }
   }
 

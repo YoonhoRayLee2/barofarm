@@ -452,6 +452,53 @@ export async function toggleFavorite({ userId, liveId }) {
   });
 }
 
+/* ─── Wishlist ───────────────────────────────────────────────────────── */
+
+/**
+ * Get wishlist products for a user.
+ * @param {string} userId
+ * @returns {Promise<Array>}
+ */
+export async function getWishlist(userId) {
+  return request(`/api/wishlist?userId=${encodeURIComponent(userId)}`, { method: 'GET' });
+}
+
+/**
+ * Toggle wishlist for a product.
+ * @param {{ userId: string, productId: string }} payload
+ * @returns {Promise<{ wishlisted: boolean }>}
+ */
+export async function toggleWishlist({ userId, productId }) {
+  return request('/api/wishlist', {
+    method: 'POST',
+    body: JSON.stringify({ userId, productId }),
+  });
+}
+
+/* ─── Notifications ──────────────────────────────────────────────────── */
+
+/**
+ * Get notifications for a user.
+ * @param {string|number} userId
+ * @returns {Promise<{ items: Array<{ id, type, title, body, link, isRead, createdAt }>, unreadCount: number }>}
+ */
+export async function getNotifications(userId) {
+  return request(`/api/notifications?userId=${encodeURIComponent(userId)}`, { method: 'GET' });
+}
+
+/**
+ * Mark a notification as read.
+ * @param {string|number} id
+ * @param {string|number} userId
+ * @returns {Promise<{ ok: boolean }>}
+ */
+export async function markNotificationRead(id, userId) {
+  return request(`/api/notifications/${encodeURIComponent(id)}/read`, {
+    method: 'PATCH',
+    body: JSON.stringify({ userId }),
+  });
+}
+
 /**
  * 단골(구독) 맺기 — subscriberId는 서버가 인증 토큰에서 취득한다.
  * @param {number|string} sellerId
@@ -566,6 +613,53 @@ export async function updateProduct(id, fields) {
  */
 export async function deleteProduct(id) {
   return request(`/api/products/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+/**
+ * 통합 검색.
+ * @param {{ q?: string, category?: string, minPrice?: number, maxPrice?: number }} params
+ * @returns {Promise<{ products: Object[], sellers: Object[] }>}
+ */
+export async function search(params = {}) {
+  const qs = new URLSearchParams();
+  if (params.q != null && params.q !== '') qs.append('q', params.q);
+  if (params.category != null && params.category !== '') qs.append('category', params.category);
+  if (params.minPrice != null && params.minPrice !== '') qs.append('minPrice', params.minPrice);
+  if (params.maxPrice != null && params.maxPrice !== '') qs.append('maxPrice', params.maxPrice);
+  const qstr = qs.toString();
+  return request(`/api/search${qstr ? '?' + qstr : ''}`);
+}
+
+/* ─── Reviews ────────────────────────────────────────────────── */
+
+/**
+ * 리뷰 작성 (인증 필요).
+ * @param {{ auctionId: string|number, rating: number, comment?: string }} payload
+ * @returns {Promise<{ id, auctionId, reviewerId, sellerId, rating, comment, sellerReply }>}
+ */
+export async function createReview({ auctionId, rating, comment }) {
+  return request('/api/reviews', {
+    method: 'POST',
+    body: JSON.stringify({ auctionId, rating, comment }),
+  });
+}
+
+/**
+ * 판매자 리뷰 목록 + 평균.
+ * @param {string|number} sellerId
+ * @returns {Promise<{ average: number|null, count: number, items: Array }>}
+ */
+export async function getSellerReviews(sellerId) {
+  return request(`/api/reviews/seller/${encodeURIComponent(sellerId)}`);
+}
+
+/**
+ * 거래 단위 리뷰 조회 (본인 것만).
+ * @param {string|number} auctionId
+ * @returns {Promise<object|null>} 리뷰 객체 또는 null
+ */
+export async function getReviewByAuction(auctionId) {
+  return request(`/api/reviews/by-auction/${encodeURIComponent(auctionId)}`);
 }
 
 /**

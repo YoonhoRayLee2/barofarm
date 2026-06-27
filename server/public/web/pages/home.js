@@ -5,7 +5,7 @@
  * @module pages/home
  */
 
-import { getLives, getProducts, getUser } from '/app/scripts/api.js';
+import { getLives, getProducts, getUser, getNotifications } from '/app/scripts/api.js';
 import { getSecureItem, setSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace, setCleanup } from '/app/scripts/router.js';
 import * as Sock from '/app/scripts/socket.js';
@@ -95,11 +95,18 @@ export default async function load() {
       <img class="home-header__logo" src="/app/assets/home-logo-bright.png" alt="NH바로팜" />
     </div>
     <div class="home-header__actions">
-      <button class="home-header__icon-btn" aria-label="알림">
+      <button class="home-header__icon-btn" aria-label="검색" id="home-search-btn">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
+          <path d="M16.5 16.5L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button class="home-header__icon-btn home-header__icon-btn--notif" id="home-notif-btn" aria-label="알림">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
           <path d="M6 16V11a6 6 0 1112 0v5l1.5 2H4.5L6 16z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           <path d="M10 20a2 2 0 004 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
+        <span class="home-notif-badge" id="home-notif-badge" style="display:none" aria-hidden="true"></span>
       </button>
       <button class="home-header__icon-btn" aria-label="설정" id="home-settings-btn">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -111,8 +118,29 @@ export default async function load() {
   `;
   page.appendChild(header);
 
+  // Search button
+  header.querySelector('#home-search-btn').addEventListener('click', () => navigate('/app/search'));
+
   // Settings button: use SPA navigate instead of inline onclick
   header.querySelector('#home-settings-btn').addEventListener('click', () => navigate('/app/settings'));
+
+  // Notifications button
+  header.querySelector('#home-notif-btn').addEventListener('click', () => navigate('/app/notifications'));
+
+  // Unread badge — fetch once on mount, suppress errors silently
+  if (currentUser) {
+    getNotifications(currentUser.id).then(data => {
+      const count = (data && data.unreadCount) || 0;
+      const badge = header.querySelector('#home-notif-badge');
+      if (!badge) return;
+      if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : String(count);
+        badge.style.display = '';
+      } else {
+        badge.style.display = 'none';
+      }
+    }).catch(() => { /* ignore */ });
+  }
 
   // ---- Category bubbles ----
   let activeCategory = '전체';

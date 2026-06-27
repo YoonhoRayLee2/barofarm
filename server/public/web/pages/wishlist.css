@@ -1,0 +1,94 @@
+/* Wishlist Page — Fresh Field tokens only */
+
+.wishlist-page {
+  background: var(--color-bg);
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-width: 480px;
+  margin: 0 auto;
+  font-family: var(--font-body);
+  color: var(--color-ink);
+}
+
+/* ── Header ───────────────────────────────────────────────── */
+.wishlist-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: max(14px, env(safe-area-inset-top)) var(--space-4) 14px;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-surface);
+  flex-shrink: 0;
+  z-index: var(--z-sticky);
+}
+
+.wishlist-header__back {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  font-size: 18px;
+  color: var(--color-ink);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.wishlist-header__back:active {
+  background: var(--color-surface-alt);
+  transform: scale(0.94);
+}
+
+.wishlist-header__title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-ink);
+  letter-spacing: -0.3px;
+  flex: 1;
+}
+
+/* ── Scroll area ──────────────────────────────────────────── */
+.wishlist-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--space-4);
+}
+
+/* ── Product grid ─────────────────────────────────────────── */
+.wishlist-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* ── Empty state ──────────────────────────────────────────── */
+.wishlist-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: 80px var(--space-5);
+  color: var(--color-ink-soft);
+  text-align: center;
+}
+
+.wishlist-empty__icon {
+  font-size: 48px;
+  opacity: 0.5;
+}
+
+.wishlist-empty__text {
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--color-ink-mute);
+}

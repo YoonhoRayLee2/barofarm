@@ -58,3 +58,49 @@
 
 .up-cta { padding:12px 16px 24px; }
 .up-cta-btn { width:100%;padding:14px;background:var(--color-accent);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer; }
+
+/* ── 판매자 리뷰 목록 ────────────────────────────────────────── */
+.up-reviews { padding: 0 16px 24px; display: flex; flex-direction: column; gap: 10px; }
+
+.up-review-item {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.up-review-item__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.up-review-item__stars { display: flex; gap: 2px; }
+.up-star { font-size: 15px; color: var(--color-line); line-height: 1; }
+.up-star--on { color: var(--color-warn); }
+.up-review-item__name {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+  flex: 1;
+}
+.up-review-item__date {
+  font-size: var(--fs-xs);
+  color: var(--color-ink-mute);
+}
+.up-review-item__comment {
+  font-size: var(--fs-sm);
+  color: var(--color-ink-soft);
+  line-height: 1.5;
+  margin: 0;
+}
+.up-review-item__reply {
+  font-size: var(--fs-sm);
+  color: var(--color-ink-soft);
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  line-height: 1.5;
+}
+.up-review-item__reply b { color: var(--color-ink); margin-right: 4px; }

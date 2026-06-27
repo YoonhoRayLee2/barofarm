@@ -55,6 +55,26 @@
   width: 36px;
   height: 36px;
 }
+.pd-header__wish {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: var(--color-ink-soft);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: color var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+}
+.pd-header__wish--active {
+  color: var(--color-cta);
+}
+.pd-header__wish:active {
+  transform: scale(0.88);
+}
 
 /* ── Gallery ──────────────────────────────────────────────── */
 .pd-gallery__main {
@@ -230,6 +250,26 @@
   color: var(--color-ink);
 }
 
+/* 판매자 평점 뱃지 — "상품 평점"이 아닌 "판매자 평점"임을 명시 */
+.pd-seller-rating {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--color-warn-tint);
+  color: var(--color-warn);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+.pd-seller-rating__star { color: var(--color-warn); }
+.pd-seller-rating__count { font-weight: 400; color: var(--color-ink-mute); font-size: var(--fs-xs); }
+.pd-seller-rating--new {
+  background: var(--color-accent-tint);
+  color: var(--color-accent);
+}
 
 /* ── Bottom bar ───────────────────────────────────────────── */
 /* 재고 표시 */

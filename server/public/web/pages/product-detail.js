@@ -85,7 +85,7 @@ export default async function load(params = {}) {
     <header class="pd-header">
       <button class="pd-header__back" id="pd-back" aria-label="뒤로">‹</button>
       <h1 class="pd-header__title">상품 상세</h1>
-      <span class="pd-header__spacer" aria-hidden="true"></span>
+      <button class="pd-header__wish" id="pd-wish-btn" aria-label="찜하기" aria-pressed="false">♡</button>
     </header>
 
     <div class="pd-scroll">
@@ -155,6 +155,36 @@ export default async function load(params = {}) {
   page.querySelector('#pd-back').addEventListener('click', () => {
     if (window.history.length > 1) window.history.back();
     else navigate('/app/home');
+  });
+
+  // ---- Wishlist heart button ----
+  const wishBtn = page.querySelector('#pd-wish-btn');
+  let wishlisted = false;
+
+  function setWishState(state) {
+    wishlisted = state;
+    wishBtn.textContent = wishlisted ? '♥' : '♡';
+    wishBtn.setAttribute('aria-pressed', String(wishlisted));
+    wishBtn.classList.toggle('pd-header__wish--active', wishlisted);
+  }
+
+  // Load initial wish state (best-effort)
+  (async () => {
+    try {
+      const list = await api.getWishlist(currentUser.id);
+      const ids = Array.isArray(list) ? list.map((p) => String(p.id)) : [];
+      setWishState(ids.includes(String(productId)));
+    } catch { /* ignore — defaults to un-wishlisted */ }
+  })();
+
+  wishBtn.addEventListener('click', async () => {
+    try {
+      const res = await api.toggleWishlist({ userId: currentUser.id, productId });
+      setWishState(res.wishlisted);
+      showToast(res.wishlisted ? '찜 목록에 추가됐어요' : '찜 목록에서 제거됐어요', { variant: 'success', duration: 1800 });
+    } catch (err) {
+      showToast('찜 처리에 실패했습니다', { variant: 'error' });
+    }
   });
 
   // ---- Render gallery ----
@@ -233,6 +263,25 @@ export default async function load(params = {}) {
       } catch {
         // 판매자 조회 실패 시 영역은 숨겨진 상태로 둔다.
       }
+
+      // 판매자 평점 뱃지 (best-effort)
+      try {
+        const reviews = await api.getSellerReviews(product.sellerId);
+        const sellerEl = page.querySelector('#pd-seller');
+        if (!sellerEl) return;
+        if (reviews.count > 0 && reviews.average != null) {
+          const badge = document.createElement('span');
+          badge.className = 'pd-seller-rating';
+          badge.setAttribute('aria-label', `판매자 평점 ${Number(reviews.average).toFixed(1)}점 (리뷰 ${reviews.count}건)`);
+          badge.innerHTML = `<span class="pd-seller-rating__star" aria-hidden="true">★</span>${Number(reviews.average).toFixed(1)} <span class="pd-seller-rating__count">(${reviews.count})</span>`;
+          sellerEl.appendChild(badge);
+        } else if (reviews.count === 0) {
+          const badge = document.createElement('span');
+          badge.className = 'pd-seller-rating pd-seller-rating--new';
+          badge.textContent = '신규 판매자';
+          sellerEl.appendChild(badge);
+        }
+      } catch { /* 평점 조회 실패 시 뱃지 생략 */ }
     })();
   }
 

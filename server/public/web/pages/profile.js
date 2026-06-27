@@ -825,6 +825,7 @@ function buildCollectorPanel(profileUser, scrollEl, isMe) {
   menuGroup.className = 'profile-menu-group';
 
   [
+    { icon: '❤️', label: '위시리스트',        path: '/app/wishlist' },
     { icon: '⭐', label: '관심카테고리 설정', path: '__interests__' },
     { icon: '📋', label: '딜러 위탁 신청하기', path: '/app/consignment/apply' },
     { icon: '🛍️', label: '주문 목록',       path: '/app/profile/orders' },

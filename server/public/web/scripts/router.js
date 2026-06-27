@@ -286,6 +286,9 @@ register('/app/group-deals',         async ()  => import('/app/pages/group-deal-
 register('/app/group-deals/create',  async ()  => import('/app/pages/group-deal-create.js').then(m => m.default()));
 register('/app/group-deals/:id',     async (p) => import('/app/pages/group-deal-detail.js').then(m => m.default(p)));
 register('/app/my-forest',           async ()  => import('/app/pages/my-forest.js').then(m => m.default()));
+register('/app/notifications',       async ()  => import('/app/pages/notifications.js').then(m => m.default()));
+register('/app/wishlist',            async ()  => import('/app/pages/wishlist.js').then(m => m.default()));
+register('/app/search',              async ()  => import('/app/pages/search.js').then(m => m.default()));
 
 /* ----------------------------- Global handlers ----------------------------- */
 

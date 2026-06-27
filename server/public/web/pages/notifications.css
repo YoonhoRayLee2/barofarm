@@ -1,0 +1,157 @@
+/* notifications.css — 알림센터 페이지 · Light Theme */
+
+/* ── 페이지 루트 ── */
+.notif-page {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+}
+
+/* ── 헤더 ── */
+.notif-header {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-line);
+  padding: max(14px, env(safe-area-inset-top)) 18px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.notif-header__back {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-ink);
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+.notif-header__back:active { opacity: 0.6; }
+.notif-header__title {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--color-ink);
+  flex: 1;
+}
+
+/* ── 스크롤 영역 ── */
+.notif-list {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--space-2) 0 env(safe-area-inset-bottom);
+}
+
+/* ── 로딩 ── */
+.notif-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-7) var(--space-4);
+  gap: var(--space-3);
+  color: var(--color-ink-mute);
+  font-size: var(--fs-base);
+}
+.notif-loading__dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--color-line);
+  border-top-color: var(--color-accent);
+  animation: notif-spin 0.8s linear infinite;
+}
+@keyframes notif-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── 빈 상태 ── */
+.notif-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-7) var(--space-4);
+  gap: var(--space-3);
+}
+.notif-empty__icon {
+  font-size: 40px;
+  opacity: 0.5;
+}
+.notif-empty__title {
+  font-size: var(--fs-base);
+  color: var(--color-ink-mute);
+}
+
+/* ── 알림 항목 ── */
+.notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4) 18px;
+  border-bottom: 1px solid var(--color-line);
+  cursor: pointer;
+  background: var(--color-surface);
+  transition: background var(--dur-fast) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+.notif-item:active { background: var(--color-surface-alt); }
+
+/* 안읽음 항목 강조 */
+.notif-item--unread {
+  background: var(--color-accent-tint);
+}
+.notif-item--unread:active { background: var(--color-surface-alt); }
+
+/* 안읽음 점 */
+.notif-item__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-cta);
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+.notif-item__dot--hidden {
+  visibility: hidden;
+}
+
+/* 본문 영역 */
+.notif-item__body {
+  flex: 1;
+  min-width: 0;
+}
+.notif-item__title {
+  font-size: var(--fs-base);
+  font-weight: 700;
+  color: var(--color-ink);
+  line-height: var(--lh-tight);
+  margin-bottom: var(--space-1);
+}
+.notif-item__text {
+  font-size: var(--fs-sm);
+  color: var(--color-ink-soft);
+  line-height: var(--lh-normal);
+  margin-bottom: var(--space-1);
+}
+.notif-item__time {
+  font-size: var(--fs-xs);
+  color: var(--color-ink-mute);
+}
+
+/* 읽음 처리 후 텍스트 약화 */
+.notif-item--read .notif-item__title {
+  font-weight: 500;
+  color: var(--color-ink-soft);
+}

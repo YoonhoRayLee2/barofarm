@@ -2,6 +2,7 @@ import { RoomServiceClient } from 'livekit-server-sdk';
 import db from '../db/mysql';
 import { AuctionState } from '../store/memory';
 import { getBuyerTier, getSellerTier, calcBuyerDiscount, calcSellerFee } from './tier';
+import { createNotification } from './notifications';
 
 let _client: RoomServiceClient | null = null;
 
@@ -89,6 +90,16 @@ export async function endAuction(state: AuctionState): Promise<void> {
         'INSERT IGNORE INTO bids (auction_id, bidder_id, price) VALUES (?, ?, ?)',
         [state.id, Number(state.topBidder), state.currentPrice],
       );
+      try {
+        await createNotification(Number(state.topBidder), {
+          type: 'auction_won',
+          title: '경매에 낙찰되었어요',
+          body: `${state.productName} 상품이 ${state.currentPrice.toLocaleString()}원에 낙찰되었습니다.`,
+          link: `/app/order-detail/${state.id}`,
+        });
+      } catch (notifErr) {
+        console.error('[auction] won notification failed:', notifErr);
+      }
     }
   } catch (e) {
     console.error('[auction] end DB save failed:', (e as Error).message);

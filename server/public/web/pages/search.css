@@ -1,0 +1,296 @@
+/* search.css — Fresh Field tokens only */
+
+.search-page {
+  background: var(--color-bg);
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-width: 480px;
+  margin: 0 auto;
+  font-family: var(--font-body);
+  color: var(--color-ink);
+}
+
+/* ── Header ───────────────────────────────────────────────── */
+.search-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: max(14px, env(safe-area-inset-top)) var(--space-4) 14px;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-surface);
+  flex-shrink: 0;
+  z-index: var(--z-sticky);
+}
+
+.search-header__back {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  font-size: 18px;
+  color: var(--color-ink);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.search-header__back:active {
+  background: var(--color-surface-alt);
+  transform: scale(0.94);
+}
+
+.search-header__input-wrap {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-header__icon {
+  position: absolute;
+  left: 12px;
+  color: var(--color-ink-soft);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.search-header__input {
+  width: 100%;
+  height: 40px;
+  border-radius: var(--radius-l);
+  border: 1.5px solid var(--color-line);
+  background: var(--color-surface-alt);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  padding: 0 12px 0 38px;
+  outline: none;
+  transition: border-color var(--dur-fast) var(--ease-out);
+  box-sizing: border-box;
+}
+
+.search-header__input:focus {
+  border-color: var(--color-accent);
+}
+
+.search-header__input::placeholder {
+  color: var(--color-ink-mute);
+}
+
+/* ── Filter bar ──────────────────────────────────────────── */
+.search-filters {
+  flex-shrink: 0;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-line);
+  padding: 10px var(--space-4) 0;
+}
+
+.search-filters__cats {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.search-filters__cats::-webkit-scrollbar {
+  display: none;
+}
+
+.search-cat-chip {
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--color-line);
+  background: transparent;
+  color: var(--color-ink-soft);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+
+.search-cat-chip.is-active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-bg);
+}
+
+.search-filters__price {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 12px;
+}
+
+.search-filters__price-label {
+  font-size: var(--fs-sm);
+  color: var(--color-ink-soft);
+  flex-shrink: 0;
+}
+
+.search-price-input {
+  flex: 1;
+  height: 34px;
+  border-radius: var(--radius-m);
+  border: 1.5px solid var(--color-line);
+  background: var(--color-surface-alt);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  padding: 0 10px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.search-price-input:focus {
+  border-color: var(--color-accent);
+}
+
+.search-price-input::placeholder {
+  color: var(--color-ink-mute);
+}
+
+.search-filters__price-sep {
+  font-size: var(--fs-sm);
+  color: var(--color-ink-mute);
+  flex-shrink: 0;
+}
+
+/* ── Scroll area ──────────────────────────────────────────── */
+.search-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--space-4);
+}
+
+/* ── Section titles ──────────────────────────────────────── */
+.search-section-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-base);
+  font-weight: 800;
+  color: var(--color-ink);
+  margin: 0 0 10px;
+}
+
+/* ── Seller list ──────────────────────────────────────────── */
+.search-sellers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.search-seller-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--color-surface);
+  border-radius: var(--radius-l);
+  border: 1px solid var(--color-line);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.search-seller-item:active {
+  background: var(--color-surface-alt);
+}
+
+.search-seller-item__avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--color-surface-alt);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.search-seller-item__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.search-seller-item__avatar-placeholder {
+  font-size: 20px;
+  color: var(--color-ink-soft);
+}
+
+.search-seller-item__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.search-seller-item__name {
+  font-weight: 700;
+  font-size: var(--fs-base);
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-seller-item__meta {
+  font-size: var(--fs-sm);
+  color: var(--color-ink-soft);
+  margin-top: 2px;
+}
+
+.search-seller-item__arrow {
+  color: var(--color-ink-mute);
+  flex-shrink: 0;
+}
+
+/* ── Product grid ─────────────────────────────────────────── */
+.search-product-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* ── Empty states ─────────────────────────────────────────── */
+.search-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: 80px var(--space-5);
+  color: var(--color-ink-soft);
+  text-align: center;
+}
+
+.search-empty__icon {
+  font-size: 48px;
+  opacity: 0.45;
+}
+
+.search-empty__text {
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--color-ink-mute);
+  line-height: 1.5;
+}

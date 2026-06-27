@@ -10,6 +10,7 @@ import { replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
 import { formatPrice, formatDate } from '/app/scripts/format.js';
+import { createReview, getReviewByAuction } from '/app/scripts/api.js';
 
 const _cssId = 'page-css-order-detail';
 if (!document.getElementById(_cssId)) {
@@ -486,10 +487,16 @@ export default async function load(params) {
     /* 환불 섹션 placeholder — 렌더 후 비동기 로드 */
     const refundHtml = `<section class="od-refund" id="od-refund"></section>`;
 
-    container.innerHTML = card + stepperHtml + feeHtml + shippingFeeHtml + trackingHtml + deliveryHtml + carbonHtml + timelineHtml + actionHtml + refundHtml + recommendationsHtml;
+    /* 리뷰 섹션 placeholder — 렌더 후 비동기 로드 */
+    const reviewHtml = `<section class="od-review" id="od-review"></section>`;
+
+    container.innerHTML = card + stepperHtml + feeHtml + shippingFeeHtml + trackingHtml + deliveryHtml + carbonHtml + timelineHtml + actionHtml + refundHtml + reviewHtml + recommendationsHtml;
 
     /* 환불 섹션 로드 */
     loadRefundSection(container, data, user, isSeller, status, loadDetail);
+
+    /* 리뷰 섹션 로드 */
+    loadReviewSection(container, data, user, isSeller, status);
 
     /* Bind fee help button */
     const feeHelpBtn = container.querySelector('.od-fee__help');
@@ -815,6 +822,138 @@ function openRefundRequestSheet(data, user, reload) {
       submitBtn.disabled = false;
       submitBtn.textContent = '신청하기';
       showToast(err.message === 'refund already in progress' ? '이미 진행 중인 환불이 있습니다' : '신청에 실패했습니다', { duration: 2000 });
+    }
+  });
+}
+
+/* ─── 리뷰 섹션 ──────────────────────────────────────────────── */
+
+function renderStarsStatic(rating) {
+  const n = Math.round(rating);
+  return Array.from({ length: 5 }, (_, i) =>
+    `<span class="od-star${i < n ? ' od-star--on' : ''}" aria-hidden="true">★</span>`
+  ).join('');
+}
+
+async function loadReviewSection(container, data, user, isSeller, status) {
+  const section = container.querySelector('#od-review');
+  if (!section) return;
+
+  const reviewableStatuses = ['purchase_confirmed', 'settlement_complete'];
+  if (isSeller || !reviewableStatuses.includes(status)) {
+    section.innerHTML = '';
+    return;
+  }
+
+  let existing = null;
+  try { existing = await getReviewByAuction(data.auctionId); } catch { /* 미작성 = null */ }
+
+  if (existing) {
+    // 이미 작성한 리뷰 — 읽기 전용 표시
+    section.innerHTML = `
+      <div class="od-review__card">
+        <div class="od-review__card-head">
+          <span class="od-review__badge">내가 남긴 리뷰</span>
+          <span class="od-review__stars">${renderStarsStatic(existing.rating)}</span>
+        </div>
+        ${existing.comment ? `<p class="od-review__comment">${escapeHtml(existing.comment)}</p>` : ''}
+        ${existing.sellerReply ? `<div class="od-review__reply"><b>판매자 답글</b> ${escapeHtml(existing.sellerReply)}</div>` : ''}
+      </div>`;
+    return;
+  }
+
+  // 미작성 → 작성 버튼
+  section.innerHTML = `
+    <button class="od-review__write-btn" id="od-review-write">판매자 리뷰 작성하기</button>`;
+  section.querySelector('#od-review-write').addEventListener('click', () => {
+    openReviewSheet(data, section);
+  });
+}
+
+function openReviewSheet(data, section) {
+  const overlay = document.createElement('div');
+  overlay.className = 'od-review-overlay';
+  overlay.dataset.theme = 'light';
+  overlay.innerHTML = `
+    <div class="od-review-sheet">
+      <div class="od-review-sheet__header">
+        <h2>판매자 리뷰 작성</h2>
+        <button class="od-review-sheet__close" type="button" aria-label="닫기">✕</button>
+      </div>
+      <div class="od-review-sheet__body">
+        <p class="od-review-sheet__product">${escapeHtml(data.productName || '상품')}</p>
+        <p class="od-review-sheet__hint-top">상품이 아닌 판매자(농장) 서비스를 평가해주세요.</p>
+        <div class="od-review-sheet__stars" id="od-rating-stars" role="radiogroup" aria-label="별점">
+          ${Array.from({ length: 5 }, (_, i) =>
+            `<button class="od-star-btn" data-val="${i + 1}" type="button" aria-label="${i + 1}점">★</button>`
+          ).join('')}
+        </div>
+        <label class="od-review-sheet__label">코멘트 <span class="od-review-sheet__optional">(선택)</span></label>
+        <textarea class="od-review-sheet__textarea" id="od-review-comment" maxlength="500" rows="4" placeholder="농장 서비스, 신선도, 포장 등 자유롭게 남겨주세요"></textarea>
+        <p class="od-review-sheet__char" id="od-review-char">0 / 500</p>
+      </div>
+      <div class="od-review-sheet__footer">
+        <button class="od-review-sheet__submit" id="od-review-submit" disabled>작성 완료</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('od-review-overlay--open'));
+
+  let selectedRating = 0;
+  const starBtns = overlay.querySelectorAll('.od-star-btn');
+  const submitBtn = overlay.querySelector('#od-review-submit');
+  const textarea  = overlay.querySelector('#od-review-comment');
+  const charEl    = overlay.querySelector('#od-review-char');
+
+  function updateStars(val) {
+    selectedRating = val;
+    starBtns.forEach((b, i) => b.classList.toggle('od-star-btn--on', i < val));
+    submitBtn.disabled = selectedRating === 0;
+  }
+
+  starBtns.forEach(btn => {
+    btn.addEventListener('click', () => updateStars(Number(btn.dataset.val)));
+  });
+
+  textarea.addEventListener('input', () => {
+    charEl.textContent = `${textarea.value.length} / 500`;
+  });
+
+  const close = () => {
+    overlay.classList.remove('od-review-overlay--open');
+    const sheet = overlay.querySelector('.od-review-sheet');
+    const cleanup = () => overlay.remove();
+    sheet.addEventListener('transitionend', cleanup, { once: true });
+    setTimeout(cleanup, 400);
+  };
+  overlay.querySelector('.od-review-sheet__close').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  submitBtn.addEventListener('click', async () => {
+    if (selectedRating === 0) return;
+    submitBtn.disabled = true;
+    submitBtn.textContent = '제출 중...';
+    try {
+      const comment = textarea.value.trim();
+      const review = await createReview({ auctionId: data.auctionId, rating: selectedRating, comment: comment || undefined });
+      showToast('리뷰가 등록되었습니다', { variant: 'success', duration: 1800 });
+      close();
+      // 섹션을 작성완료 상태로 갱신
+      section.innerHTML = `
+        <div class="od-review__card">
+          <div class="od-review__card-head">
+            <span class="od-review__badge">내가 남긴 리뷰</span>
+            <span class="od-review__stars">${renderStarsStatic(review.rating)}</span>
+          </div>
+          ${review.comment ? `<p class="od-review__comment">${escapeHtml(review.comment)}</p>` : ''}
+        </div>`;
+    } catch (err) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '작성 완료';
+      const msg = err.status === 409 ? '이미 이 거래에 리뷰를 남기셨습니다'
+        : err.status === 400 ? (err.message || '리뷰 작성 조건을 확인해주세요')
+        : '리뷰 등록에 실패했습니다';
+      showToast(msg, { duration: 2200 });
     }
   });
 }

@@ -76,6 +76,23 @@
   -webkit-tap-highlight-color: transparent;
 }
 .home-header__icon-btn:active { opacity: 0.7; }
+.home-header__icon-btn--notif { position: relative; }
+.home-notif-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: var(--radius-pill);
+  background: var(--color-cta);
+  color: var(--color-surface);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  pointer-events: none;
+}
 
 /* ── 카테고리 원형 ── */
 .home-categories {
