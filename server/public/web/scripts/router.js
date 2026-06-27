@@ -11,6 +11,7 @@
 
 import { getSecureItem, setSecureItem } from './native-bridge.js'; // ensure window.onPush / onAppResume hooks exist
 import { getMe, clearAuthToken } from './api.js';
+import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 // api.js / socket.js are imported by individual pages on demand.
 
 /* ----------------------------- Route table ----------------------------- */
@@ -127,6 +128,11 @@ async function render(path) {
       node.offsetHeight;
       node.classList.add('route-enter-active');
       node.classList.remove('route-enter');
+      const pathname = path.split('?')[0];
+      if (match && !tabBarHidden(pathname)) {
+        node.appendChild(createTabSpacer());
+        root.appendChild(createBottomTabBar({ activeTab: activeTabFor(path) }));
+      }
     }
   } catch (err) {
     console.error('[router] render error', err);
@@ -143,6 +149,28 @@ function matchRoute(path) {
     }
   }
   return null;
+}
+
+// Routes that must NOT show the bottom tab bar (fullscreen / auth / live / create flows)
+function tabBarHidden(pathname) {
+  if (pathname === '/app/login' || pathname === '/app/signup' ||
+      pathname === '/app/forgot-password' || pathname === '/app/terms' ||
+      pathname === '/app/privacy' || pathname === '/app/_storybook' ||
+      pathname === '/app/live-create' || pathname === '/app/create-auction') return true;
+  if (pathname.startsWith('/app/live-seller') || pathname.startsWith('/app/live-buyer')) return true;
+  return false;
+}
+
+// Decide which tab is active from the full path (with query).
+function activeTabFor(path) {
+  const [pathname, query = ''] = path.split('?');
+  if (pathname === '/app' || pathname === '/app/' || pathname === '/app/home') {
+    return /(^|&)tab=products(&|$)/.test(query) ? 'products' : 'home';
+  }
+  if (pathname === '/app/chat' || pathname.startsWith('/app/chat-room')) return 'chat';
+  if (pathname === '/app/profile' || pathname.startsWith('/app/profile') ||
+      pathname.startsWith('/app/user/')) return 'profile';
+  return undefined;
 }
 
 /* ----------------------------- Placeholders ----------------------------- */

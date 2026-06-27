@@ -8,7 +8,6 @@
 
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
-import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 import { showToast } from '/app/components/toast.js';
 
 // Inject CSS once
@@ -86,10 +85,6 @@ export default async function load() {
   const content = document.createElement('div');
   content.className = 'ch-content';
   page.appendChild(content);
-
-  /* ---------------- Bottom nav ---------------- */
-  page.appendChild(createTabSpacer());
-  page.appendChild(createBottomTabBar({ activeTab: 'chat' }));
 
   /* ---------------- Header actions ---------------- */
   header.querySelector('#ch-create-btn').addEventListener('click', () => {

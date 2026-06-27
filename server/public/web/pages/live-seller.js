@@ -1084,6 +1084,7 @@ export default async function load(params) {
             : `${unitPrice.toLocaleString('ko-KR')}원`;
           const ts = a.endedAt ? new Date(a.endedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '';
           const isBlind = a.mode === 'blind';
+          const aid = a.id || a.auctionId;
 
           const row = document.createElement('div');
           row.className = 'ps-sold-row' + (!isVoid && (a.id || a.auctionId) ? ' ps-row--clickable' : '');
@@ -1096,7 +1097,7 @@ export default async function load(params) {
             <div class="ps-sold-info">
               <div class="ps-sold-name">${escapeHtml(a.productName || '-')}${isBlind ? ' <span class="ps-mode-badge">블라인드</span>' : ''}</div>
               <div class="ps-sold-meta">${isVoid ? '유찰' : `${winner} · ${price}`}${ts ? ` · ${ts}` : ''}</div>
-              ${isBlind && a.id ? '<button class="ps-blind-bids-btn" data-id="' + escapeAttr(String(a.id)) + '">입찰 내역 보기</button>' : ''}
+              ${isBlind && aid ? '<button class="ps-blind-bids-btn" data-id="' + escapeAttr(String(aid)) + '">입찰 내역 보기</button>' : ''}
             </div>
           `;
           return row;

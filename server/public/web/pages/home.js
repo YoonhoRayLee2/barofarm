@@ -10,7 +10,6 @@ import { getSecureItem, setSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace, setCleanup } from '/app/scripts/router.js';
 import * as Sock from '/app/scripts/socket.js';
 import { createLiveCard } from '/app/components/live-card.js';
-import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 import { showToast } from '/app/components/toast.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
 import { thumbFallback } from '/app/components/brand-assets.js';
@@ -314,9 +313,6 @@ export default async function load() {
     tickerWrap.classList.add('is-hidden');
     sectionLive.classList.add('is-hidden');
   }
-
-  page.appendChild(createTabSpacer());
-  page.appendChild(createBottomTabBar({ activeTab: isProductsTab ? 'products' : 'home' }));
 
   // ---- State ----
   let livesList = [];
