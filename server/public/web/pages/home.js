@@ -221,15 +221,29 @@ export default async function load() {
       }
 
       // 아이템을 두 번 복제 → 무한 루프 효과
-      const html = items.map(it => `
+      const html = items.map(it => {
+        const dir = it.dayDirection;
+        const dirLabel = dir === 'up' ? ', 전일대비 상승'
+                       : dir === 'down' ? ', 전일대비 하락'
+                       : dir === 'flat' ? ', 전일대비 보합'
+                       : '';
+        const deltaSpan = dir === 'up'
+          ? `<span class="home-ticker__delta home-ticker__delta--up" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><polygon points="5,1 9,9 1,9"/></svg></span>`
+          : dir === 'down'
+          ? `<span class="home-ticker__delta home-ticker__delta--down" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><polygon points="5,9 9,1 1,1"/></svg></span>`
+          : dir === 'flat'
+          ? `<span class="home-ticker__delta home-ticker__delta--flat" aria-hidden="true"><svg width="10" height="4" viewBox="0 0 10 4" aria-hidden="true"><rect x="0" y="1" width="10" height="2"/></svg></span>`
+          : '';
+        return `
         <button class="home-ticker__item" data-code="${escapeAttr(it.itemCode)}" data-kind="${escapeAttr(it.kindName)}"
-                aria-label="${escapeHtml(it.itemName)} 시세 상세보기">
+                aria-label="${escapeHtml(it.itemName)} 시세 상세보기${dirLabel}">
           <span class="home-ticker__cat home-ticker__cat--${escapeAttr(it.category)}">${escapeHtml(it.category)}</span>
           <span class="home-ticker__name">${escapeHtml(it.itemName)}</span>
           <span class="home-ticker__price">${Number(it.price).toLocaleString('ko-KR')}원</span>
-          <span class="home-ticker__unit">/${escapeHtml(it.unit)}</span>
+          <span class="home-ticker__unit">/${escapeHtml(it.unit)}</span>${deltaSpan}
         </button>
-      `).join('');
+      `;
+      }).join('');
       track.innerHTML = html + html;  // duplicate for seamless loop
 
       // 클릭 → 상세 페이지 이동

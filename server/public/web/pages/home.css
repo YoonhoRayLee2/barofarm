@@ -491,6 +491,16 @@
 .home-ticker__name { font-weight: 600; }
 .home-ticker__price { color: var(--color-accent); font-weight: 700; }
 .home-ticker__unit { color: var(--color-ink-mute); font-size: 11px; }
+.home-ticker__delta {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  margin-left: 2px;
+}
+.home-ticker__delta svg { display: block; fill: currentColor; }
+.home-ticker__delta--up   { color: var(--color-danger); }
+.home-ticker__delta--down { color: var(--color-info); }
+.home-ticker__delta--flat { color: var(--color-ink-soft); }
 
 /* ── Follow live banner (팔로우한 판매자 라이브 시작 알림) ── */
 .home-follow-banner {

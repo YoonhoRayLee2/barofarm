@@ -565,6 +565,20 @@ export function createLiveRouter(io: Server) {
     const resolvedUnitCount = unitCount !== undefined ? Number(unitCount) : 1;
     const resolvedUnitLabel = unitLabel !== undefined ? String(unitLabel) : '';
 
+    // 판매자 합배송비 조회 (생성 시 1회 캐시 — 매 emit마다 조회하지 않음)
+    let sellerShippingFee = 3000;
+    try {
+      const [feeRows] = await pool.query<any[]>(
+        'SELECT seller_shipping_fee FROM users WHERE id = ?',
+        [Number(live.sellerId)],
+      );
+      if (Array.isArray(feeRows) && feeRows.length > 0 && feeRows[0].seller_shipping_fee != null) {
+        sellerShippingFee = Number(feeRows[0].seller_shipping_fee);
+      }
+    } catch (e) {
+      console.error('[auction] seller_shipping_fee 조회 실패, 기본값 사용:', (e as Error).message);
+    }
+
     createAuction(auctionId, {
       liveId,
       productName: String(productName),
@@ -576,6 +590,7 @@ export function createLiveRouter(io: Server) {
       imageUrl,
       unitCount: resolvedUnitCount,
       unitLabel: resolvedUnitLabel,
+      sellerShippingFee,
     });
 
     // DB에도 저장 (영속화)

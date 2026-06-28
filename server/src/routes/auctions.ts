@@ -212,6 +212,41 @@ router.patch('/:id/pay-shipping-fee', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/auctions/combinable-shipping?sellerId=&buyerId=
+// 구매자가 해당 판매자에게 합배송 가능한지 조회 (미발송 주문 존재 여부)
+router.get('/combinable-shipping', async (req: Request, res: Response) => {
+  const { sellerId, buyerId } = req.query as { sellerId?: string; buyerId?: string };
+  if (!sellerId || !buyerId) {
+    res.status(400).json({ error: 'sellerId and buyerId are required' });
+    return;
+  }
+  try {
+    const [[combRows], [avgRows]] = await Promise.all([
+      pool.execute(
+        `SELECT COUNT(*) AS cnt FROM auctions
+         WHERE seller_id = ? AND top_bidder_id = ? AND delivery_status = 'payment_complete'`,
+        [sellerId, buyerId],
+      ) as Promise<[unknown[], unknown]>,
+      pool.execute(
+        `SELECT AVG(DATEDIFF(shipped_at, created_at)) AS avg_days, COUNT(*) AS shipped_count
+         FROM auctions
+         WHERE seller_id = ? AND shipped_at IS NOT NULL`,
+        [sellerId],
+      ) as Promise<[unknown[], unknown]>,
+    ]);
+    const count = Number((combRows as Array<{ cnt: number }>)[0]?.cnt ?? 0);
+    const avgRow = (avgRows as Array<{ avg_days: number | null; shipped_count: number }>)[0];
+    const avgShippingDays =
+      avgRow?.shipped_count > 0 && avgRow.avg_days != null
+        ? Math.max(0, Math.round(avgRow.avg_days))
+        : null;
+    res.json({ combinable: count > 0, pendingCount: count, avgShippingDays });
+  } catch (err) {
+    console.error('[auctions] GET /combinable-shipping error:', err);
+    res.status(500).json({ error: 'database error' });
+  }
+});
+
 // GET /api/auctions/:id/recommendations
 router.get('/:id/recommendations', async (req: Request, res: Response) => {
   const { id } = req.params;
@@ -299,7 +334,7 @@ router.patch('/:id/delivery-status', async (req: Request, res: Response) => {
         return;
       }
       await pool.execute(
-        'UPDATE auctions SET delivery_status = ?, tracking_company = ?, tracking_number = ? WHERE id = ?',
+        'UPDATE auctions SET delivery_status = ?, shipped_at = NOW(), tracking_company = ?, tracking_number = ? WHERE id = ?',
         [next, trackingCompany.trim(), trackingNumber.trim(), id],
       );
       if (row.top_bidder_id) {

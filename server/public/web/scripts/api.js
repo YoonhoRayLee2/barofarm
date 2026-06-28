@@ -236,6 +236,16 @@ export async function getAuctions() {
   return request('/api/auctions', { method: 'GET' });
 }
 
+/**
+ * Check if a buyer can combine shipping with an existing pending order from the same seller.
+ * @param {string|number} sellerId
+ * @param {string|number} buyerId
+ * @returns {Promise<{ combinable: boolean, pendingCount: number }>}
+ */
+export async function getCombinableShipping(sellerId, buyerId) {
+  return request(`/api/auctions/combinable-shipping?sellerId=${encodeURIComponent(sellerId)}&buyerId=${encodeURIComponent(buyerId)}`);
+}
+
 /* ─── Lives ─────────────────────────────────────────────────────────── */
 
 /**

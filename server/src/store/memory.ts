@@ -53,6 +53,8 @@ export interface AuctionState {
   // 단위 수량·단위명
   unitCount: number;
   unitLabel: string;
+  // 판매자 합배송비
+  sellerShippingFee: number;
 }
 
 export const lives = new Map<string, LiveState>();
@@ -107,11 +109,12 @@ interface CreateAuctionParams {
   imageUrl?: string;
   unitCount?: number;
   unitLabel?: string;
+  sellerShippingFee?: number;
 }
 
 export function createAuction(
   id: string,
-  { liveId, productName, startPrice, sellerId, mode = 'normal', durationSec = 30, stockTotal, imageUrl, unitCount, unitLabel }: CreateAuctionParams,
+  { liveId, productName, startPrice, sellerId, mode = 'normal', durationSec = 30, stockTotal, imageUrl, unitCount, unitLabel, sellerShippingFee }: CreateAuctionParams,
 ): void {
   const state: AuctionState = {
     id,
@@ -128,6 +131,7 @@ export function createAuction(
     imageUrl,
     unitCount: unitCount ?? 1,
     unitLabel: unitLabel ?? '',
+    sellerShippingFee: sellerShippingFee ?? 3000,
   };
 
   if (mode === 'fcfs') {

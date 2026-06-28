@@ -154,12 +154,18 @@ export default async function load(params) {
           <span class="lb-product__price" id="lb-product-price"></span>
           <span class="lb-product__step" id="lb-price-step" style="display:none"></span>
         </div>
+        <div id="lb-shipping-note" class="lb-shipping-note">
+          <span id="lb-shipping-text">+ 배송비</span>
+          <button id="lb-shipping-help" class="lb-help-btn" aria-label="배송비 안내" type="button">?</button>
+        </div>
         <div id="lb-unit-total" class="lb-unit-total" style="display:none"></div>
         <div class="lb-product__bidder" id="lb-product-bidder" style="display:none"></div>
       </div>
+    </div>
+    <div class="lb-bid-row" id="lb-bid-row">
+      <div class="lb-bid-controls" id="lb-bid-controls" style="display:none"></div>
       <div class="lb-product__timer-slot" id="lb-timer-slot"></div>
     </div>
-    <div class="lb-bid-controls" id="lb-bid-controls" style="display:none"></div>
     <div class="lb-no-auction-cta" id="lb-no-auction-cta">
       <span class="lb-waiting-text">라이브 시청 중 — 경매를 기다려보세요</span>
     </div>
@@ -253,6 +259,9 @@ export default async function load(params) {
   let currentMode = 'normal';
   let currentAuction = null;
   const endedAuctions = [];
+  // ---- Shipping cache ----
+  let _lastShippingAuctionId = null;
+  let _avgShippingDays = null;
   // ---- Giveaway state ----
   let giveawayParticipants = [];  // 참여자 목록 (슬롯 애니메이션용)
   let giveawayJoined = false;     // 내가 이미 참여했는지
@@ -391,6 +400,31 @@ export default async function load(params) {
     page.appendChild(modal);
   }
 
+  function showShippingHelp(auction) {
+    if (page.querySelector('.lb-shipping-modal')) return;
+    const fee = Number((auction && auction.sellerShippingFee) ?? 3000).toLocaleString('ko-KR');
+    const shippingDaysText = (typeof _avgShippingDays === 'number') ? `🚛 배송 시작까지 평균 ${_avgShippingDays}일 소요` : '🚛 아직 배송 데이터가 없어요';
+    const modal = document.createElement('div');
+    modal.className = 'lb-help-modal lb-shipping-modal';
+    modal.innerHTML = `
+      <div class="lb-help-modal__card">
+        <div class="lb-help-modal__icon">🚚</div>
+        <div class="lb-help-modal__title">딜러당 배송비</div>
+        <p class="lb-shipping-modal__body">바로팜은 상품당 배송비가 아닌, 딜러당 배송비(합배송)를 사용합니다. 따라서 동일한 판매자에게서 여러 상품을 구매했을 때, 상품마다 따로 배송비를 지불하지 않고 한 번의 합배송비만 결제합니다. 딜러가 상품을 발송한 이후 새로운 주문을 하게 되면, 해당 주문에 대해서는 새로운 배송비가 결제됩니다.</p>
+        <div class="lb-shipping-modal__info-box">
+          <span>현재 라이브 딜러의 합배송비: <strong>${fee}원</strong></span>
+        </div>
+        <div class="lb-shipping-modal__info-box">
+          <span>${shippingDaysText}</span>
+        </div>
+        <button class="lb-help-modal__close">확인</button>
+      </div>
+    `;
+    modal.querySelector('.lb-help-modal__close').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    page.appendChild(modal);
+  }
+
   function modeBadgeText(mode) {
     if (mode === 'fcfs') return '선착순';
     if (mode === 'blind') return '블라인드';
@@ -520,6 +554,14 @@ export default async function load(params) {
   const emojiBarEl = page.querySelector('#lb-emoji-bar');
   const bidderEl = page.querySelector('#lb-product-bidder');
   const priceStepEl = page.querySelector('#lb-price-step');
+  const shippingTextEl = page.querySelector('#lb-shipping-text');
+  const shippingHelpBtn = page.querySelector('#lb-shipping-help');
+  const bidRowEl = page.querySelector('#lb-bid-row');
+
+  // 배송비 안내 버튼 이벤트
+  if (shippingHelpBtn) {
+    shippingHelpBtn.addEventListener('click', () => showShippingHelp(currentAuction));
+  }
 
   // Thumbnail: create <img> once, swap .src only
   let _lastThumbUrl = null;
@@ -530,6 +572,7 @@ export default async function load(params) {
 
     if (!auction) {
       if (bidControlsEl) bidControlsEl.style.display = 'none';
+      if (bidRowEl) bidRowEl.style.display = 'none';
       if (noAuctionCtaEl) noAuctionCtaEl.style.display = 'none';
       if (productCardEl) productCardEl.style.display = 'none';
       if (modeChipsEl) modeChipsEl.style.display = 'none';
@@ -547,13 +590,32 @@ export default async function load(params) {
 
     // Auction active: 숨겼던 요소 복원
     if (bidControlsEl) bidControlsEl.style.display = '';
+    if (bidRowEl) bidRowEl.style.display = '';
     if (noAuctionCtaEl) noAuctionCtaEl.style.display = 'none';
     if (productCardEl) productCardEl.style.display = '';
     if (modeChipsEl) modeChipsEl.style.display = '';
     if (emojiBarEl) emojiBarEl.style.display = '';
 
-    currentAuctionId = auction.id || auction.auctionId || currentAuctionId;
+    const newAuctionId = auction.id || auction.auctionId || currentAuctionId;
+    currentAuctionId = newAuctionId;
     basePrice = auction.currentPrice || auction.startPrice || 0;
+
+    // 배송비 합배송 여부 — 경매당 1회만 조회 (캐시)
+    if (newAuctionId && newAuctionId !== _lastShippingAuctionId) {
+      _lastShippingAuctionId = newAuctionId;
+      const sellerId = auction.sellerId || auction.seller_id;
+      if (sellerId && user.id && shippingTextEl) {
+        api.getCombinableShipping(sellerId, user.id)
+          .then(({ combinable, avgShippingDays }) => {
+            _avgShippingDays = (typeof avgShippingDays === 'number') ? avgShippingDays : null;
+            if (!shippingTextEl) return;
+            shippingTextEl.textContent = combinable ? '배송비 결제완료 (합배송)' : '+ 배송비';
+          })
+          .catch(() => {
+            if (shippingTextEl) shippingTextEl.textContent = '+ 배송비';
+          });
+      }
+    }
 
     if (productNameEl) {
       const next = auction.productName || '';

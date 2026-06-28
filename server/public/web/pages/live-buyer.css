@@ -186,9 +186,16 @@
   font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
   background: var(--color-warn-tint); color: var(--color-warn);
 }
-.lb-product__timer-slot { margin-left: auto; flex-shrink: 0; }
+/* timer-slot: 구조는 lb-bid-row 안으로 이동, flex-shrink만 유지 */
+.lb-product__timer-slot { flex-shrink: 0; }
 
-/* Timer component overrides for light card */
+/* Bid row — 하단 한 행: 입찰버튼(flex:1) + 타이머(우측) */
+.lb-bid-row {
+  display: flex; align-items: center; gap: 10px;
+}
+.lb-bid-row .lb-bid-controls { flex: 1; min-width: 0; }
+
+/* Timer component overrides */
 .lb-product__timer-slot .timer {
   background: var(--color-bg-alt);
   border-color: var(--color-line);
@@ -200,6 +207,15 @@
   color: var(--color-ink);
 }
 .lb-product__timer-slot .timer__label { color: var(--color-ink-mute); }
+
+/* Shipping note — 현재가 아래 배송비 문구 */
+.lb-shipping-note {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-top: 3px;
+}
+#lb-shipping-text {
+  font-size: 11px; font-weight: 600; color: var(--color-ink-mute);
+}
 
 /* Waiting CTA */
 .lb-no-auction-cta {
@@ -503,6 +519,24 @@
   font-size: 15px;
   font-weight: 800;
   cursor: pointer;
+}
+
+/* Shipping help bottomsheet extras */
+.lb-shipping-modal__body {
+  font-size: 13px;
+  color: var(--color-ink-soft);
+  line-height: 1.65;
+  margin: 0;
+}
+
+.lb-shipping-modal__info-box {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-line);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink-soft);
 }
 
 /* ── Product sheet (박스 버튼 바텀시트) ───────────────────── */

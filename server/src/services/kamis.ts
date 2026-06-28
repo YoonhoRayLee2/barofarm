@@ -35,6 +35,9 @@ export interface MarketPriceRow {
   price: number;
   priceDate: string; // 'YYYY-MM-DD'
   category: string;
+  prevPrice: number | null;
+  dayChange: number | null;
+  dayDirection: 'up' | 'down' | 'flat' | null;
 }
 
 function todayStr(): string {
@@ -109,36 +112,83 @@ export async function fetchAndCacheTodayPrices(): Promise<void> {
   }
 }
 
+const TODAY_SELECT = `
+  SELECT item_code, item_name, kind_name, unit, price, DATE_FORMAT(price_date, '%Y-%m-%d') AS price_date, category
+  FROM market_prices
+  WHERE price_date = DATE(NOW())
+  ORDER BY category, item_name`;
+
+/** 오늘 시세 행 목록에 직전 시세일 가격을 한 번의 쿼리로 병합한다. */
+async function attachPrevPrices(
+  conn: any,
+  todayRows: any[],
+): Promise<MarketPriceRow[]> {
+  if (todayRows.length === 0) return [];
+
+  // 오늘 품목 목록 수집
+  const pairs = todayRows.map((r) => [r.item_code, r.kind_name]);
+
+  // 각 (item_code, kind_name)의 오늘 이전 최신 price_date와 가격을 한 번에 조회
+  // GROUP BY + MAX → 서브쿼리 조인으로 해당 날짜의 가격을 가져옴
+  const placeholders = pairs.map(() => '(item_code = ? AND kind_name = ?)').join(' OR ');
+  const params: string[] = pairs.flat();
+
+  const [prevRows]: any = await conn.execute(
+    `SELECT mp.item_code, mp.kind_name, mp.price AS prev_price
+     FROM market_prices mp
+     INNER JOIN (
+       SELECT item_code, kind_name, MAX(price_date) AS max_date
+       FROM market_prices
+       WHERE price_date < DATE(NOW())
+         AND (${placeholders})
+       GROUP BY item_code, kind_name
+     ) latest ON mp.item_code = latest.item_code
+              AND mp.kind_name = latest.kind_name
+              AND mp.price_date = latest.max_date`,
+    params,
+  );
+
+  // 메모리 맵 구성: "itemCode:kindName" → prevPrice
+  const prevMap = new Map<string, number>();
+  for (const r of prevRows as any[]) {
+    prevMap.set(`${r.item_code}:${r.kind_name}`, r.prev_price);
+  }
+
+  return todayRows.map((r) => {
+    const base = toRow(r);
+    const prevPrice = prevMap.get(`${r.item_code}:${r.kind_name}`) ?? null;
+    const dayChange = prevPrice !== null ? base.price - prevPrice : null;
+    const dayDirection: MarketPriceRow['dayDirection'] =
+      prevPrice === null
+        ? null
+        : base.price === prevPrice
+        ? 'flat'
+        : base.price > prevPrice
+        ? 'up'
+        : 'down';
+    return { ...base, prevPrice, dayChange, dayDirection };
+  });
+}
+
 export async function getTodayPrices(): Promise<MarketPriceRow[]> {
   const conn = await pool.getConnection();
   try {
-    const [rows]: any = await conn.execute(
-      `SELECT item_code, item_name, kind_name, unit, price, DATE_FORMAT(price_date, '%Y-%m-%d') AS price_date, category
-       FROM market_prices
-       WHERE price_date = DATE(NOW())
-       ORDER BY category, item_name`,
-    );
+    const [rows]: any = await conn.execute(TODAY_SELECT);
 
     if ((rows as any[]).length === 0) {
       conn.release();
       await fetchAndCacheTodayPrices();
       const conn2 = await pool.getConnection();
       try {
-        const [rows2]: any = await conn2.execute(
-          `SELECT item_code, item_name, kind_name, unit, price, DATE_FORMAT(price_date, '%Y-%m-%d') AS price_date, category
-           FROM market_prices
-           WHERE price_date = DATE(NOW())
-           ORDER BY category, item_name`,
-        );
-        return (rows2 as any[]).map(toRow);
+        const [rows2]: any = await conn2.execute(TODAY_SELECT);
+        return attachPrevPrices(conn2, rows2 as any[]);
       } finally {
         conn2.release();
       }
     }
 
-    return (rows as any[]).map(toRow);
+    return attachPrevPrices(conn, rows as any[]);
   } finally {
-    // conn may already be released above; guard with a try
     try { conn.release(); } catch {}
   }
 }
@@ -236,5 +286,8 @@ function toRow(r: any): MarketPriceRow {
     price: r.price,
     priceDate: r.price_date,
     category: r.category,
+    prevPrice: null,
+    dayChange: null,
+    dayDirection: null,
   };
 }
