@@ -688,24 +688,24 @@ function initAuctionsPage() {
     const status = document.getElementById('auction-status-filter').value;
     const deliveryStatus = document.getElementById('auction-delivery-filter').value;
     const tbody = document.getElementById('auctions-tbody');
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="8"><span class="spinner"></span></td></tr>';
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="9"><span class="spinner"></span></td></tr>';
     try {
       const params = new URLSearchParams({ page });
       if (status) params.set('status', status);
       if (deliveryStatus) params.set('deliveryStatus', deliveryStatus);
       const data = await apiFetch(`/admin/api/auctions?${params}`);
       const rows = data.auctions || [];
-      if (!rows.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="8">없음</td></tr>'; return; }
+      if (!rows.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="9">없음</td></tr>'; return; }
       tbody.innerHTML = rows.map(a => {
         const ended = a.status === 'ended';
         return `<tr data-id="${escapeHtml(String(a.id))}"${ended ? ' style="cursor:pointer"' : ''}>
         <td>${escapeHtml(String(a.id))}</td><td>${escapeHtml(a.product_name)}</td>
         <td>${formatKRW(a.current_price)}</td><td>${escapeHtml(a.status)}</td>
-        <td>${shippingStatusLabel(a.delivery_status)}</td><td>${escapeHtml(a.seller_nickname||'-')}</td>
+        <td>${shippingStatusLabel(a.delivery_status)}</td><td>${escapeHtml(a.seller_nickname||'-')}</td><td>${escapeHtml(a.buyer_nickname||'-')}</td>
         <td class="text-muted">${formatDate(a.created_at)}</td><td>${formatKRW(a.seller_fee_amt)}</td></tr>`;
       }).join('');
       renderPagination('auctions-pagination', page, data.total, 20, loadAuctions);
-    } catch (err) { tbody.innerHTML = `<tr class="empty-row"><td colspan="8">오류: ${escapeHtml(err.message)}</td></tr>`; }
+    } catch (err) { tbody.innerHTML = `<tr class="empty-row"><td colspan="9">오류: ${escapeHtml(err.message)}</td></tr>`; }
   }
 
   function closeAuctionModal() { document.getElementById('auction-modal').hidden = true; }
@@ -750,6 +750,7 @@ function initAuctionsPage() {
       title.textContent = `경매 #${a.id} — ${a.product_name || ''}`;
       meta.innerHTML = `
         <span>판매자: <strong>${escapeHtml(a.seller_nickname || '-')}</strong></span>
+        <span>구매자(낙찰자): <strong>${escapeHtml(a.buyer_nickname || '-')}</strong></span>
         <span>낙찰가: <strong>${formatKRW(a.current_price)}</strong></span>
         <span>수수료: <strong>${formatKRW(a.seller_fee_amt)}</strong></span>
         <span>상태: ${escapeHtml(a.status)}</span>

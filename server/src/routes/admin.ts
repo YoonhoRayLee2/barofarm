@@ -337,7 +337,7 @@ export default function createAdminRouter(io: Server) {
     if (sellerId) { where += ' AND a.seller_id=?'; params.push(sellerId); }
     try {
       const [[{ total }]] = await pool.query<any>(`SELECT COUNT(*) AS total FROM auctions a ${where}`, params) as any;
-      const [auctionRows] = await pool.query<any>(`SELECT a.id, a.product_name, a.current_price, a.seller_fee_amt, a.delivery_status, a.status, a.created_at, seller.nickname AS seller_nickname FROM auctions a JOIN users seller ON seller.id=a.seller_id ${where} ORDER BY a.id DESC LIMIT 20 OFFSET ?`, [...params, offset]) as any;
+      const [auctionRows] = await pool.query<any>(`SELECT a.id, a.product_name, a.current_price, a.seller_fee_amt, a.delivery_status, a.status, a.created_at, a.top_bidder_id, seller.nickname AS seller_nickname, buyer.nickname AS buyer_nickname FROM auctions a JOIN users seller ON seller.id=a.seller_id LEFT JOIN users buyer ON buyer.id=a.top_bidder_id ${where} ORDER BY a.id DESC LIMIT 20 OFFSET ?`, [...params, offset]) as any;
       res.json({ auctions: auctionRows, total, page: pageNum, pageSize: 20 });
     } catch (err) {
       console.error('[admin/auctions]', err);
@@ -536,8 +536,9 @@ export default function createAdminRouter(io: Server) {
     const { id } = req.params;
     try {
       const [[auction]] = await pool.query<any>(
-        `SELECT a.*, u.nickname AS seller_nickname
+        `SELECT a.*, u.nickname AS seller_nickname, buyer.nickname AS buyer_nickname
          FROM auctions a JOIN users u ON u.id = a.seller_id
+         LEFT JOIN users buyer ON buyer.id = a.top_bidder_id
          WHERE a.id = ? LIMIT 1`,
         [id],
       ) as any;
