@@ -219,6 +219,10 @@
   max-width: 100%;
 }
 
+.cr-msg--pending {
+  opacity: 0.6;
+}
+
 /* ---------------- Empty / loading ---------------- */
 
 .cr-empty {

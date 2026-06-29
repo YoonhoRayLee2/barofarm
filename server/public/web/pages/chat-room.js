@@ -274,6 +274,26 @@ export default async function load(params) {
       if (!msg || msg.roomId !== roomId) return;
       if (msg.id != null && seenIds.has(msg.id)) return;
       if (msg.id != null) seenIds.add(msg.id);
+
+      // 낙관적 렌더링: 내가 보낸 echo라면 pending 임시 행을 확정으로 교체
+      if (Number(msg.userId) === Number(user.id)) {
+        const pidx = messages.findIndex(m => m._pending && m.message === msg.message);
+        if (pidx !== -1) {
+          const tmpId = messages[pidx]._pendingId;
+          // messages 배열의 임시 항목을 서버 확정 값으로 교체
+          messages[pidx] = msg;
+          // DOM 행의 pending 상태 해제 및 id 갱신
+          const row = messagesEl.querySelector(`[data-pending-id="${tmpId}"]`);
+          if (row) {
+            row.removeAttribute('data-pending-id');
+            row.classList.remove('cr-msg--pending');
+            // 시간 span이 없으면 추가(연속 전송으로 직전에 제거된 경우는 서버 확정 후에도 없어도 무방)
+          }
+          scrollToBottom();
+          return;
+        }
+      }
+
       messages.push(msg);
       appendMessage(msg);
       scrollToBottom();
@@ -295,6 +315,14 @@ export default async function load(params) {
 
     socket.on('cr:error', (err) => {
       showToast(err?.message || '메시지 전송에 실패했습니다', { variant: 'error' });
+      // 가장 최근 pending 임시 메시지 제거
+      const pidx = messages.findLastIndex(m => m._pending);
+      if (pidx !== -1) {
+        const tmpId = messages[pidx]._pendingId;
+        messages.splice(pidx, 1);
+        const row = messagesEl.querySelector(`[data-pending-id="${tmpId}"]`);
+        if (row) row.remove();
+      }
     });
   }
 
@@ -331,6 +359,8 @@ export default async function load(params) {
   });
 
   /* ---------------- Send ---------------- */
+  let _pendingSeq = 0;
+
   const doSend = () => {
     const text = inputEl.value.trim();
     if (!text) return;
@@ -345,6 +375,29 @@ export default async function load(params) {
     });
     inputEl.value = '';
     autoSize(inputEl);
+
+    // 낙관적 렌더링: 서버 echo 전에 즉시 말풍선 표시
+    const tmpId = 'tmp_' + (++_pendingSeq);
+    const tmpMsg = {
+      _pending: true,
+      _pendingId: tmpId,
+      id: null,
+      roomId,
+      userId: user.id,
+      userName: user.nickname || user.name || '익명',
+      avatarUrl: user.avatarUrl || user.profileImage || null,
+      message: text,
+      createdAt: new Date().toISOString(),
+    };
+    messages.push(tmpMsg);
+    appendMessage(tmpMsg);
+    // pending 행에 data-pending-id 부여
+    const lastRow = messagesEl.lastElementChild;
+    if (lastRow) {
+      lastRow.dataset.pendingId = tmpId;
+      lastRow.classList.add('cr-msg--pending');
+    }
+    scrollToBottom();
   };
 
   formEl.addEventListener('submit', (e) => {
