@@ -17,7 +17,11 @@ export default function registerChatSocket(io: Server): void {
     socket.on('cr:join', async ({ roomId, userId }: { roomId: number; userId: number; userName: string }) => {
       socket.join(`cr_${roomId}`);
       const memberCount = io.sockets.adapter.rooms.get(`cr_${roomId}`)?.size ?? 0;
-      io.to(`cr_${roomId}`).emit('cr:member_count', { roomId, memberCount });
+      const [[{ total: memberTotal }]] = await pool.query<any[]>(
+        'SELECT COUNT(*) AS total FROM chat_room_members WHERE room_id = ?',
+        [roomId],
+      );
+      io.to(`cr_${roomId}`).emit('cr:member_count', { roomId, memberCount, memberTotal });
 
       // 캐시 미스 시에만 DB 조회
       if (!userCache.has(userId)) {
@@ -87,8 +91,14 @@ export default function registerChatSocket(io: Server): void {
     });
 
     // cr:leave { roomId }
-    socket.on('cr:leave', ({ roomId }: { roomId: number }) => {
+    socket.on('cr:leave', async ({ roomId }: { roomId: number }) => {
       socket.leave(`cr_${roomId}`);
+      const memberCount = io.sockets.adapter.rooms.get(`cr_${roomId}`)?.size ?? 0;
+      const [[{ total: memberTotal }]] = await pool.query<any[]>(
+        'SELECT COUNT(*) AS total FROM chat_room_members WHERE room_id = ?',
+        [roomId],
+      );
+      io.to(`cr_${roomId}`).emit('cr:member_count', { roomId, memberCount, memberTotal });
     });
 
   });

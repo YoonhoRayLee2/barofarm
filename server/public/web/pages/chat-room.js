@@ -106,7 +106,14 @@ export default async function load(params) {
   const seenIds = new Set();
   /** @type {{ id?: number, userId: number, userName: string, avatarUrl?: string|null, message: string, createdAt: string|number }[]} */
   const messages = [];
-  let memberCount = 0;
+  let memberTotal = 0;
+  let onlineCount = 0;
+  function renderMemberLabel(total, online) {
+    if (!(total > 0)) return '';
+    let s = `${total}명`;
+    if (online > 0) s += ` · 접속 ${online}`;
+    return s;
+  }
 
   /* ---------------- Header info (best-effort) ---------------- */
   fetchRoomMeta(roomId, user.id).then((room) => {
@@ -120,8 +127,8 @@ export default async function load(params) {
     } else {
       headerAvatarEl.innerHTML = personIconSVG(28);
     }
-    memberCount = Number(room.memberCount) || 0;
-    headerMembersEl.textContent = memberCount > 0 ? `${memberCount}명` : '';
+    memberTotal = Number(room.memberCount) || 0;
+    headerMembersEl.textContent = renderMemberLabel(memberTotal, onlineCount);
 
     // DM 룸이면 ≡ 메뉴 버튼 숨김
     if (room.isDm) {
@@ -307,10 +314,11 @@ export default async function load(params) {
       }
     });
 
-    socket.on('cr:member_count', ({ roomId: rid, memberCount: mc }) => {
+    socket.on('cr:member_count', ({ roomId: rid, memberCount: mc, memberTotal: mt }) => {
       if (rid !== roomId) return;
-      memberCount = mc;
-      headerMembersEl.textContent = mc > 0 ? `${mc}명` : '';
+      onlineCount = Number(mc) || 0;
+      if (mt != null) memberTotal = Number(mt) || 0;
+      headerMembersEl.textContent = renderMemberLabel(memberTotal, onlineCount);
     });
 
     socket.on('cr:error', (err) => {
