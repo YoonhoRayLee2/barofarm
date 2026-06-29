@@ -898,6 +898,32 @@
   font-size: var(--fs-xs);
   -webkit-tap-highlight-color: transparent;
   transition: color var(--dur-fast) var(--ease-out);
+  position: relative;
+}
+
+.profile-icon-action__badge {
+  position: absolute;
+  top: 6px;
+  left: calc(50% + 6px);
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-danger);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  border-radius: var(--radius-pill);
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.profile-icon-action__badge.is-visible {
+  display: inline-flex;
 }
 
 .profile-icon-action:active {

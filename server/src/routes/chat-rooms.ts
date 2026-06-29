@@ -48,10 +48,16 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/chat-rooms/unread-total?userId=
+// GET /api/chat-rooms/unread-total?userId=&type=dm|group
+// type 없으면 전체(하위호환), type=dm → is_dm=1, type=group → is_dm=0
 router.get('/unread-total', async (req: Request, res: Response) => {
   const userId = Number(req.query.userId);
   if (!userId) return res.status(400).json({ error: 'userId required' });
+
+  const type = req.query.type;
+  let dmFilter = '';
+  if (type === 'dm') dmFilter = 'AND cr.is_dm = 1';
+  else if (type === 'group') dmFilter = 'AND cr.is_dm = 0';
 
   try {
     const [rows] = await pool.query<any[]>(
@@ -60,7 +66,8 @@ router.get('/unread-total', async (req: Request, res: Response) => {
           WHERE cm.room_id = cr.id AND cm.created_at > m.last_read_at AND cm.user_id != ?)
        ), 0) AS total
        FROM chat_rooms cr
-       JOIN chat_room_members m ON m.room_id = cr.id AND m.user_id = ?`,
+       JOIN chat_room_members m ON m.room_id = cr.id AND m.user_id = ?
+       WHERE 1=1 ${dmFilter}`,
       [userId, userId],
     );
     res.json({ total: Number(rows[0]?.total ?? 0) });

@@ -813,10 +813,30 @@ function buildCollectorPanel(profileUser, scrollEl, isMe) {
     const btn = document.createElement('button');
     btn.className = 'profile-icon-action';
     btn.innerHTML = svg;
+    const badge = document.createElement('span');
+    badge.className = 'profile-icon-action__badge';
+    badge.setAttribute('aria-hidden', 'true');
+    btn.appendChild(badge);
     btn.appendChild(Object.assign(document.createElement('span'), { textContent: label }));
     btn.addEventListener('click', action);
     iconRow.appendChild(btn);
   });
+
+  if (isMe) {
+    (async () => {
+      try {
+        const res = await fetch(`/api/chat-rooms/unread-total?userId=${encodeURIComponent(profileUser.id)}&type=dm`);
+        if (!res.ok) return;
+        const { total } = await res.json();
+        const count = Number(total) || 0;
+        const badgeEl = iconRow.querySelector('.profile-icon-action__badge');
+        if (badgeEl && count > 0) {
+          badgeEl.textContent = count > 99 ? '99+' : String(count);
+          badgeEl.classList.add('is-visible');
+        }
+      } catch { /* non-critical */ }
+    })();
+  }
 
   panel.appendChild(iconRow);
 
