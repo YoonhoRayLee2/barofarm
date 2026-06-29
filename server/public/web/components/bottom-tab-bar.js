@@ -8,6 +8,8 @@
 
 import { navigate } from '/app/scripts/router.js';
 import { openFabModal } from '/app/components/fab-modal.js';
+import { connect, identifyUser } from '/app/scripts/socket.js';
+import { getSecureItem } from '/app/scripts/native-bridge.js';
 
 // Inject CSS once
 const _cssId = 'component-css-bottom-tab-bar';
@@ -61,8 +63,9 @@ export function createBottomTabBar(opts = {}) {
       const btn = document.createElement('button');
       btn.className = 'tab-item' + (tab.id === activeTab ? ' is-active' : '');
       btn.setAttribute('aria-label', tab.label);
+      const badge = tab.id === 'chat' ? '<span class="tab-badge" aria-hidden="true"></span>' : '';
       btn.innerHTML = `
-        <span class="tab-item__icon">${tab.icon}</span>
+        <span class="tab-item__icon">${tab.icon}${badge}</span>
         <span class="tab-item__label">${tab.label}</span>
       `;
       btn.addEventListener('click', () => navigate(tab.path));
@@ -70,7 +73,61 @@ export function createBottomTabBar(opts = {}) {
     }
   });
 
+  setupUnreadBadge(bar);
+
   return bar;
+}
+
+/**
+ * Wire up the chat tab unread-total badge with initial fetch + live refresh.
+ * @param {HTMLElement} bar
+ */
+async function setupUnreadBadge(bar) {
+  const badgeEl = bar.querySelector('.tab-badge');
+  if (!badgeEl) return;
+
+  let userId = null;
+  try {
+    const stored = await getSecureItem('user');
+    if (stored) userId = JSON.parse(stored).id;
+  } catch { /* not logged in */ }
+  if (!userId) return;
+
+  const refresh = async () => {
+    try {
+      const res = await fetch(`/api/chat-rooms/unread-total?userId=${encodeURIComponent(userId)}`);
+      if (!res.ok) return;
+      const { total } = await res.json();
+      renderBadge(badgeEl, Number(total) || 0);
+    } catch { /* non-critical */ }
+  };
+
+  // 1) initial count
+  refresh();
+
+  // 2) live refresh — tab bar is always mounted, keep a persistent socket here.
+  let socket;
+  try {
+    socket = connect();
+    const onConnect = () => identifyUser(socket, userId);
+    socket.on('connect', onConnect);
+    if (socket.connected) onConnect();
+    socket.on('cr:unread', refresh);
+  } catch { /* socket unavailable — badge still shows initial count */ }
+}
+
+/**
+ * @param {HTMLElement} el
+ * @param {number} count
+ */
+function renderBadge(el, count) {
+  if (count > 0) {
+    el.textContent = count > 99 ? '99+' : String(count);
+    el.classList.add('is-visible');
+  } else {
+    el.textContent = '';
+    el.classList.remove('is-visible');
+  }
 }
 
 /**

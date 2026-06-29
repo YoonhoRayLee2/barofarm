@@ -4,6 +4,11 @@ import pool from '../db/mysql';
 export default function registerChatSocket(io: Server): void {
   io.on('connection', (socket) => {
 
+    // user:identify { userId } — personal room join for cr:unread push
+    socket.on('user:identify', ({ userId }: { userId: number }) => {
+      socket.join(`user:${userId}`);
+    });
+
     // cr:join { roomId, userId, userName }
     socket.on('cr:join', ({ roomId, userId, userName }: { roomId: number; userId: number; userName: string }) => {
       socket.join(`cr_${roomId}`);
@@ -40,6 +45,15 @@ export default function registerChatSocket(io: Server): void {
           message,
           createdAt: tsRows[0]?.created_at ?? new Date(),
         });
+
+        // push cr:unread to all members except sender
+        const [members] = await pool.query<any[]>(
+          'SELECT user_id FROM chat_room_members WHERE room_id = ? AND user_id != ?',
+          [roomId, userId],
+        );
+        for (const m of members) {
+          io.to(`user:${m.user_id}`).emit('cr:unread', { roomId });
+        }
       } catch (err) {
         console.error('[chat-socket] cr:send error', err);
         socket.emit('cr:error', { message: 'Failed to send message' });

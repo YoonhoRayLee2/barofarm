@@ -48,6 +48,28 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/chat-rooms/unread-total?userId=
+router.get('/unread-total', async (req: Request, res: Response) => {
+  const userId = Number(req.query.userId);
+  if (!userId) return res.status(400).json({ error: 'userId required' });
+
+  try {
+    const [rows] = await pool.query<any[]>(
+      `SELECT COALESCE(SUM(
+         (SELECT COUNT(*) FROM chat_messages cm
+          WHERE cm.room_id = cr.id AND cm.created_at > m.last_read_at AND cm.user_id != ?)
+       ), 0) AS total
+       FROM chat_rooms cr
+       JOIN chat_room_members m ON m.room_id = cr.id AND m.user_id = ?`,
+      [userId, userId],
+    );
+    res.json({ total: Number(rows[0]?.total ?? 0) });
+  } catch (err) {
+    console.error('[chat-rooms] GET /unread-total', err);
+    res.status(500).json({ error: 'internal_error' });
+  }
+});
+
 // GET /api/chat-rooms/mine?userId=&type=group|dm
 router.get('/mine', async (req: Request, res: Response) => {
   const userId = Number(req.query.userId);

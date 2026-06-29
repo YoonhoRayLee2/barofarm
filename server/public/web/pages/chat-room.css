@@ -127,7 +127,10 @@
 }
 
 .cr-msg--me {
-  flex-direction: row-reverse;
+  /* 내 메시지: 시간 span(첫 DOM) → 버블 순서를 유지하되 우측 정렬.
+     시간이 버블 왼쪽에 오고 버블이 화면 우측에 깔끔히 붙는다. */
+  flex-direction: row;
+  justify-content: flex-end;
   align-items: flex-end;
 }
 
