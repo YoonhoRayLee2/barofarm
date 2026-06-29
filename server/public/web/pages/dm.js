@@ -70,12 +70,14 @@ export default async function load() {
         <div class="dm-item__body">
           <div class="dm-item__row">
             <span class="dm-item__name">${escapeHtml(room.name)}</span>
-            <span class="dm-item__time">${timeStr}</span>
           </div>
           <div class="dm-item__row">
             <span class="dm-item__last">${escapeHtml(room.lastMessage || '')}</span>
-            ${unread}
           </div>
+        </div>
+        <div class="dm-item__meta">
+          <span class="dm-item__time">${timeStr}</span>
+          ${unread}
         </div>
       `;
       li.addEventListener('click', () => navigate('/app/chat-room/' + room.id));

@@ -191,6 +191,12 @@
   padding-bottom: 4px;
 }
 
+/* 상대 시간: row 직속 자식(아바타/col의 형제). 버블 오른쪽·바닥 정렬. */
+.cr-msg--other .cr-msg__time {
+  align-self: flex-end;
+  margin-top: auto;
+}
+
 .cr-msg__bubble {
   padding: 10px 14px;
   border-radius: var(--radius-lg);

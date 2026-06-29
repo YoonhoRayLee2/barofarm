@@ -223,7 +223,8 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 60%;
+  flex: 1;
+  min-width: 0;
 }
 
 .ch-room-members {
@@ -248,10 +249,19 @@
   text-overflow: ellipsis;
 }
 
+.ch-room-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+  min-width: 40px;
+}
+
 .ch-room-time {
   font-size: var(--fs-xs);
   color: var(--color-ink-mute);
-  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .ch-unread-badge {

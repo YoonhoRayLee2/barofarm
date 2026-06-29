@@ -366,28 +366,41 @@ export default async function load(params) {
   function renderAllMessages() {
     messagesEl.innerHTML = '';
     let prev = null;
-    messages.forEach((m) => {
-      appendMessage(m, prev);
+    messages.forEach((m, i) => {
+      const next = messages[i + 1];
+      const isLastOfRun = !next || !isGrouped(m, next);
+      appendMessage(m, prev, isLastOfRun);
       prev = m;
     });
     // initial scroll
     scrollToBottom(false);
   }
 
-  function appendMessage(msg, prevOverride) {
+  function appendMessage(msg, prevOverride, isLastOfRun) {
     const isMe = Number(msg.userId) === Number(user.id);
     const prev = prevOverride !== undefined
       ? prevOverride
       : (messages.length >= 2 ? messages[messages.length - 2] : null);
 
     const grouped = isGrouped(prev, msg);
+    // 새 append(socket 수신)는 isLastOfRun 미지정 → 항상 현재 run의 마지막으로 간주.
+    const last = isLastOfRun === undefined ? true : isLastOfRun;
+
+    // 새 append가 직전 메시지와 같은 run을 이어가면, 직전 행의 시간 span 제거.
+    if (isLastOfRun === undefined && grouped) {
+      const prevRow = messagesEl.lastElementChild;
+      const t = prevRow && prevRow.querySelector('.cr-msg__time');
+      if (t) t.remove();
+    }
+
+    const timeSpan = last ? `<span class="cr-msg__time">${formatTime(msg.createdAt)}</span>` : '';
 
     const row = document.createElement('div');
     row.className = 'cr-msg' + (isMe ? ' cr-msg--me' : ' cr-msg--other') + (grouped ? ' is-grouped' : '');
 
     if (isMe) {
       row.innerHTML = `
-        ${grouped ? '' : `<span class="cr-msg__time">${formatTime(msg.createdAt)}</span>`}
+        ${timeSpan}
         <div class="cr-msg__bubble">${escapeHtml(msg.message)}</div>
       `;
     } else {
@@ -399,11 +412,11 @@ export default async function load(params) {
           ${grouped ? '' : `
             <div class="cr-msg__meta">
               <span class="cr-msg__name">${escapeHtml(msg.userName || '익명')}</span>
-              <span class="cr-msg__time">${formatTime(msg.createdAt)}</span>
             </div>
           `}
           <div class="cr-msg__bubble">${escapeHtml(msg.message)}</div>
         </div>
+        ${timeSpan}
       `;
     }
 

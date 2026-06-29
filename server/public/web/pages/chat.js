@@ -175,15 +175,17 @@ async function renderMine(container, user) {
       <div class="ch-room-body">
         <div class="ch-room-line1">
           <span class="ch-room-name">${escapeHtml(room.name)}</span>
-          ${room.unreadCount > 0
-            ? `<span class="ch-unread-badge">${room.unreadCount > 99 ? '99+' : room.unreadCount}</span>`
-            : ''}
           <span class="ch-room-members">${room.memberCount}명</span>
         </div>
         <div class="ch-room-line2">
           <span class="ch-room-last-msg">${room.lastMessage ? escapeHtml(room.lastMessage) : '대화가 없습니다'}</span>
-          <span class="ch-room-time">${formatTimeAgo(room.lastMessageAt)}</span>
         </div>
+      </div>
+      <div class="ch-room-meta">
+        <span class="ch-room-time">${formatTimeAgo(room.lastMessageAt)}</span>
+        ${room.unreadCount > 0
+          ? `<span class="ch-unread-badge">${room.unreadCount > 99 ? '99+' : room.unreadCount}</span>`
+          : ''}
       </div>
     `;
 
