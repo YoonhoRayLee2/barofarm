@@ -34,6 +34,15 @@ const TABS = [
   { id: 'profile',  path: '/app/profile',           icon: SVG_USER,     label: '내정보'  },
 ];
 
+// App-wide singletons for the unread badge.
+// The tab bar is re-created on every page transition, but the socket and its
+// listeners must be created ONCE — otherwise zombie sockets accumulate.
+let badgeSocket = null;            // single shared socket for the badge
+let badgeListenersBound = false;   // 'connect' / 'cr:unread' bound only once
+let badgeUserId = null;            // resolved once on first login
+let currentBadgeEl = null;         // the badge element of the CURRENT (latest) tab bar
+let refreshTimer = null;           // debounce timer for cr:unread bursts
+
 /**
  * Create the bottom tab bar element.
  * @param {{ activeTab?: string }} [opts]  activeTab: 'home' | 'products' | 'chat' | 'profile'
@@ -79,40 +88,60 @@ export function createBottomTabBar(opts = {}) {
 }
 
 /**
- * Wire up the chat tab unread-total badge with initial fetch + live refresh.
+ * Fetch the unread total once and render it onto the CURRENT tab bar's badge.
+ * Always reads `currentBadgeEl` so live updates land on the latest tab bar
+ * after a page transition.
+ */
+async function refreshUnreadBadge() {
+  if (!badgeUserId) return;
+  try {
+    const res = await fetch(`/api/chat-rooms/unread-total?userId=${encodeURIComponent(badgeUserId)}`);
+    if (!res.ok) return;
+    const { total } = await res.json();
+    if (currentBadgeEl) renderBadge(currentBadgeEl, Number(total) || 0);
+  } catch { /* non-critical */ }
+}
+
+/** Debounced refresh — collapses cr:unread bursts into a single fetch. */
+function scheduleBadgeRefresh() {
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(refreshUnreadBadge, 400);
+}
+
+/**
+ * Wire up the chat tab unread-total badge.
+ * The socket + listeners are created ONCE for the whole app lifetime; only the
+ * current badge element ref is updated on each tab-bar re-creation.
  * @param {HTMLElement} bar
  */
 async function setupUnreadBadge(bar) {
   const badgeEl = bar.querySelector('.tab-badge');
   if (!badgeEl) return;
 
-  let userId = null;
-  try {
-    const stored = await getSecureItem('user');
-    if (stored) userId = JSON.parse(stored).id;
-  } catch { /* not logged in */ }
-  if (!userId) return;
+  // Point live updates at the newest tab bar.
+  currentBadgeEl = badgeEl;
 
-  const refresh = async () => {
+  // Resolve user id once.
+  if (!badgeUserId) {
     try {
-      const res = await fetch(`/api/chat-rooms/unread-total?userId=${encodeURIComponent(userId)}`);
-      if (!res.ok) return;
-      const { total } = await res.json();
-      renderBadge(badgeEl, Number(total) || 0);
-    } catch { /* non-critical */ }
-  };
+      const stored = await getSecureItem('user');
+      if (stored) badgeUserId = JSON.parse(stored).id;
+    } catch { /* not logged in */ }
+  }
+  if (!badgeUserId) return;
 
-  // 1) initial count
-  refresh();
+  // 1) immediate sync for this freshly-mounted badge (cheap single fetch).
+  refreshUnreadBadge();
 
-  // 2) live refresh — tab bar is always mounted, keep a persistent socket here.
-  let socket;
+  // 2) live refresh — bind the shared socket exactly once.
+  if (badgeListenersBound) return;
   try {
-    socket = connect();
-    const onConnect = () => identifyUser(socket, userId);
-    socket.on('connect', onConnect);
-    if (socket.connected) onConnect();
-    socket.on('cr:unread', refresh);
+    if (!badgeSocket) badgeSocket = connect();
+    const onConnect = () => identifyUser(badgeSocket, badgeUserId);
+    badgeSocket.on('connect', onConnect);
+    if (badgeSocket.connected) onConnect();
+    badgeSocket.on('cr:unread', scheduleBadgeRefresh);
+    badgeListenersBound = true;
   } catch { /* socket unavailable — badge still shows initial count */ }
 }
 

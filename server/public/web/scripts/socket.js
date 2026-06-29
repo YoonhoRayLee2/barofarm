@@ -18,7 +18,7 @@ export function connect(baseUrl = '') {
   const socket = window.io(target, {
     transports: ['websocket', 'polling'],
     reconnection: true,
-    reconnectionAttempts: Infinity,
+    reconnectionAttempts: 10,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
     autoConnect: true,
