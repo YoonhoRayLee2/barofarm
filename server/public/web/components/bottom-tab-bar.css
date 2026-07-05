@@ -83,10 +83,10 @@
   align-items: center;
   justify-content: center;
   background: var(--color-danger);
-  color: #fff;
+  color: var(--color-on-danger, #fff);
   font-family: var(--font-body);
-  font-size: 10px;
-  font-weight: 700;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
   line-height: 1;
   border-radius: var(--radius-pill);
   box-sizing: border-box;
@@ -98,7 +98,7 @@
 
 .tab-item__label {
   font-size: 10px;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   line-height: 1;
   letter-spacing: 0.02em;
 }
@@ -113,7 +113,7 @@
 .tab-item--fab .tab-fab-btn {
   width: 54px;
   height: 54px;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: linear-gradient(135deg, var(--color-cta), #C8453A);
   color: #fff;
   border: none;
@@ -155,7 +155,7 @@
 [data-theme="dark"] .tab-item--fab .tab-fab-btn {
   width: 46px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   margin-top: 0;
   box-shadow: 0 2px 8px rgba(214, 71, 58, 0.35);
 }

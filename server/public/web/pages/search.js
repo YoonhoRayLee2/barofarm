@@ -188,6 +188,8 @@ export default async function load() {
       sellers.forEach((seller) => {
         const item = document.createElement('div');
         item.className = 'search-seller-item';
+        item.setAttribute('role', 'button');
+        item.setAttribute('tabindex', '0');
         const avatarInner = seller.avatarUrl
           ? `<img src="${escapeAttr(seller.avatarUrl)}" alt="" loading="lazy" />`
           : `<span class="search-seller-item__avatar-placeholder">&#128100;</span>`;
@@ -200,6 +202,7 @@ export default async function load() {
           <span class="search-seller-item__arrow">›</span>
         `;
         item.addEventListener('click', () => navigate(`/app/user/${encodeURIComponent(seller.id)}`));
+        item.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.click(); } });
         list.appendChild(item);
       });
       scroll.appendChild(list);

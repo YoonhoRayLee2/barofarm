@@ -15,9 +15,11 @@
   justify-content: center;
   opacity: 0;
   transition: opacity var(--dur-base) var(--ease-out);
+  pointer-events: none;
 }
 .pes-backdrop.is-visible {
   opacity: 1;
+  pointer-events: auto;
 }
 
 /* ── Sheet container ───────────────────────────────────────── */
@@ -74,7 +76,7 @@
   text-align: center;
   font-family: var(--font-display);
   font-size: var(--fs-lg);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
 }
 .pes-header-spacer {
@@ -147,7 +149,7 @@
 .pes-avatar-fallback {
   font-family: var(--font-display);
   font-size: 32px;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink-soft);
   text-transform: uppercase;
 }
@@ -168,7 +170,7 @@
 .pes-avatar-label {
   font-size: var(--fs-sm);
   color: var(--color-accent);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   cursor: pointer;
 }
 
@@ -259,7 +261,7 @@
   border: none;
   border-radius: var(--radius-md);
   font-size: var(--fs-base);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   font-family: var(--font-body);
   cursor: pointer;
   transition: background var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);

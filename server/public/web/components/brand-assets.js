@@ -65,7 +65,7 @@ export function avatar(name, size = 48) {
   const bg = avatarHue(name);
   const ch = String(name || '?').trim().charAt(0).toUpperCase() || '?';
   const fs = Math.round(size * 0.42);
-  return `<span class="bf-avatar" style="width:${size}px;height:${size}px;border-radius:50%;background:${bg};color:#fff;display:inline-flex;align-items:center;justify-content:center;font-family:'Pretendard',sans-serif;font-weight:800;font-size:${fs}px;flex:0 0 auto;user-select:none">${ch}</span>`;
+  return `<span class="bf-avatar" style="width:${size}px;height:${size}px;border-radius:50%;background:${bg};color:#fff;display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-body);font-weight:var(--fw-extrabold);font-size:${fs}px;flex:0 0 auto;user-select:none">${ch}</span>`;
 }
 
 /** Illustrated silhouette fallback (no name available). */

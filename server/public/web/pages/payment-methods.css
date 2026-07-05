@@ -28,7 +28,7 @@
 .pm-header__back {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
-  font-size: 18px;
+  font-size: var(--fs-xl);
   color: var(--color-ink);
   cursor: pointer;
   width: 38px;
@@ -44,7 +44,7 @@
 .pm-header__title {
   font-family: var(--font-display);
   font-size: var(--fs-xl);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   letter-spacing: -0.3px;
   flex: 1;
@@ -57,7 +57,7 @@
   border-radius: var(--radius-pill);
   font-family: var(--font-body);
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-bg);
   padding: 8px 14px;
   cursor: pointer;
@@ -112,7 +112,7 @@
   background: var(--grad-accent);
   color: var(--color-bg);
   font-size: var(--fs-xs);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   padding: 3px 9px;
   border-radius: var(--radius-pill);
 }
@@ -122,16 +122,16 @@
   align-items: center;
   gap: 8px;
 }
-.pm-card__icon { font-size: 18px; }
+.pm-card__icon { font-size: var(--fs-xl); }
 .pm-card__type {
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink-soft);
 }
 .pm-card__num {
   font-family: var(--font-display);
   font-size: var(--fs-lg);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   letter-spacing: 0.5px;
 }
@@ -148,7 +148,7 @@
 .pm-btn {
   font-family: var(--font-body);
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   padding: 8px 14px;
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -173,7 +173,7 @@
 .pm-empty__icon { font-size: 40px; }
 .pm-empty__title {
   font-size: var(--fs-base);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
 }
 .pm-empty__desc {
@@ -187,7 +187,7 @@
   border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
   padding: 8px 16px;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   cursor: pointer;
 }
@@ -233,7 +233,7 @@
 .pm-form-header h2 {
   font-family: var(--font-display);
   font-size: var(--fs-lg);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   margin: 0;
   letter-spacing: -0.2px;
@@ -241,7 +241,7 @@
 .pm-form-close {
   background: none;
   border: none;
-  font-size: 18px;
+  font-size: var(--fs-xl);
   color: var(--color-ink-soft);
   cursor: pointer;
   padding: 6px 10px;
@@ -274,12 +274,12 @@
 .pm-type-option--barofarm { border-color: var(--color-accent); }
 .pm-type-option__icon { font-size: 24px; flex-shrink: 0; }
 .pm-type-option__text { display: flex; flex-direction: column; gap: 3px; }
-.pm-type-option__name { font-size: var(--fs-base); font-weight: 700; color: var(--color-ink); }
+.pm-type-option__name { font-size: var(--fs-base); font-weight: var(--fw-bold); color: var(--color-ink); }
 .pm-type-option__desc { font-size: var(--fs-sm); color: var(--color-ink-soft); }
 
 /* fields */
 .pm-field { display: flex; flex-direction: column; gap: 6px; }
-.pm-field__label { font-size: var(--fs-sm); font-weight: 700; color: var(--color-ink-soft); }
+.pm-field__label { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--color-ink-soft); }
 .pm-field__input {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
@@ -319,7 +319,7 @@
 .pm-barofarm-card__logo {
   font-family: var(--font-display);
   font-size: var(--fs-xl);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-accent);
 }
 .pm-barofarm-card__desc {
@@ -342,7 +342,7 @@
   border-radius: var(--radius-md);
   font-family: var(--font-body);
   font-size: var(--fs-lg);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-bg);
   cursor: pointer;
   transition: opacity var(--dur-fast) var(--ease-out);

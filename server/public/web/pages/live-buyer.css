@@ -1,7 +1,7 @@
 /* ===== LIVE BUYER PAGE ===== */
 .live-buyer {
   position: absolute; inset: 0;
-  background: #000;
+  background: var(--color-live-bg);
   color: #EDF1E2;
   display: flex; flex-direction: column;
   overflow: hidden;
@@ -34,14 +34,14 @@
 .lb-avatar {
   width: 38px; height: 38px; border-radius: 50%;
   background: var(--grad-accent);
-  border: 2px solid rgba(255,255,255,0.3);
+  border: 2px solid var(--color-white-tint-30);
   display: flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: 14px; color: #fff;
+  font-weight: var(--fw-extrabold); font-size: var(--fs-base); color: #fff;
   flex-shrink: 0;
 }
 .lb-host-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.lb-host-name { font-size: 14px; font-weight: 700; color: #fff; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lb-host-sub  { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-host-name { font-size: var(--fs-base); font-weight: var(--fw-bold); color: #fff; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-host-sub  { font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: rgba(255,255,255,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* ── Follow button (in-room) ─────────────────────────── */
 .lb-follow-btn {
@@ -55,8 +55,8 @@
   border: 1.5px solid rgba(255, 255, 255, 0.6);
   background: transparent;
   color: #fff;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
   font-family: var(--font-body);
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
@@ -65,7 +65,7 @@
 }
 .lb-follow-btn.is-following {
   background: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.3);
+  border-color: var(--color-white-tint-30);
   color: rgba(255, 255, 255, 0.7);
 }
 .lb-follow-btn:disabled {
@@ -77,8 +77,8 @@
 .lb-live-badge {
   display: inline-flex; align-items: center; gap: 6px;
   background: var(--grad-cta); color: #fff;
-  font-size: 10px; font-weight: 800; letter-spacing: 0.08em;
-  padding: 6px 11px; border-radius: 999px;
+  font-size: 10px; font-weight: var(--fw-extrabold); letter-spacing: 0.08em;
+  padding: 6px 11px; border-radius: var(--radius-pill);
 }
 .lb-live-badge .dot {
   width: 6px; height: 6px; border-radius: 50%; background: #fff;
@@ -88,18 +88,18 @@
 .lb-upcoming-badge {
   background: rgba(0,0,0,0.45);
   backdrop-filter: blur(8px);
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 .lb-glass-btn {
   width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
   border: 1px solid rgba(237,241,226,0.18);
   background: rgba(0,0,0,0.4); backdrop-filter: blur(8px);
   color: #fff; display: flex; align-items: center; justify-content: center;
-  cursor: pointer; font-size: 14px; line-height: 1;
+  cursor: pointer; font-size: var(--fs-base); line-height: 1;
 }
 .lb-viewers-chip {
-  width: auto; border-radius: 999px; gap: 4px; padding: 0 10px;
-  font-size: 11px; font-weight: 600;
+  width: auto; border-radius: var(--radius-pill); gap: 4px; padding: 0 10px;
+  font-size: var(--fs-xs); font-weight: var(--fw-semibold);
 }
 
 /* Mute/HD row */
@@ -109,8 +109,8 @@
   white-space: nowrap; flex-shrink: 0;
   background: rgba(0,0,0,0.4); backdrop-filter: blur(8px);
   border: 1px solid rgba(237,241,226,0.12);
-  border-radius: 999px; padding: 3px 8px;
-  font-size: 10px; font-weight: 600; color: #fff;
+  border-radius: var(--radius-pill); padding: 3px 8px;
+  font-size: 10px; font-weight: var(--fw-semibold); color: #fff;
 }
 .lb-mute-row .divider { width: 1px; height: 10px; background: rgba(255,255,255,0.18); }
 
@@ -139,8 +139,8 @@
 }
 .lb-mode-chip {
   display: inline-flex; align-items: center; gap: 5px;
-  font-size: 10px; font-weight: 800; letter-spacing: 0.06em;
-  padding: 4px 9px; border-radius: 999px;
+  font-size: 10px; font-weight: var(--fw-extrabold); letter-spacing: 0.06em;
+  padding: 4px 9px; border-radius: var(--radius-pill);
   background: var(--color-accent-tint); color: var(--color-accent);
   border: 1px solid rgba(45,138,62,0.25);
 }
@@ -154,16 +154,16 @@
   padding: 10px 12px;
   background: var(--color-surface);
   border: 1px solid var(--color-line);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   margin-bottom: 10px;
   box-shadow: var(--elev-1);
 }
 .lb-product__thumb {
-  width: 52px; height: 52px; border-radius: 10px;
+  width: 52px; height: 52px; border-radius: var(--radius-md);
   background: var(--color-bg-alt);
   flex-shrink: 0; overflow: hidden;
   display: flex; align-items: center; justify-content: center;
-  color: var(--color-ink-mute); font-size: 22px;
+  color: var(--color-ink-mute); font-size: var(--fs-2xl);
   border: 1px solid var(--color-line);
 }
 .lb-product__thumb img {
@@ -171,19 +171,19 @@
 }
 .lb-product__info { flex: 1; min-width: 0; }
 .lb-product__no {
-  font-size: 10px; font-weight: 700; color: var(--color-accent); letter-spacing: 0.06em;
+  font-size: 10px; font-weight: var(--fw-bold); color: var(--color-accent); letter-spacing: 0.06em;
 }
 .lb-product__name {
-  font-size: 12px; color: var(--color-ink-soft); margin: 1px 0 3px;
+  font-size: var(--fs-sm); color: var(--color-ink-soft); margin: 1px 0 3px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .lb-product__price-row { display: flex; align-items: baseline; gap: 6px; }
 .lb-product__price {
   font-family: var(--font-display);
-  font-size: 22px; font-weight: 900; letter-spacing: -0.5px; color: var(--color-ink); line-height: 1.1;
+  font-size: var(--fs-2xl); font-weight: var(--fw-black); letter-spacing: -0.5px; color: var(--color-ink); line-height: 1.1;
 }
 .lb-product__step {
-  font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+  font-size: 10px; font-weight: var(--fw-bold); padding: 2px 6px; border-radius: 4px;
   background: var(--color-warn-tint); color: var(--color-warn);
 }
 /* timer-slot: 구조는 lb-bid-row 안으로 이동, flex-shrink만 유지 */
@@ -203,7 +203,7 @@
   padding: 6px 10px;
 }
 .lb-product__timer-slot .timer__number {
-  font-size: 28px;
+  font-size: var(--fs-3xl);
   color: var(--color-ink);
 }
 .lb-product__timer-slot .timer__label { color: var(--color-ink-mute); }
@@ -214,7 +214,7 @@
   margin-top: 3px;
 }
 #lb-shipping-text {
-  font-size: 11px; font-weight: 600; color: var(--color-ink-mute);
+  font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: var(--color-ink-mute);
 }
 
 /* Waiting CTA */
@@ -223,7 +223,7 @@
   text-align: center;
 }
 .lb-waiting-text {
-  font-size: 12px; color: var(--color-ink-mute); font-weight: 500;
+  font-size: var(--fs-sm); color: var(--color-ink-mute); font-weight: var(--fw-medium);
 }
 
 /* Timer ring (SVG) */
@@ -234,7 +234,7 @@
 .timer-ring__txt {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-display); font-weight: 900; font-size: 18px;
+  font-family: var(--font-display); font-weight: var(--fw-black); font-size: var(--fs-xl);
   color: var(--color-ink);
 }
 
@@ -243,37 +243,37 @@
   position: relative; width: 100%; height: 52px;
   background: var(--color-surface-alt);
   border: 1.5px solid var(--color-line);
-  border-radius: 999px; padding: 4px; overflow: hidden;
+  border-radius: var(--radius-pill); padding: 4px; overflow: hidden;
   margin-bottom: 10px;
 }
 .lb-slide-bid__track {
-  position: absolute; inset: 4px; border-radius: 999px;
+  position: absolute; inset: 4px; border-radius: var(--radius-pill);
   background: linear-gradient(90deg, transparent, rgba(229,86,74,0.15));
   display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 700; color: var(--color-ink-soft);
+  font-size: var(--fs-13); font-weight: var(--fw-bold); color: var(--color-ink-soft);
   pointer-events: none;
 }
 .lb-slide-bid__handle {
   position: absolute; left: 4px; top: 4px; bottom: 4px; width: 44px;
-  border-radius: 999px; background: var(--grad-cta);
+  border-radius: var(--radius-pill); background: var(--grad-cta);
   display: flex; align-items: center; justify-content: center;
   color: #fff; box-shadow: 0 2px 8px rgba(229,86,74,0.3);
-  font-size: 16px;
+  font-size: var(--fs-lg);
 }
 
 /* FCFS buy button */
 .lb-fcfs-btn {
   width: 100%; height: 52px;
   background: var(--grad-cta); color: #fff;
-  border: none; border-radius: 999px;
-  font-size: 16px; font-weight: 800; cursor: pointer;
+  border: none; border-radius: var(--radius-pill);
+  font-size: var(--fs-lg); font-weight: var(--fw-extrabold); cursor: pointer;
   display: flex; align-items: center; justify-content: center; gap: 8px;
   box-shadow: 0 4px 14px rgba(229,86,74,0.3);
   letter-spacing: -0.3px; margin-bottom: 10px;
 }
 .lb-fcfs-btn .stock {
-  font-size: 11px; font-weight: 700; opacity: 0.9;
-  padding: 3px 8px; background: rgba(0,0,0,0.2); border-radius: 999px;
+  font-size: var(--fs-xs); font-weight: var(--fw-bold); opacity: 0.9;
+  padding: 3px 8px; background: rgba(0,0,0,0.2); border-radius: var(--radius-pill);
 }
 
 /* Blind bid input */
@@ -281,22 +281,22 @@
   width: 100%; height: 52px;
   background: var(--color-surface);
   border: 1.5px solid var(--color-accent);
-  border-radius: 999px; padding: 0 6px 0 20px;
+  border-radius: var(--radius-pill); padding: 0 6px 0 20px;
   display: flex; align-items: center; gap: 10px;
   margin-bottom: 6px;
 }
 .lb-blind-input__field {
   flex: 1; min-width: 0;
   background: transparent; border: none; outline: none;
-  font-family: var(--font-display); font-weight: 800;
+  font-family: var(--font-display); font-weight: var(--fw-extrabold);
   font-size: max(16px, 18px); color: var(--color-ink); letter-spacing: -0.3px;
 }
-.lb-blind-input__field::placeholder { color: var(--color-ink-mute); font-weight: 600; }
-.lb-blind-input__suffix { color: var(--color-ink-soft); font-weight: 700; font-size: 14px; padding-right: 4px; }
+.lb-blind-input__field::placeholder { color: var(--color-ink-mute); font-weight: var(--fw-semibold); }
+.lb-blind-input__suffix { color: var(--color-ink-soft); font-weight: var(--fw-bold); font-size: var(--fs-base); padding-right: 4px; }
 .lb-blind-input__submit {
   height: 40px; padding: 0 18px;
   background: var(--grad-cta); color: #fff; border: none;
-  border-radius: 999px; font-weight: 800; font-size: 13px; cursor: pointer;
+  border-radius: var(--radius-pill); font-weight: var(--fw-extrabold); font-size: var(--fs-13); cursor: pointer;
   box-shadow: 0 2px 8px rgba(229,86,74,0.3);
 }
 .lb-blind-hint {
@@ -312,8 +312,8 @@
   flex: 1; height: 42px;
   background: var(--color-surface-alt);
   border: 1px solid var(--color-line);
-  border-radius: 999px; padding: 0 18px;
-  color: var(--color-ink); font-size: 13px; outline: none; font-family: inherit;
+  border-radius: var(--radius-pill); padding: 0 18px;
+  color: var(--color-ink); font-size: var(--fs-13); outline: none; font-family: inherit;
 }
 .lb-chat-input::placeholder { color: var(--color-ink-mute); }
 .lb-icon-btn {
@@ -322,7 +322,7 @@
   background: var(--color-surface-alt);
   border-radius: 50%; color: var(--color-ink-soft);
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; font-size: 18px; line-height: 1;
+  cursor: pointer; font-size: var(--fs-xl); line-height: 1;
 }
 
 /* ── Giveaway mode ──────────────────────────────────── */
@@ -340,12 +340,12 @@
 }
 
 .lb-giveaway-badge {
-  font-size: 13px; font-weight: 800; color: var(--color-ink-soft);
+  font-size: var(--fs-13); font-weight: var(--fw-extrabold); color: var(--color-ink-soft);
   display: flex; align-items: center; gap: 5px;
 }
 
 .lb-giveaway-count {
-  font-size: 11px; font-weight: 700;
+  font-size: var(--fs-xs); font-weight: var(--fw-bold);
   color: var(--color-accent);
   background: var(--color-accent-tint);
   padding: 3px 9px; border-radius: var(--radius-pill);
@@ -355,7 +355,7 @@
   width: 100%; height: 48px;
   background: var(--grad-accent); color: #fff;
   border: none; border-radius: var(--radius-pill);
-  font-family: var(--font-body); font-size: 15px; font-weight: 800;
+  font-family: var(--font-body); font-size: var(--fs-15); font-weight: var(--fw-extrabold);
   cursor: pointer; letter-spacing: -0.2px;
   box-shadow: 0 3px 12px rgba(201,96,24,0.25);
   transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast);
@@ -367,19 +367,19 @@
   background: var(--color-surface-alt);
   color: var(--color-accent);
   box-shadow: none; cursor: default;
-  font-size: 14px;
+  font-size: var(--fs-base);
 }
 
 /* Giveaway-mode label (legacy) */
 .lb-giveaway-label {
   text-align: center; padding: 14px 0;
-  font-size: 15px; font-weight: 700; color: var(--color-ink-soft);
+  font-size: var(--fs-15); font-weight: var(--fw-bold); color: var(--color-ink-soft);
   margin-bottom: 4px;
 }
 
 /* Bidder info inside product card */
 .lb-product__bidder {
-  font-size: 11px; color: var(--color-accent); margin-top: 2px; font-weight: 600;
+  font-size: var(--fs-xs); color: var(--color-accent); margin-top: 2px; font-weight: var(--fw-semibold);
 }
 
 /* ── Emoji reaction bar ──────────────────────────────── */
@@ -443,8 +443,8 @@
   border: 1.5px solid var(--color-line);
   background: var(--color-surface);
   color: var(--color-ink-mute);
-  font-size: 11px;
-  font-weight: 800;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-extrabold);
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -488,8 +488,8 @@
 
 .lb-help-modal__title {
   font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 800;
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   text-align: center;
 }
@@ -503,7 +503,7 @@
 }
 
 .lb-help-modal__steps li {
-  font-size: 14px;
+  font-size: var(--fs-base);
   color: var(--color-ink-soft);
   line-height: 1.55;
 }
@@ -516,14 +516,14 @@
   color: #fff;
   border: none;
   border-radius: var(--radius-pill);
-  font-size: 15px;
-  font-weight: 800;
+  font-size: var(--fs-15);
+  font-weight: var(--fw-extrabold);
   cursor: pointer;
 }
 
 /* Shipping help bottomsheet extras */
 .lb-shipping-modal__body {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-soft);
   line-height: 1.65;
   margin: 0;
@@ -534,8 +534,8 @@
   border-radius: var(--radius-md);
   background: var(--color-surface-alt);
   border: 1px solid var(--color-line);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--fs-13);
+  font-weight: var(--fw-semibold);
   color: var(--color-ink-soft);
 }
 
@@ -559,8 +559,8 @@
   display: flex; align-items: center; justify-content: space-between;
   flex-shrink: 0;
 }
-.product-sheet__title { font-size: 16px; font-weight: 800; color: var(--color-ink); }
-.product-sheet__close-x { background: none; border: none; color: var(--color-ink-mute); font-size: 18px; cursor: pointer; }
+.product-sheet__title { font-size: var(--fs-lg); font-weight: var(--fw-extrabold); color: var(--color-ink); }
+.product-sheet__close-x { background: none; border: none; color: var(--color-ink-mute); font-size: var(--fs-xl); cursor: pointer; }
 
 .product-sheet__tabs {
   display: flex; gap: 4px; overflow-x: auto; -webkit-overflow-scrolling: touch;
@@ -570,7 +570,7 @@
   flex-shrink: 0;
   padding: 7px 12px; border-radius: var(--radius-pill);
   background: var(--color-surface-alt); border: 1px solid var(--color-line);
-  color: var(--color-ink-soft); font-size: 13px; font-weight: 700; cursor: pointer;
+  color: var(--color-ink-soft); font-size: var(--fs-13); font-weight: var(--fw-bold); cursor: pointer;
   display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
 }
 .product-sheet__tab.is-active {
@@ -580,29 +580,29 @@
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 18px; height: 18px; padding: 0 5px;
   border-radius: 9px; background: var(--color-accent); color: #fff;
-  font-size: 11px; font-weight: 800;
+  font-size: var(--fs-xs); font-weight: var(--fw-extrabold);
 }
 .product-sheet__content {
   flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
   min-height: 0;
 }
 .product-sheet__notice {
-  font-size: 11px; color: var(--color-ink-mute); line-height: 1.5; text-align: center;
+  font-size: var(--fs-xs); color: var(--color-ink-mute); line-height: 1.5; text-align: center;
   flex-shrink: 0;
 }
 .product-sheet__close-btn {
-  width: 100%; height: 46px; border-radius: 10px;
+  width: 100%; height: 46px; border-radius: var(--radius-md);
   background: var(--color-surface-alt); border: 1px solid var(--color-line);
-  color: var(--color-ink-soft); font-weight: 700; font-size: 14px; cursor: pointer;
+  color: var(--color-ink-soft); font-weight: var(--fw-bold); font-size: var(--fs-base); cursor: pointer;
   flex-shrink: 0;
 }
 
-.ps-empty { font-size: 13px; color: var(--color-ink-mute); text-align: center; padding: 24px 0; }
+.ps-empty { font-size: var(--fs-13); color: var(--color-ink-mute); text-align: center; padding: 24px 0; }
 
 /* 진행중 상품 / 구매내역 / 경매결과 행 공통 */
 .ps-product-row, .ps-sold-row, .ps-history-row {
   display: flex; align-items: center; gap: 10px;
-  padding: 10px; border-radius: 10px;
+  padding: 10px; border-radius: var(--radius-md);
   background: var(--color-bg); border: 1px solid var(--color-line);
 }
 .ps-sold-row--mine { border-color: var(--color-accent); background: var(--color-accent-tint); }
@@ -614,29 +614,29 @@
 .ps-product-thumb--empty, .ps-sold-thumb--empty, .ps-history-thumb--empty {
   display: flex; align-items: center; justify-content: center;
   background: var(--color-surface-alt); color: var(--color-ink-mute);
-  font-weight: 800; font-size: 14px;
+  font-weight: var(--fw-extrabold); font-size: var(--fs-base);
 }
 
 .ps-product-info, .ps-sold-info, .ps-history-info { flex: 1; min-width: 0; }
 .ps-product-name, .ps-sold-name, .ps-history-name {
-  font-size: 13px; font-weight: 700; color: var(--color-ink);
+  font-size: var(--fs-13); font-weight: var(--fw-bold); color: var(--color-ink);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.ps-sold-meta, .ps-history-meta { font-size: 11px; color: var(--color-ink-mute); margin-top: 2px; }
+.ps-sold-meta, .ps-history-meta { font-size: var(--fs-xs); color: var(--color-ink-mute); margin-top: 2px; }
 .ps-product-price {
-  font-family: var(--font-display); font-size: 15px; font-weight: 900; color: var(--color-ink); margin-top: 2px;
+  font-family: var(--font-display); font-size: var(--fs-15); font-weight: var(--fw-black); color: var(--color-ink); margin-top: 2px;
 }
 .ps-won-badge {
   display: inline-block; margin-left: 4px; padding: 1px 6px;
-  border-radius: 6px; background: var(--color-accent); color: #fff;
-  font-size: 10px; font-weight: 800;
+  border-radius: var(--radius-sm); background: var(--color-accent); color: #fff;
+  font-size: 10px; font-weight: var(--fw-extrabold);
 }
 
 /* 정보 탭 */
 .ps-info-block { display: flex; flex-direction: column; gap: 8px; padding: 4px; }
-.ps-info-title { font-size: 15px; font-weight: 800; color: var(--color-ink); }
-.ps-info-seller { font-size: 13px; color: var(--color-ink-soft); }
-.ps-info-notice { font-size: 12px; color: var(--color-ink-mute); line-height: 1.6; margin-top: 4px; }
+.ps-info-title { font-size: var(--fs-15); font-weight: var(--fw-extrabold); color: var(--color-ink); }
+.ps-info-seller { font-size: var(--fs-13); color: var(--color-ink-soft); }
+.ps-info-notice { font-size: var(--fs-sm); color: var(--color-ink-mute); line-height: 1.6; margin-top: 4px; }
 
 /* ── 종료된 방송 안내 ───────────────────────────────────── */
 .live-ended-page {
@@ -650,7 +650,7 @@
 .live-ended-overlay {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -668,7 +668,7 @@
   border: 1px solid var(--color-line);
   border-radius: var(--radius-lg);
   padding: var(--space-6) var(--space-5);
-  box-shadow: 0 12px 32px var(--color-shadow);
+  box-shadow: var(--elev-3);
 }
 .live-ended-icon {
   width: 64px;
@@ -685,7 +685,7 @@
 .live-ended-title {
   font-family: var(--font-display);
   font-size: var(--fs-xl);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
 }
 .live-ended-desc {
@@ -701,8 +701,8 @@
   border: none;
   color: var(--color-bg);
   font-family: var(--font-body);
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--fs-15);
+  font-weight: var(--fw-bold);
   cursor: pointer;
 }
 .live-ended-btn:active { opacity: 0.85; }
@@ -759,11 +759,11 @@
 .won-card--giveaway { border-color: var(--color-success); }
 .won-card__emoji { font-size: 40px; line-height: 1; }
 .won-card__winner-name {
-  font-family: var(--font-display); font-size: var(--fs-2xl); font-weight: 900;
+  font-family: var(--font-display); font-size: var(--fs-2xl); font-weight: var(--fw-black);
   color: var(--color-ink); letter-spacing: -0.5px; line-height: var(--lh-tight);
 }
 .won-card__title {
-  font-size: var(--fs-base); font-weight: 600;
+  font-size: var(--fs-base); font-weight: var(--fw-semibold);
   color: var(--color-ink-soft);
 }
 .won-card__price {
@@ -771,30 +771,30 @@
   font-weight: var(--fw-price, 900); color: var(--color-accent);
 }
 .won-card__unit-total {
-  font-size: var(--fs-sm); color: var(--color-ink-soft); font-weight: 600;
+  font-size: var(--fs-sm); color: var(--color-ink-soft); font-weight: var(--fw-semibold);
   margin: var(--space-1) 0;
 }
-.won-card__winner { font-size: var(--fs-sm); color: var(--color-success); font-weight: 700; }
+.won-card__winner { font-size: var(--fs-sm); color: var(--color-success); font-weight: var(--fw-bold); }
 .won-card__winner-msg { font-size: var(--fs-sm); color: var(--color-ink-soft); }
 .won-card__confirm-btn {
   margin-top: var(--space-2); padding: 10px 28px;
   background: var(--grad-accent);
   border: none;
   border-radius: var(--radius-pill); color: var(--color-surface); font-size: var(--fs-base);
-  font-weight: 700; cursor: pointer; font-family: var(--font-body);
+  font-weight: var(--fw-bold); cursor: pointer; font-family: var(--font-body);
 }
 .won-card__confirm-btn:active { opacity: 0.85; }
 
 /* Won slot machine (giveaway animation) */
 .won-slot { overflow: hidden; height: 2em; display: flex; align-items: center; justify-content: center; }
 .won-slot__name {
-  font-family: var(--font-display); font-size: var(--fs-2xl); font-weight: 900;
+  font-family: var(--font-display); font-size: var(--fs-2xl); font-weight: var(--fw-black);
   color: var(--color-ink); transition: color var(--dur-base) var(--ease-out);
 }
 .won-slot__name--winner { color: var(--color-accent); }
 
 /* ===== Unit total display ===== */
-.lb-unit-total { font-size: var(--fs-sm); color: var(--color-accent); font-weight: 600; margin-top: var(--space-1); text-align: center; }
+.lb-unit-total { font-size: var(--fs-sm); color: var(--color-accent); font-weight: var(--fw-semibold); margin-top: var(--space-1); text-align: center; }
 
 /* ===== Viewer modal (shared with seller) ===== */
 .ls-viewer-modal-backdrop {
@@ -812,13 +812,13 @@
 .ls-viewer-modal__header {
   display: flex; align-items: center; justify-content: space-between;
 }
-.ls-viewer-modal__title { font-size: 16px; font-weight: 800; color: var(--color-ink); }
-.ls-viewer-modal__close { background: none; border: none; color: var(--color-ink-mute); font-size: 18px; cursor: pointer; }
+.ls-viewer-modal__title { font-size: var(--fs-lg); font-weight: var(--fw-extrabold); color: var(--color-ink); }
+.ls-viewer-modal__close { background: none; border: none; color: var(--color-ink-mute); font-size: var(--fs-xl); cursor: pointer; }
 .ls-viewer-modal__list { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
 .ls-viewer-modal__item {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 12px; border-bottom: 1px solid var(--color-line);
-  font-size: 14px; color: var(--color-ink);
+  font-size: var(--fs-base); color: var(--color-ink);
 }
 .ls-viewer-modal__avatar {
   flex: none; width: 32px; height: 32px; border-radius: 50%;
@@ -828,4 +828,4 @@
   display: inline-flex; align-items: center; justify-content: center;
 }
 .ls-viewer-modal__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ls-viewer-modal__empty { padding: 16px; text-align: center; color: var(--color-ink-mute); font-size: 13px; }
+.ls-viewer-modal__empty { padding: 16px; text-align: center; color: var(--color-ink-mute); font-size: var(--fs-13); }

@@ -44,7 +44,7 @@ export default async function storybookPage() {
       .sb-section-title {
         font-family: var(--font-display);
         font-size: var(--fs-2xl);
-        font-weight: 700;
+        font-weight: var(--fw-bold);
         color: var(--color-ink);
         border-bottom: 2px solid var(--color-accent);
         padding-bottom: var(--space-2);
@@ -64,7 +64,7 @@ export default async function storybookPage() {
       .sb-item-label {
         font-family: var(--font-body);
         font-size: var(--fs-xs);
-        font-weight: 600;
+        font-weight: var(--fw-semibold);
         color: var(--color-ink-mute);
         letter-spacing: 0.08em;
         text-transform: uppercase;
@@ -102,7 +102,7 @@ export default async function storybookPage() {
       }
       .sb-chip__name {
         font-size: var(--fs-xs);
-        font-weight: 600;
+        font-weight: var(--fw-semibold);
         color: var(--color-ink);
         white-space: nowrap;
         overflow: hidden;
@@ -178,7 +178,7 @@ export default async function storybookPage() {
         border-radius: var(--radius-md);
         font-family: var(--font-body);
         font-size: var(--fs-sm);
-        font-weight: 600;
+        font-weight: var(--fw-semibold);
         cursor: pointer;
         transition: background var(--dur-fast) var(--ease-in-out);
       }
@@ -194,7 +194,7 @@ export default async function storybookPage() {
   const header = document.createElement('div');
   header.style.cssText = 'margin-bottom: var(--space-7)';
   header.innerHTML = `
-    <h1 style="font-family:var(--font-display);font-size:var(--fs-3xl);font-weight:700;color:var(--color-accent);margin-bottom:var(--space-2)">
+    <h1 style="font-family:var(--font-display);font-size:var(--fs-3xl);font-weight:var(--fw-bold);color:var(--color-accent);margin-bottom:var(--space-2)">
       Fresh Field Storybook
     </h1>
     <p style="font-size:var(--fs-base);color:var(--color-ink-soft);line-height:var(--lh-normal)">

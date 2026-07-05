@@ -2,7 +2,8 @@
 
 .history-page {
   background: var(--color-bg);
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   max-width: 480px;
@@ -25,7 +26,7 @@
 .history-header__back {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
-  font-size: 18px;
+  font-size: var(--fs-xl);
   color: var(--color-ink);
   cursor: pointer;
   padding: 0;
@@ -46,8 +47,8 @@
 
 .history-header__title {
   font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 800;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   letter-spacing: -0.3px;
 }
@@ -64,8 +65,8 @@
   background: none;
   border: none;
   font-family: var(--font-body);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-semibold);
   color: var(--color-ink-mute);
   cursor: pointer;
   border-bottom: 2.5px solid transparent;
@@ -76,7 +77,7 @@
 .history-tab.is-active {
   color: var(--color-ink);
   border-bottom-color: var(--color-accent);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
 }
 
 .history-content {
@@ -92,7 +93,7 @@
   justify-content: center;
   gap: 12px;
   padding: 80px var(--space-5);
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-soft);
 }
 
@@ -126,13 +127,13 @@
 
 .history-empty__title {
   font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 700;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
   color: var(--color-ink-soft);
 }
 
 .history-empty__desc {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-mute);
   line-height: var(--lh-relaxed);
 }
@@ -143,8 +144,8 @@
   border: none;
   border-radius: var(--radius-md);
   font-family: var(--font-body);
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
   color: var(--color-bg);
   cursor: pointer;
 }
@@ -181,8 +182,8 @@
 }
 
 .history-item__title {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--fs-15);
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   flex: 1;
   line-height: 1.35;
@@ -190,8 +191,8 @@
 
 .history-item__price {
   font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 800;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-extrabold);
   color: var(--color-accent);
   white-space: nowrap;
   letter-spacing: -0.3px;
@@ -206,13 +207,13 @@
 }
 
 .history-item__meta span {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--color-ink-mute);
 }
 
 .history-item__winner {
   font-size: 10px !important;
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-bg) !important;
   background: var(--color-accent);
   border-radius: var(--radius-pill);
@@ -233,7 +234,7 @@
 /* Status badges */
 .history-status {
   font-size: 10px;
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   border-radius: var(--radius-pill);
   padding: 3px 9px;
   white-space: nowrap;

@@ -34,7 +34,7 @@
 }
 .gdl-header__title {
   font-size: var(--fs-lg);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   margin: 0;
 }
@@ -70,7 +70,7 @@
   background: var(--color-accent);
   border-color: var(--color-accent);
   color: var(--color-bg);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
 }
 
 /* ── Scroll area ── */
@@ -114,7 +114,7 @@
 }
 .gdl-empty__title {
   font-size: var(--fs-lg);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
 }
 .gdl-empty__desc {
@@ -168,7 +168,7 @@
   color: var(--color-accent);
   border-radius: var(--radius-pill);
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   backdrop-filter: blur(6px);
 }
 
@@ -181,7 +181,7 @@
 
 .gdl-card__title {
   font-size: var(--fs-base);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   margin: 0;
   display: -webkit-box;
@@ -194,13 +194,13 @@
 
 .gdl-card__price {
   font-size: var(--fs-base);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   margin: 0;
 }
 .gdl-card__price span {
   font-size: var(--fs-sm);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
   color: var(--color-ink-soft);
   margin-left: 2px;
 }
@@ -226,7 +226,7 @@
 .gdl-card__progress-text {
   font-size: var(--fs-sm);
   color: var(--color-ink-soft);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .gdl-card__dday {
@@ -236,7 +236,7 @@
   color: var(--color-ink-soft);
   border-radius: var(--radius-sm);
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   margin-top: 2px;
 }
 .gdl-card__dday--urgent {

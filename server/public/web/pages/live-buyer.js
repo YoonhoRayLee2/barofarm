@@ -130,7 +130,7 @@ export default async function load(params) {
     <span>🔇</span>
     <span id="lb-mute-label">음소거</span>
     <span class="divider"></span>
-    <span style="font-size:9px;padding:1px 4px;border-radius:3px;border:1px solid rgba(255,255,255,0.4);font-weight:800;">HD</span>
+    <span style="font-size:9px;padding:1px 4px;border-radius:3px;border:1px solid rgba(255,255,255,0.4);font-weight:var(--fw-extrabold);">HD</span>
     <span style="opacity:0.8"> 720p</span>
   `;
   page.querySelector('.lb-host-info').appendChild(muteRow);
@@ -1543,30 +1543,30 @@ function showDeliveryGate(container, userId) {
     overlay.innerHTML = `
       <div style="text-align:center;margin-bottom:var(--space-6)">
         <div style="font-size:48px;margin-bottom:var(--space-3)">🏠</div>
-        <div style="font-family:var(--font-display);font-size:20px;font-weight:800;color:var(--color-ink);margin-bottom:var(--space-2)">배송 주소 등록 필요</div>
-        <div style="font-size:14px;color:var(--color-ink-soft);line-height:1.6">라이브 참여 전 배송 주소를 등록해주세요.<br>낙찰 시 이 주소로 배송됩니다.</div>
+        <div style="font-family:var(--font-display);font-size:20px;font-weight:var(--fw-extrabold);color:var(--color-ink);margin-bottom:var(--space-2)">배송 주소 등록 필요</div>
+        <div style="font-size:var(--fs-base);color:var(--color-ink-soft);line-height:1.6">라이브 참여 전 배송 주소를 등록해주세요.<br>낙찰 시 이 주소로 배송됩니다.</div>
       </div>
 
       <div style="display:flex;flex-direction:column;gap:var(--space-3);max-width:480px;margin:0 auto">
         <label style="display:flex;flex-direction:column;gap:var(--space-1);font-size:var(--fs-sm);color:var(--color-ink-soft)">
           수령인 이름
           <input type="text" name="deliveryName" placeholder="홍길동"
-            style="background:var(--color-surface-alt);border:1px solid var(--color-line);border-radius:var(--radius-md);padding:10px 12px;color:var(--color-ink);font-size:14px;font-family:var(--font-body)" />
+            style="background:var(--color-surface-alt);border:1px solid var(--color-line);border-radius:var(--radius-md);padding:10px 12px;color:var(--color-ink);font-size:var(--fs-base);font-family:var(--font-body)" />
         </label>
 
         <label style="display:flex;flex-direction:column;gap:var(--space-1);font-size:var(--fs-sm);color:var(--color-ink-soft)">
           연락처
           <input type="tel" name="deliveryPhone" placeholder="010-0000-0000"
-            style="background:var(--color-surface-alt);border:1px solid var(--color-line);border-radius:var(--radius-md);padding:10px 12px;color:var(--color-ink);font-size:14px;font-family:var(--font-body)" />
+            style="background:var(--color-surface-alt);border:1px solid var(--color-line);border-radius:var(--radius-md);padding:10px 12px;color:var(--color-ink);font-size:var(--fs-base);font-family:var(--font-body)" />
         </label>
 
         <label style="display:flex;flex-direction:column;gap:var(--space-1);font-size:var(--fs-sm);color:var(--color-ink-soft)">
           우편번호
           <div style="display:flex;gap:var(--space-2)">
             <input type="text" name="deliveryZipcode" placeholder="우편번호" inputmode="numeric" readonly
-              style="flex:1;background:var(--color-surface-alt);border:1px solid var(--color-line);border-radius:var(--radius-md);padding:10px 12px;color:var(--color-ink);font-size:14px;font-family:var(--font-body)" />
+              style="flex:1;background:var(--color-surface-alt);border:1px solid var(--color-line);border-radius:var(--radius-md);padding:10px 12px;color:var(--color-ink);font-size:var(--fs-base);font-family:var(--font-body)" />
             <button type="button" data-action="zipSearch"
-              style="padding:10px 14px;background:var(--color-surface-alt);border:1px solid var(--color-line);border-radius:var(--radius-md);color:var(--color-ink-soft);font-size:13px;font-family:var(--font-body);white-space:nowrap;cursor:pointer">
+              style="padding:10px 14px;background:var(--color-surface-alt);border:1px solid var(--color-line);border-radius:var(--radius-md);color:var(--color-ink-soft);font-size:var(--fs-13);font-family:var(--font-body);white-space:nowrap;cursor:pointer">
               검색
             </button>
           </div>
@@ -1575,22 +1575,22 @@ function showDeliveryGate(container, userId) {
         <label style="display:flex;flex-direction:column;gap:var(--space-1);font-size:var(--fs-sm);color:var(--color-ink-soft)">
           도로명 주소
           <input type="text" name="deliveryAddress" placeholder="도로명 주소" readonly
-            style="background:var(--color-surface-alt);border:1px solid var(--color-line);border-radius:var(--radius-md);padding:10px 12px;color:var(--color-ink);font-size:14px;font-family:var(--font-body)" />
+            style="background:var(--color-surface-alt);border:1px solid var(--color-line);border-radius:var(--radius-md);padding:10px 12px;color:var(--color-ink);font-size:var(--fs-base);font-family:var(--font-body)" />
         </label>
 
         <label style="display:flex;flex-direction:column;gap:var(--space-1);font-size:var(--fs-sm);color:var(--color-ink-soft)">
           상세주소 (선택)
           <input type="text" name="deliveryDetail" placeholder="동 · 호수 · 건물명 등"
-            style="background:var(--color-surface-alt);border:1px solid var(--color-line);border-radius:var(--radius-md);padding:10px 12px;color:var(--color-ink);font-size:14px;font-family:var(--font-body)" />
+            style="background:var(--color-surface-alt);border:1px solid var(--color-line);border-radius:var(--radius-md);padding:10px 12px;color:var(--color-ink);font-size:var(--fs-base);font-family:var(--font-body)" />
         </label>
 
         <button type="button" data-action="submit" disabled
-          style="margin-top:var(--space-3);padding:14px;background:var(--color-accent);color:var(--color-bg);border:none;border-radius:var(--radius-md);font-size:14px;font-weight:700;font-family:var(--font-body);cursor:pointer;opacity:0.55">
+          style="margin-top:var(--space-3);padding:14px;background:var(--color-accent);color:var(--color-bg);border:none;border-radius:var(--radius-md);font-size:var(--fs-base);font-weight:var(--fw-bold);font-family:var(--font-body);cursor:pointer;opacity:0.55">
           등록하고 입장하기
         </button>
 
         <button type="button" data-action="cancel"
-          style="padding:12px;background:transparent;color:var(--color-ink-soft);border:1px solid var(--color-line);border-radius:var(--radius-md);font-size:14px;font-family:var(--font-body);cursor:pointer">
+          style="padding:12px;background:transparent;color:var(--color-ink-soft);border:1px solid var(--color-line);border-radius:var(--radius-md);font-size:var(--fs-base);font-family:var(--font-body);cursor:pointer">
           뒤로가기
         </button>
       </div>

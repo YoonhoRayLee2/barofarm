@@ -75,6 +75,8 @@ export default async function load() {
     list.forEach((item) => {
       const li = document.createElement('li');
       li.className = 'cf-card';
+      li.setAttribute('role', 'button');
+      li.setAttribute('tabindex', '0');
       const thumb = item.primaryImage
         ? `<img src="${escapeAttr(item.primaryImage)}" alt="" loading="lazy">`
         : `<span class="cf-card__fallback">🌿</span>`;
@@ -90,6 +92,7 @@ export default async function load() {
         </div>
       `;
       li.addEventListener('click', () => navigate('/app/consignment/' + item.id));
+      li.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); li.click(); } });
       ul.appendChild(li);
     });
     container.innerHTML = '';

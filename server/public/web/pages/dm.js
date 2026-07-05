@@ -60,6 +60,8 @@ export default async function load() {
     list.forEach((room) => {
       const li = document.createElement('li');
       li.className = 'dm-item';
+      li.setAttribute('role', 'button');
+      li.setAttribute('tabindex', '0');
       const avatarHtml = room.avatarUrl
         ? `<img class="dm-item__avatar-img" src="${escapeAttr(room.avatarUrl)}" alt="">`
         : `<div class="dm-item__avatar-initial">${personIconSVG(28)}</div>`;
@@ -81,6 +83,7 @@ export default async function load() {
         </div>
       `;
       li.addEventListener('click', () => navigate('/app/chat-room/' + room.id));
+      li.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); li.click(); } });
       ul.appendChild(li);
     });
     container.innerHTML = '';

@@ -33,7 +33,7 @@
 }
 .gdd-header__title {
   font-size: var(--fs-lg);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   margin: 0;
   flex: 1;
 }
@@ -139,13 +139,13 @@
   color: var(--color-accent);
   border-radius: var(--radius-pill);
   font-size: var(--fs-xs);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
 }
 .gdd-status {
   padding: 4px 10px;
   border-radius: var(--radius-pill);
   font-size: var(--fs-xs);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
 }
 .gdd-status--info {
   background: rgba(61, 108, 158, 0.12);
@@ -163,20 +163,20 @@
 /* ── Title / price ── */
 .gdd-title {
   font-size: var(--fs-2xl);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   margin: 0;
   line-height: var(--lh-tight);
 }
 .gdd-price {
   font-size: var(--fs-3xl);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   margin: 0;
 }
 .gdd-price__suffix {
   font-size: var(--fs-base);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
   color: var(--color-ink-soft);
   margin-left: 6px;
 }
@@ -215,11 +215,11 @@
 }
 .gdd-progress-meta__count strong {
   color: var(--color-accent);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
 }
 .gdd-progress-meta__time {
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-warn);
   font-variant-numeric: tabular-nums;
 }
@@ -264,7 +264,7 @@
 }
 .gdd-seller__name {
   font-size: var(--fs-base);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
 }
 .gdd-seller__label {
@@ -284,7 +284,7 @@
 }
 .gdd-section__title {
   font-size: var(--fs-base);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   margin: 0;
 }
@@ -314,7 +314,7 @@
   padding: 14px;
   font-size: var(--fs-sm);
   color: var(--color-ink-soft);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .gdd-action-btn {
@@ -322,7 +322,7 @@
   border: none;
   border-radius: var(--radius-md);
   font-size: var(--fs-base);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   font-family: var(--font-body);
   cursor: pointer;
   transition: all var(--dur-fast) var(--ease-out);

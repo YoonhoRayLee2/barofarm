@@ -37,8 +37,8 @@
   align-items: center;
   justify-content: center;
   font-family: var(--font-body);
-  font-size: 16px;
-  font-weight: 800;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   pointer-events: none;
   letter-spacing: 0.02em;
@@ -50,7 +50,7 @@
 /* Pulse arrow indicator */
 .slide-bid__label::after {
   content: '›››';
-  font-size: 14px;
+  font-size: var(--fs-base);
   margin-left: 4px;
   opacity: 0.85;
   animation: slide-arrow 1.4s ease-in-out infinite;
@@ -76,8 +76,8 @@
   justify-content: center;
   cursor: grab;
   transition: left 0.05s linear;
-  font-size: 18px;
-  font-weight: 800;
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-extrabold);
   color: var(--color-cta);
   box-shadow: 0 2px 8px rgba(0,0,0,0.25);
 }

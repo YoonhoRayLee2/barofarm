@@ -2,7 +2,8 @@
 
 .auction-detail-page {
   background: var(--color-bg);
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   max-width: 480px;
@@ -25,7 +26,7 @@
 .auction-detail-header__back {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
-  font-size: 18px;
+  font-size: var(--fs-xl);
   color: var(--color-ink);
   cursor: pointer;
   padding: 0;
@@ -47,14 +48,15 @@
 
 .auction-detail-header__title {
   font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 800;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   letter-spacing: -0.3px;
 }
 
 .auction-detail-content {
   flex: 1;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
@@ -84,9 +86,9 @@
 }
 
 .auction-detail-loading__text {
-  font-size: 14px;
+  font-size: var(--fs-base);
   color: var(--color-ink-soft);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
 }
 
 /* Error */
@@ -107,7 +109,7 @@
 }
 
 .auction-detail-error__msg {
-  font-size: 14px;
+  font-size: var(--fs-base);
   color: var(--color-ink-soft);
 }
 
@@ -117,8 +119,8 @@
   border: none;
   border-radius: var(--radius-md);
   font-family: var(--font-body);
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
   color: var(--color-bg);
   cursor: pointer;
   transition: transform var(--dur-fast) var(--ease-out);
@@ -155,10 +157,10 @@
 
 .auction-detail-thumb__label {
   font-family: var(--font-display);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--color-ink-soft);
   letter-spacing: 0.06em;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
 }
 
 .auction-detail-live-badge {
@@ -189,7 +191,7 @@
 
 .auction-detail-live-badge__text {
   font-size: 10px;
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   letter-spacing: 0.08em;
 }
@@ -206,9 +208,9 @@
   -webkit-backdrop-filter: blur(6px);
   border-radius: var(--radius-pill);
   padding: 4px 11px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--color-ink);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   font-variant-numeric: tabular-nums;
 }
 
@@ -223,8 +225,8 @@
 
 .auction-detail-info__title {
   font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 800;
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   line-height: 1.35;
   letter-spacing: -0.3px;
@@ -237,22 +239,22 @@
 }
 
 .auction-detail-info__seller-label {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--color-ink-mute);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
 .auction-detail-info__seller-name {
-  font-size: 14px;
+  font-size: var(--fs-base);
   color: var(--color-ink-soft);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .auction-detail-info__my-badge {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-bg);
   background: var(--color-accent);
   border-radius: var(--radius-pill);
@@ -268,9 +270,9 @@
 }
 
 .auction-detail-info__price-label {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--color-ink-mute);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -278,7 +280,7 @@
 .auction-detail-info__price {
   font-family: var(--font-display);
   font-size: 24px;
-  font-weight: 900;
+  font-weight: var(--fw-black);
   color: var(--color-accent);
   letter-spacing: -0.5px;
 }
@@ -295,8 +297,8 @@
   border: none;
   border-radius: var(--radius-md);
   font-family: var(--font-body);
-  font-size: 16px;
-  font-weight: 800;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-extrabold);
   color: var(--color-bg);
   cursor: pointer;
   transition: opacity var(--dur-fast) var(--ease-out),
@@ -330,19 +332,19 @@
 .auction-detail-ended__title {
   font-family: var(--font-display);
   font-size: 20px;
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   letter-spacing: -0.3px;
 }
 
 .auction-detail-ended__status {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--color-ink-mute);
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-pill);
   padding: 4px 14px;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .auction-detail-ended__summary {
@@ -363,9 +365,9 @@
 }
 
 .auction-detail-ended__summary-label {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--color-ink-mute);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -373,13 +375,13 @@
 .auction-detail-ended__summary-value {
   font-family: var(--font-display);
   font-size: 20px;
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-accent);
   letter-spacing: -0.3px;
 }
 
 .auction-detail-ended__notice {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--color-ink-mute);
   margin-top: 4px;
 }
@@ -390,8 +392,8 @@
   border: 1.5px solid var(--color-line);
   border-radius: var(--radius-md);
   font-family: var(--font-body);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-semibold);
   color: var(--color-ink-soft);
   cursor: pointer;
   margin-top: 8px;

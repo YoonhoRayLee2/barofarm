@@ -29,8 +29,8 @@
   border: 1.5px solid var(--glass-line);
   border-radius: var(--radius-pill);
   font-family: var(--font-display);
-  font-size: 14px;
-  font-weight: 800;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-extrabold);
   cursor: pointer;
   white-space: nowrap;
   display: inline-flex;

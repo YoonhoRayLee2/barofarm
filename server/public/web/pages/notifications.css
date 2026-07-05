@@ -29,7 +29,7 @@
   border: none;
   cursor: pointer;
   color: var(--color-ink);
-  font-size: 22px;
+  font-size: var(--fs-2xl);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -39,7 +39,7 @@
 .notif-header__back:active { opacity: 0.6; }
 .notif-header__title {
   font-size: var(--fs-lg);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   flex: 1;
 }
@@ -98,7 +98,7 @@
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-4) 18px;
+  padding: var(--space-4) var(--space-4);
   border-bottom: 1px solid var(--color-line);
   cursor: pointer;
   background: var(--color-surface);
@@ -134,7 +134,7 @@
 }
 .notif-item__title {
   font-size: var(--fs-base);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   line-height: var(--lh-tight);
   margin-bottom: var(--space-1);
@@ -152,6 +152,6 @@
 
 /* 읽음 처리 후 텍스트 약화 */
 .notif-item--read .notif-item__title {
-  font-weight: 500;
+  font-weight: var(--fw-medium);
   color: var(--color-ink-soft);
 }

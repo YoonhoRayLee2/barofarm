@@ -28,7 +28,7 @@
 .sp-header__back {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
-  font-size: 18px;
+  font-size: var(--fs-xl);
   color: var(--color-ink);
   cursor: pointer;
   padding: 0;
@@ -50,7 +50,7 @@
 .sp-header__title {
   font-family: var(--font-display);
   font-size: var(--fs-xl);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   letter-spacing: -0.3px;
   flex: 1;
@@ -82,7 +82,7 @@
 .sp-card__title {
   font-family: var(--font-display);
   font-size: var(--fs-lg);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   letter-spacing: -0.2px;
   margin: 0 0 var(--space-1);
@@ -99,7 +99,7 @@
 
 .sp-field__label {
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: var(--color-ink-soft);
 }
 
@@ -212,7 +212,7 @@
   padding: 15px var(--space-4);
   font-family: var(--font-body);
   font-size: var(--fs-lg);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   letter-spacing: -0.3px;
   cursor: pointer;
   transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
@@ -260,7 +260,7 @@
   position: absolute;
   inset: 0;
   background: var(--color-line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   transition: background 0.2s;
 }
 

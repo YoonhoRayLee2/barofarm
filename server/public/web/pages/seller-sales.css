@@ -25,7 +25,7 @@
 .sales-header__back {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
-  font-size: 18px;
+  font-size: var(--fs-xl);
   color: var(--color-ink);
   cursor: pointer;
   padding: 0;
@@ -46,8 +46,8 @@
 
 .sales-header__title {
   font-family: var(--font-display);
-  font-size: var(--fs-xl);
-  font-weight: 800;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   letter-spacing: -0.3px;
   flex: 1;
@@ -66,8 +66,8 @@
   background: var(--color-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23999'/%3E%3C/svg%3E") no-repeat right 10px center;
   -webkit-appearance: none;
   appearance: none;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--fs-13);
+  font-weight: var(--fw-semibold);
   color: var(--color-ink);
   cursor: pointer;
 }
@@ -92,7 +92,7 @@
   border-radius: var(--radius-md);
   background: var(--color-bg-alt);
   color: var(--color-ink);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-family: var(--font-body);
   outline: none;
 }
@@ -100,15 +100,15 @@
 .sales-date-input:focus { border-color: var(--color-accent); }
 
 .sales-date-sep {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-mute);
   flex-shrink: 0;
 }
 
 .sales-date-hint {
   width: 100%;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
   min-height: 14px;
 }
 
@@ -127,7 +127,7 @@
   justify-content: center;
   gap: 12px;
   padding: 80px var(--space-5);
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-soft);
 }
 
@@ -162,12 +162,12 @@
 .sales-empty__title {
   font-family: var(--font-display);
   font-size: var(--fs-lg);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink-soft);
 }
 
 .sales-empty__desc {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-mute);
   line-height: var(--lh-relaxed);
 }
@@ -178,8 +178,8 @@
   border: none;
   border-radius: var(--radius-md);
   font-family: var(--font-body);
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
   color: var(--color-bg);
   cursor: pointer;
 }
@@ -215,10 +215,10 @@
 
 .sg-live-badge {
   font-size: 10px;
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   letter-spacing: 0.06em;
   padding: 3px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--color-cta, #E5564A);
   color: #fff;
 }
@@ -228,12 +228,12 @@
 }
 
 .sg-live-badge--group {
-  background: var(--color-info, #3b82f6);
+  background: var(--color-info);
 }
 
 .sg-header__title {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
   color: var(--color-ink);
   max-width: 120px;
   white-space: nowrap;
@@ -242,14 +242,14 @@
 }
 
 .sg-header__date {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--fs-13);
+  font-weight: var(--fw-semibold);
   color: var(--color-ink-soft);
 }
 
 .sg-header__summary {
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
   color: var(--color-accent);
 }
 
@@ -276,8 +276,8 @@
   border-radius: 50%;
   background: var(--color-accent-tint);
   color: var(--color-accent);
-  font-size: 12px;
-  font-weight: 800;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-extrabold);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -285,14 +285,14 @@
 }
 
 .sg-buyer__name {
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--fs-13);
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   flex: 1;
 }
 
 .sg-buyer__count {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--color-ink-mute);
 }
 
@@ -342,8 +342,8 @@
 }
 
 .sg-item__name {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-semibold);
   color: var(--color-ink);
   white-space: nowrap;
   overflow: hidden;
@@ -358,18 +358,18 @@
 
 .sg-item__mode {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink-soft);
   background: var(--color-bg-alt);
   border: 1px solid var(--color-line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 1px 7px;
 }
 
 .sg-item__status {
   font-size: 10px;
-  font-weight: 700;
-  border-radius: 999px;
+  font-weight: var(--fw-bold);
+  border-radius: var(--radius-pill);
   padding: 1px 7px;
   border: 1px solid transparent;
 }
@@ -400,8 +400,8 @@
 
 .sg-item__price {
   font-family: var(--font-display);
-  font-size: 15px;
-  font-weight: 800;
+  font-size: var(--fs-15);
+  font-weight: var(--fw-extrabold);
   color: var(--color-accent);
   white-space: nowrap;
   letter-spacing: -0.3px;

@@ -4,7 +4,8 @@
 
 .product-register {
   background: var(--color-bg);
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   font-family: var(--font-body);
@@ -31,7 +32,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: var(--fs-2xl);
   color: var(--color-ink);
   background: transparent;
   border-radius: var(--radius-md);
@@ -44,7 +45,7 @@
 .pr-header__title {
   font-family: var(--font-display);
   font-size: var(--fs-lg);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
 }
 
@@ -52,7 +53,7 @@
   background: transparent;
   color: var(--color-accent);
   font-size: var(--fs-base);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
 }
@@ -139,7 +140,7 @@
 }
 
 .pr-img-slot__add-icon {
-  font-size: 22px;
+  font-size: var(--fs-2xl);
   color: var(--color-ink-mute);
   line-height: 1;
 }
@@ -153,7 +154,7 @@
   border-radius: 50%;
   background: var(--color-overlay-dim);
   color: var(--color-ink);
-  font-size: 14px;
+  font-size: var(--fs-base);
   line-height: 1;
   display: flex;
   align-items: center;
@@ -181,7 +182,7 @@
 .pr-section__title {
   font-family: var(--font-display);
   font-size: var(--fs-lg);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
 }
 
@@ -239,7 +240,7 @@
   border: 1.5px solid var(--color-line);
   border-radius: var(--radius-md);
   padding: 10px 14px;
-  font-size: 13px;
+  font-size: var(--fs-13);
   cursor: pointer;
   text-align: center;
   background: transparent;
@@ -259,7 +260,7 @@
   background: var(--color-accent);
   border-color: var(--color-accent);
   color: var(--color-bg);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 /* ── Price row ───────────────────────────────────────────── */
@@ -308,7 +309,7 @@
 }
 .pr-market__base strong {
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-accent);
   margin-left: 4px;
 }
@@ -318,7 +319,7 @@
 }
 .pr-market__trend {
   font-size: var(--fs-xs);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   line-height: var(--lh-normal);
 }
 .pr-market__trend--up {
@@ -361,7 +362,7 @@
   background: var(--color-accent);
   color: var(--color-bg);
   font-size: var(--fs-lg);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   padding: 14px;
   border-radius: var(--radius-md);
   border: none;

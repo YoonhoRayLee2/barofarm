@@ -114,7 +114,7 @@ function buildTopbar(nickname) {
   avatar.className = 'profile-topbar__avatar';
   avatar.style.background = avatarHue(nickname || '바로팜');
   avatar.style.overflow = 'hidden';
-  avatar.innerHTML = `<span style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Pretendard',sans-serif;font-weight:800;font-size:14px">${String(nickname || '바').trim().charAt(0).toUpperCase()}</span>`;
+  avatar.innerHTML = `<span style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--font-body);font-weight:var(--fw-extrabold);font-size:var(--fs-base)">${String(nickname || '바').trim().charAt(0).toUpperCase()}</span>`;
 
   const name = document.createElement('span');
   name.className = 'profile-topbar__name';
@@ -156,7 +156,7 @@ function buildHero(user, stats) {
   } else {
     const nm = (user && (user.nickname || user.username || user.name)) || '바로팜';
     avatarWrap.style.background = avatarHue(nm);
-    avatarWrap.innerHTML = `<span style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Pretendard',sans-serif;font-weight:800;font-size:30px">${esc(String(nm).trim().charAt(0).toUpperCase())}</span>`;
+    avatarWrap.innerHTML = `<span style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--font-body);font-weight:var(--fw-extrabold);font-size:30px">${esc(String(nm).trim().charAt(0).toUpperCase())}</span>`;
   }
   hero.appendChild(avatarWrap);
 
@@ -596,7 +596,7 @@ function showBankVerifySheet(userId, onVerified) {
         <div class="bank-sheet__handle"></div>
         <h3 class="bank-sheet__title">인증번호 입력</h3>
         <p class="bank-sheet__desc">방금 송금된 1원의<br>입금자명 숫자 4자리를 입력해주세요</p>
-        <input type="text" id="bv-code" placeholder="0000" maxlength="4" inputmode="numeric" style="text-align:center;font-size:24px;font-weight:800;letter-spacing:8px" />
+        <input type="text" id="bv-code" placeholder="0000" maxlength="4" inputmode="numeric" style="text-align:center;font-size:24px;font-weight:var(--fw-extrabold);letter-spacing:8px" />
         <button class="bank-sheet__btn" id="bv-confirm-btn">인증 확인</button>
       </div>
     `;

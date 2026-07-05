@@ -49,8 +49,8 @@
 
 .fab-sheet__title {
   font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 800;
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   padding: 0 var(--space-4) var(--space-3);
   letter-spacing: -0.3px;
@@ -98,14 +98,14 @@
 
 .fab-option__label {
   font-family: var(--font-body);
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--fs-15);
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
 }
 
 .fab-option__desc {
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--color-ink-soft);
   line-height: var(--lh-normal);
 }

@@ -5,6 +5,7 @@
   height: 100dvh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   max-width: 480px;
   margin: 0 auto;
   font-family: var(--font-body);
@@ -45,7 +46,6 @@
 .cr-icon-btn:hover,
 .cr-icon-btn:focus-visible {
   background: var(--color-surface);
-  outline: none;
 }
 
 .cr-back {
@@ -62,7 +62,7 @@
   align-items: center;
   justify-content: center;
   font-family: var(--font-display);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   font-size: var(--fs-base);
   overflow: hidden;
   flex-shrink: 0;
@@ -84,7 +84,7 @@
 
 .cr-header__name {
   font-size: var(--fs-base);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   white-space: nowrap;
   overflow: hidden;
@@ -148,7 +148,7 @@
   align-items: center;
   justify-content: center;
   font-family: var(--font-display);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   font-size: var(--fs-sm);
   flex-shrink: 0;
   overflow: hidden;
@@ -179,7 +179,7 @@
 
 .cr-msg__name {
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: var(--color-ink);
 }
 

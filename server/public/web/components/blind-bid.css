@@ -24,19 +24,19 @@
   align-items: center;
   gap: 6px;
   font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--fs-13);
+  font-weight: var(--fw-bold);
   color: var(--color-ink-soft);
 }
 
 .blind-bid__lock {
-  font-size: 13px;
+  font-size: var(--fs-13);
   line-height: 1;
 }
 
 .blind-bid__count-badge {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
   color: var(--color-accent);
   background: var(--color-accent-tint);
   padding: 3px 9px;
@@ -53,17 +53,17 @@
   padding: 8px 10px;
   background: var(--color-bg-alt);
   border-radius: var(--radius-md);
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 
 .blind-bid__last-label {
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink-mute);
 }
 
 .blind-bid__last-price {
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-accent);
 }
 
@@ -85,8 +85,8 @@
   border-radius: var(--radius-md);
   color: var(--color-ink);
   font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-bold);
   padding: 12px var(--space-3);
   outline: none;
   -moz-appearance: textfield;
@@ -111,8 +111,8 @@
 
 .blind-bid__btn {
   font-family: var(--font-body);
-  font-size: 15px;
-  font-weight: 800;
+  font-size: var(--fs-15);
+  font-weight: var(--fw-extrabold);
   color: #fff;
   background: var(--grad-cta);
   border: none;
@@ -139,10 +139,10 @@
 
 /* ── Message ── */
 .blind-bid__msg {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   text-align: center;
   min-height: 14px;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .blind-bid__msg--ok    { color: var(--color-success); }
@@ -177,20 +177,20 @@
 .blind-bid-result__title {
   font-family: var(--font-display);
   font-size: 20px;
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   text-align: center;
 }
 
 .blind-bid-result__void {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-mute);
   text-align: center;
 }
 
 .blind-bid-result__winner,
 .blind-bid-result__price {
-  font-size: 14px;
+  font-size: var(--fs-base);
   color: var(--color-ink-soft);
   text-align: center;
 }
@@ -199,12 +199,12 @@
 .blind-bid-result__price strong {
   color: var(--color-ink);
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: var(--fs-lg);
 }
 
 .blind-bid-result__toggle {
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--fs-13);
+  font-weight: var(--fw-bold);
   color: var(--color-accent);
   background: transparent;
   border: 1.5px solid var(--color-accent);
@@ -226,17 +226,17 @@
 .blind-bid-result__table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-soft);
 }
 
 .blind-bid-result__table th {
   color: var(--color-ink-mute);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   padding: 6px var(--space-2);
   border-bottom: 1px solid var(--color-line);
   text-align: left;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.04em;
 }
 
@@ -247,16 +247,16 @@
 
 .blind-bid-result__table tbody tr:first-child td {
   color: var(--color-accent);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
 }
 
 .bbr-rank  { width: 36px; text-align: center; }
-.bbr-price { text-align: right; font-family: var(--font-display); font-weight: 700; }
+.bbr-price { text-align: right; font-family: var(--font-display); font-weight: var(--fw-bold); }
 
 .blind-bid-result__loading,
 .blind-bid-result__empty,
 .blind-bid-result__error {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-mute);
   text-align: center;
   padding: var(--space-3) 0;
@@ -265,8 +265,8 @@
 .blind-bid-result__error { color: var(--color-danger); }
 
 .blind-bid-result__close {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   background: var(--color-surface-alt);
   border: 1px solid var(--color-line);

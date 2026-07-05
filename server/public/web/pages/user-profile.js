@@ -238,7 +238,10 @@ export default async function load(params) {
           <div class="up-grid-item__price">${formatPrice(item.finalPrice)}</div>
         `;
         card.style.cursor = 'pointer';
+        card.setAttribute('role', 'button');
+        card.setAttribute('tabindex', '0');
         card.addEventListener('click', () => navigate('/app/order-detail/' + item.auctionId));
+        card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); } });
         gridEl.appendChild(card);
       });
     } catch {

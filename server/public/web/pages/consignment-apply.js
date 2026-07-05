@@ -144,7 +144,7 @@ export default async function load() {
       const file = input.files && input.files[0];
       if (!file) return;
       const url = URL.createObjectURL(file);
-      inner.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:6px;">`;
+      inner.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius-sm);">`;
     });
   });
 

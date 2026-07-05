@@ -34,7 +34,7 @@
 }
 .cd-header__title {
   font-size: var(--fs-lg);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   margin: 0;
 }
@@ -101,7 +101,7 @@
   background: var(--color-overlay-dim);
   border: none;
   color: var(--color-ink);
-  font-size: 22px;
+  font-size: var(--fs-2xl);
   line-height: 1;
   cursor: pointer;
   display: flex;
@@ -121,7 +121,7 @@
   background: var(--color-overlay-dim);
   color: var(--color-ink);
   font-size: var(--fs-xs);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
 }
 
 /* Buyer row */
@@ -145,14 +145,14 @@
 }
 .cd-buyer__avatar-img { width: 100%; height: 100%; object-fit: cover; }
 .cd-buyer__avatar-initial {
-  font-weight: 700;
-  font-size: 16px;
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-lg);
   color: var(--color-accent);
 }
 .cd-buyer__name {
   flex: 1;
   font-size: var(--fs-base);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
 }
 .cd-buyer__link {
@@ -177,7 +177,7 @@
 }
 .cd-section__title {
   font-size: var(--fs-base);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   margin: 0 0 var(--space-2) 0;
 }
@@ -231,7 +231,7 @@
   color: var(--color-bg);
   font-family: var(--font-body);
   font-size: var(--fs-lg);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   letter-spacing: -0.3px;
   cursor: pointer;
   transition: transform var(--dur-fast) var(--ease-out);

@@ -272,7 +272,10 @@ export default async function load() {
           </div>
         `;
         li.style.cursor = 'pointer';
+        li.setAttribute('role', 'button');
+        li.setAttribute('tabindex', '0');
         li.addEventListener('click', () => navigate('/app/order-detail/' + order.auctionId));
+        li.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); li.click(); } });
         ul.appendChild(li);
       });
       groupEl.appendChild(ul);

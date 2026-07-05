@@ -317,7 +317,10 @@ function renderAllList(listEl, rooms, user, myRoomIds) {
     if (joined) {
       // Already joined — clicking the row enters the room
       item.style.cursor = 'pointer';
+      item.setAttribute('role', 'button');
+      item.setAttribute('tabindex', '0');
       item.addEventListener('click', () => navigate('/app/chat-room/' + room.id));
+      item.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.click(); } });
     } else {
       const joinBtn = item.querySelector('.ch-join-btn');
       joinBtn.addEventListener('click', async (e) => {

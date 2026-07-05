@@ -31,7 +31,7 @@
 .ca-header__help {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
-  font-size: 18px;
+  font-size: var(--fs-xl);
   color: var(--color-ink);
   cursor: pointer;
   padding: 0;
@@ -54,8 +54,8 @@
 .ca-header__title {
   flex: 1;
   font-family: var(--font-display);
-  font-size: var(--fs-xl);
-  font-weight: 800;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   letter-spacing: -0.3px;
 }
@@ -80,7 +80,7 @@
 .ca-section__title {
   font-family: var(--font-body);
   font-size: var(--fs-base);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   letter-spacing: -0.2px;
 }
@@ -105,7 +105,7 @@
 
 .ca-label {
   font-size: var(--fs-base);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
 }
 
@@ -317,7 +317,7 @@
   color: #fff;
   font-family: var(--font-body);
   font-size: var(--fs-lg);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   letter-spacing: -0.3px;
   cursor: pointer;
   transition: transform var(--dur-fast) var(--ease-out);

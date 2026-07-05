@@ -114,6 +114,7 @@ export default async function load() {
 
     listEl.innerHTML = items.map(item => `
       <div class="notif-item ${item.isRead ? 'notif-item--read' : 'notif-item--unread'}"
+           role="button" tabindex="0"
            data-id="${escapeHtml(String(item.id))}"
            data-link="${escapeHtml(item.link || '')}">
         <span class="notif-item__dot ${item.isRead ? 'notif-item__dot--hidden' : ''}"></span>
@@ -145,6 +146,7 @@ export default async function load() {
 
         if (link) navigate(link);
       });
+      el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
     });
   }
 

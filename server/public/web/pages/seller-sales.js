@@ -265,11 +265,14 @@ export default async function load() {
             <span class="sg-item__price">${formatPrice(item.finalPrice)}</span>
           `;
           row.style.cursor = 'pointer';
+          row.setAttribute('role', 'button');
+          row.setAttribute('tabindex', '0');
           if (item.itemType === 'group_deal') {
             row.addEventListener('click', () => navigate('/app/group-deals/' + item.dealId));
           } else {
             row.addEventListener('click', () => navigate('/app/order-detail/' + item.auctionId));
           }
+          row.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); row.click(); } });
           buyerEl.appendChild(row);
         });
 

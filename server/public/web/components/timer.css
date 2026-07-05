@@ -10,7 +10,7 @@
   justify-content: center;
   min-width: 64px;
   padding: 8px 12px;
-  background: rgba(0,0,0,0.45);
+  background: var(--color-overlay-dim);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--glass-line);
@@ -20,7 +20,7 @@
 .timer__number {
   font-family: var(--font-display);
   font-size: 38px;
-  font-weight: 900;
+  font-weight: var(--fw-black);
   line-height: 1;
   color: var(--color-accent);
   transition: color var(--dur-slow) var(--ease-out);
@@ -35,7 +35,7 @@
   margin-top: 2px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 /* State: warning (10–4s) */

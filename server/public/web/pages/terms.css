@@ -35,8 +35,8 @@
 
 .terms-header__title {
   font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
 }
 
@@ -51,15 +51,15 @@
 }
 
 .terms-meta {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--color-ink-mute);
   margin-bottom: 20px;
 }
 
 .terms-section-title {
   font-family: var(--font-display);
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--fs-15);
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   margin: 24px 0 10px;
   padding-bottom: 6px;
@@ -67,7 +67,7 @@
 }
 
 .terms-body p {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-soft);
   line-height: 1.75;
   margin: 0 0 10px;
@@ -79,7 +79,7 @@
 }
 
 .terms-ol li {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-soft);
   line-height: 1.75;
   margin-bottom: 4px;
@@ -91,7 +91,7 @@
 }
 
 .terms-ul li {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-soft);
   line-height: 1.75;
   margin-bottom: 4px;
@@ -101,7 +101,7 @@
 .terms-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   margin: 10px 0 16px;
   color: var(--color-ink-soft);
   overflow-x: auto;
@@ -111,7 +111,7 @@
 .terms-table th {
   background: var(--color-surface);
   color: var(--color-ink-soft);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   padding: 8px 10px;
   border: 1px solid var(--color-line);
   text-align: left;
@@ -131,7 +131,7 @@
 
 /* Footer note */
 .terms-footer {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--color-ink-mute);
   margin-top: 24px !important;
   text-align: center;
@@ -140,5 +140,5 @@
 /* Strong inside terms */
 .terms-body strong {
   color: var(--color-ink);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }

@@ -44,8 +44,8 @@ export async function openKakaoPostcode(callback) {
   const modal = document.createElement('div');
   modal.style.cssText = [
     'width:100%', 'max-width:480px',
-    'background:var(--color-bg,#0e1a12)',
-    'border-radius:var(--radius-lg,16px) var(--radius-lg,16px) 0 0',
+    'background:var(--color-bg,#FAFAF8)',
+    'border-radius:var(--radius-lg,14px) var(--radius-lg,14px) 0 0',
     'overflow:hidden',
     'display:flex', 'flex-direction:column',
     // 처음엔 아래로 숨김
@@ -58,16 +58,16 @@ export async function openKakaoPostcode(callback) {
   header.style.cssText = [
     'display:flex', 'align-items:center', 'justify-content:space-between',
     'padding:16px 16px 12px',
-    'border-bottom:1px solid var(--color-line,rgba(255,255,255,0.08))',
+    'border-bottom:1px solid var(--color-line,#EAE0D4)',
     'flex-shrink:0',
   ].join(';');
   header.innerHTML = `
-    <span style="font-family:var(--font-display,sans-serif);font-size:16px;font-weight:700;color:var(--color-ink,#f0f4ee)">
+    <span style="font-family:var(--font-display,'Pretendard',sans-serif);font-size:var(--fs-lg,16px);font-weight:var(--fw-bold,700);color:var(--color-ink,#1C1208)">
       주소 검색
     </span>
     <button id="_kp_close" aria-label="닫기" style="
       background:none;border:none;padding:6px;cursor:pointer;
-      color:var(--color-ink-soft,#8a9a86);line-height:0;
+      color:var(--color-ink-soft,#4A3420);line-height:0;
     ">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
         <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>

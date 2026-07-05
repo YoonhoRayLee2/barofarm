@@ -53,7 +53,7 @@
 .mp-header__title {
   font-family: var(--font-display);
   font-size: var(--fs-lg);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   margin: 0;
 }
@@ -141,7 +141,7 @@
 }
 
 .mp-item__name {
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   font-size: var(--fs-base);
   color: var(--color-ink);
   flex: 1;
@@ -160,7 +160,7 @@
 }
 
 .mp-item__price {
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-accent);
 }
 
@@ -187,7 +187,7 @@
   background: transparent;
   font-family: var(--font-body);
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   cursor: pointer;
   white-space: nowrap;
   transition: opacity var(--dur-fast) var(--ease-out),
@@ -212,7 +212,7 @@
 /* ── Status badge ─────────────────────────────────────── */
 .mp-status-badge {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   border-radius: var(--radius-pill);
   padding: 2px 7px;
   white-space: nowrap;
@@ -250,7 +250,7 @@
   background: var(--color-accent);
   color: var(--color-bg);
   font-size: var(--fs-lg);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   padding: 14px;
   border-radius: var(--radius-md);
   border: none;
@@ -286,7 +286,7 @@
 .mp-empty__title {
   margin: 0;
   font-size: var(--fs-lg);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
 }
 

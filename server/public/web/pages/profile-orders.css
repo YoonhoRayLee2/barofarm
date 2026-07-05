@@ -35,8 +35,8 @@
   background: var(--color-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23999'/%3E%3C/svg%3E") no-repeat right 10px center;
   -webkit-appearance: none;
   appearance: none;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--fs-13);
+  font-weight: var(--fw-semibold);
   color: var(--color-ink);
   cursor: pointer;
   flex-shrink: 0;
@@ -45,7 +45,7 @@
 .orders-header__back {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
-  font-size: 18px;
+  font-size: var(--fs-xl);
   color: var(--color-ink);
   cursor: pointer;
   padding: 0;
@@ -66,8 +66,8 @@
 
 .orders-header__title {
   font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 800;
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   letter-spacing: -0.3px;
   flex: 1;
@@ -95,20 +95,20 @@
   border-radius: var(--radius-md);
   background: var(--color-bg-alt);
   color: var(--color-ink);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-family: var(--font-body);
   outline: none;
 }
 .orders-date-input:focus { border-color: var(--color-accent); }
 .orders-date-sep {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-mute);
   flex-shrink: 0;
 }
 .orders-date-hint {
   width: 100%;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
   min-height: 14px;
 }
 .orders-date-hint--error { color: var(--color-danger); }
@@ -126,7 +126,7 @@
   justify-content: center;
   gap: 12px;
   padding: 80px var(--space-5);
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-soft);
 }
 
@@ -160,13 +160,13 @@
 
 .orders-empty__title {
   font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 700;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
   color: var(--color-ink-soft);
 }
 
 .orders-empty__desc {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-mute);
   line-height: var(--lh-relaxed);
 }
@@ -177,8 +177,8 @@
   border: none;
   border-radius: var(--radius-md);
   font-family: var(--font-body);
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
   color: var(--color-bg);
   cursor: pointer;
 }
@@ -201,8 +201,8 @@
 .orders-group__date {
   padding: var(--space-3) var(--space-4) var(--space-2);
   font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--fs-13);
+  font-weight: var(--fw-bold);
   color: var(--color-ink-soft);
   letter-spacing: 0.2px;
 }
@@ -238,13 +238,13 @@
   background: var(--color-accent-tint);
   color: var(--color-accent);
   font-family: var(--font-display);
-  font-size: 14px;
-  font-weight: 800;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-extrabold);
 }
 
 .orders-group__seller-name {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   letter-spacing: -0.2px;
 }
@@ -292,7 +292,7 @@
 }
 
 .orders-item__thumb-fallback {
-  font-size: 28px;
+  font-size: var(--fs-3xl);
   opacity: 0.5;
 }
 
@@ -305,8 +305,8 @@
 }
 
 .orders-item__name {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-semibold);
   color: var(--color-ink);
   line-height: 1.35;
   overflow: hidden;
@@ -318,15 +318,15 @@
 
 .orders-item__price {
   font-family: var(--font-display);
-  font-size: 15px;
-  font-weight: 800;
+  font-size: var(--fs-15);
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   letter-spacing: -0.3px;
 }
 
 .orders-item__shipping {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
   color: var(--color-warn);
 }
 
@@ -339,8 +339,8 @@
 }
 
 .orders-item__delivery-status {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
   border-radius: var(--radius-pill);
   padding: 2px 8px;
   border: 1px solid transparent;
@@ -384,17 +384,17 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  font-size: 13px;
+  font-size: var(--fs-13);
 }
 
 .orders-summary__label {
   color: var(--color-ink-soft);
-  font-weight: 500;
+  font-weight: var(--fw-medium);
 }
 
 .orders-summary__value {
   color: var(--color-ink);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   font-family: var(--font-display);
   letter-spacing: -0.2px;
 }
@@ -406,15 +406,15 @@
 }
 
 .orders-summary__row--total .orders-summary__label {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
 }
 
 .orders-summary__row--total .orders-summary__value {
   font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 900;
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-black);
   color: var(--color-accent);
   letter-spacing: -0.4px;
 }
@@ -429,8 +429,8 @@
   border-top: 1px solid var(--color-line);
   color: var(--color-surface);
   font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--fs-13);
+  font-weight: var(--fw-bold);
   letter-spacing: -0.2px;
   cursor: pointer;
   transition: background var(--dur-fast) var(--ease-out);

@@ -28,7 +28,7 @@
 .od-header__back {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
-  font-size: 18px;
+  font-size: var(--fs-xl);
   color: var(--color-ink);
   cursor: pointer;
   padding: 0;
@@ -50,7 +50,7 @@
 .od-header__title {
   font-family: var(--font-display);
   font-size: var(--fs-xl);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   letter-spacing: -0.3px;
 }
@@ -69,7 +69,7 @@
   justify-content: center;
   gap: 12px;
   padding: 80px var(--space-5);
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-soft);
 }
 
@@ -104,7 +104,7 @@
 .od-empty__title {
   font-family: var(--font-display);
   font-size: var(--fs-lg);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink-soft);
 }
 
@@ -114,8 +114,8 @@
   border: none;
   border-radius: var(--radius-md);
   font-family: var(--font-body);
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
   color: var(--color-bg);
   cursor: pointer;
 }
@@ -165,7 +165,7 @@
 
 .od-card__name {
   font-size: var(--fs-lg);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   line-height: 1.35;
   overflow: hidden;
@@ -178,7 +178,7 @@
 .od-card__price {
   font-family: var(--font-display);
   font-size: var(--fs-2xl);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-accent);
   letter-spacing: -0.3px;
 }
@@ -198,7 +198,7 @@
 
 .od-card__mode {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink-soft);
   background: var(--color-bg);
   border: 1px solid var(--color-line);
@@ -207,7 +207,7 @@
 }
 
 .od-card__date {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--color-ink-mute);
 }
 
@@ -263,8 +263,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-extrabold);
   font-family: var(--font-display);
   border: 2px solid var(--color-line);
   background: var(--color-surface);
@@ -287,7 +287,7 @@
 
 .od-step__label {
   font-size: var(--fs-xs);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink-mute);
   text-align: center;
   letter-spacing: -0.2px;
@@ -310,7 +310,7 @@
 .od-delivery-info__title {
   font-family: var(--font-display);
   font-size: var(--fs-lg);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   letter-spacing: -0.3px;
   margin-bottom: var(--space-3);
@@ -333,7 +333,7 @@
   flex-shrink: 0;
   width: 72px;
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink-soft);
 }
 
@@ -368,8 +368,8 @@
   border: none;
   border-radius: var(--radius-pill);
   font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
   color: var(--color-bg);
   cursor: pointer;
   white-space: nowrap;
@@ -383,7 +383,7 @@
 }
 
 .od-tracking-no-info {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-mute);
   margin: 0;
 }
@@ -405,7 +405,7 @@
 .od-ship-form__title {
   font-family: var(--font-display);
   font-size: var(--fs-lg);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   letter-spacing: -0.3px;
   margin-bottom: var(--space-2);
@@ -413,7 +413,7 @@
 
 .od-ship-form__label {
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink-soft);
   margin-top: var(--space-2);
 }
@@ -464,7 +464,7 @@
   border-radius: var(--radius-md);
   font-family: var(--font-body);
   font-size: var(--fs-lg);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-bg);
   cursor: pointer;
   transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
@@ -481,12 +481,12 @@
 }
 
 .od-card__party {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--color-ink-soft);
   margin-top: 4px;
 }
 .od-card__party-name {
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
 }
 
@@ -512,7 +512,7 @@
 .od-fee__title {
   font-family: var(--font-display);
   font-size: var(--fs-lg);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   letter-spacing: -0.3px;
   margin: 0;
@@ -522,7 +522,7 @@
   background: none;
   border: none;
   padding: 2px 4px;
-  font-size: 15px;
+  font-size: var(--fs-15);
   color: var(--color-ink-mute);
   cursor: pointer;
   line-height: 1;
@@ -540,12 +540,12 @@
 
 .od-fee__label {
   color: var(--color-ink-soft);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .od-fee__value {
   color: var(--color-ink);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   text-align: right;
 }
 
@@ -557,7 +557,7 @@
 }
 .od-fee__value--pending {
   color: var(--color-warn);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .od-fee__row--total {
@@ -569,7 +569,7 @@
 .od-fee__value--strong {
   font-family: var(--font-display);
   font-size: var(--fs-xl);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-accent);
   letter-spacing: -0.3px;
 }
@@ -609,8 +609,8 @@
 
 .od-carbon__title {
   font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--fs-13);
+  font-weight: var(--fw-bold);
   color: rgba(255, 255, 255, 0.95);
   letter-spacing: -0.2px;
   flex: 1;
@@ -623,8 +623,8 @@
   border: 1px solid rgba(255, 255, 255, 0.45);
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
   line-height: 1;
   cursor: pointer;
   display: flex;
@@ -644,26 +644,26 @@
 .od-carbon__big-value {
   font-family: var(--font-display);
   font-size: 42px;
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: #fff;
   letter-spacing: -1px;
   line-height: 1;
 }
 .od-carbon__big-value small {
   font-size: 20px;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   margin-left: 2px;
 }
 .od-carbon__big-unit {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
   color: rgba(255, 255, 255, 0.9);
 }
 
 .od-carbon__trip {
   margin: 10px 0 0;
   font-size: 12.5px;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: rgba(255, 255, 255, 0.92);
   letter-spacing: -0.2px;
   position: relative;
@@ -684,14 +684,14 @@
   gap: 3px;
 }
 .od-carbon__stat-label {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--color-ink-mute);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 .od-carbon__stat-value {
   font-family: var(--font-display);
   font-size: 17px;
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-success);
   letter-spacing: -0.3px;
 }
@@ -720,8 +720,8 @@
   border-radius: 50%;
   background: var(--color-accent);
   color: #fff;
-  font-size: 13px;
-  font-weight: 800;
+  font-size: var(--fs-13);
+  font-weight: var(--fw-extrabold);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -733,8 +733,8 @@
   gap: 3px;
 }
 .od-carbon-help-step__body b {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
 }
 .od-carbon-help-step__body span {
@@ -742,14 +742,14 @@
   line-height: 1.5;
   color: var(--color-ink-soft);
 }
-.od-help-note b { color: var(--color-ink); font-weight: 700; }
+.od-help-note b { color: var(--color-ink); font-weight: var(--fw-bold); }
 
 /* ── 정산/결제 도움말 바텀시트 ──────────────────────────────── */
 .od-help-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0);
-  z-index: 1000;
+  z-index: var(--z-modal, 1000);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -782,8 +782,8 @@
   margin: 0 auto 4px;
 }
 .od-help-title {
-  font-size: 16px;
-  font-weight: 800;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   margin: 0;
   letter-spacing: -0.3px;
@@ -795,23 +795,23 @@
   padding: 12px 14px;
   background: var(--color-accent-tint);
   border-radius: var(--radius-md);
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-soft);
   line-height: 1.6;
 }
 .od-help-formula strong {
   color: var(--color-accent);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
 }
 .od-help-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--fs-13);
 }
 .od-help-table th {
   text-align: left;
   color: var(--color-ink-mute);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   padding: 0 0 8px;
   border-bottom: 1px solid var(--color-line);
 }
@@ -822,12 +822,12 @@
 }
 .od-help-table tr:last-child td { border-bottom: none; }
 .od-help-benefit {
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-accent);
   text-align: right;
 }
 .od-help-note {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--color-ink-mute);
   margin: 0;
   line-height: 1.6;
@@ -841,8 +841,8 @@
   color: #fff;
   border-radius: var(--radius-pill);
   padding: 2px 8px;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
   margin-left: 6px;
   vertical-align: middle;
   letter-spacing: -0.2px;
@@ -856,7 +856,7 @@
   border-radius: var(--radius-sm);
   padding: 2px 8px;
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   vertical-align: middle;
   margin-left: var(--space-2);
 }
@@ -901,7 +901,7 @@
   font-family: var(--font-display);
   font-size: var(--fs-lg);
   color: var(--color-ink);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
 }
 .od-shipping-fee-card button {
   background: var(--color-accent);
@@ -910,8 +910,8 @@
   padding: 10px 16px;
   border-radius: var(--radius-md);
   font-family: var(--font-body);
-  font-weight: 800;
-  font-size: 13px;
+  font-weight: var(--fw-extrabold);
+  font-size: var(--fs-13);
   cursor: pointer;
 }
 .od-shipping-fee-card button:disabled {
@@ -919,7 +919,7 @@
   cursor: not-allowed;
 }
 .od-batch-ship-hint {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-soft);
   margin: 0 16px 12px;
   padding: 12px 16px;
@@ -940,7 +940,7 @@
   margin-bottom: var(--space-3);
   font-family: var(--font-display);
   font-size: var(--fs-lg);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   letter-spacing: -0.3px;
 }
@@ -949,7 +949,7 @@
   text-align: center;
   padding: 32px 16px;
   color: var(--color-ink-soft);
-  font-size: 13px;
+  font-size: var(--fs-13);
 }
 
 .od-recommendations__logo {
@@ -1067,8 +1067,8 @@
   left: 8px;
   background: var(--grad-cta);
   color: #fff;
-  font-size: 11px;
-  font-weight: 800;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-extrabold);
   padding: 3px 7px;
   border-radius: var(--radius-pill);
   line-height: 1.2;
@@ -1080,7 +1080,7 @@
 
 .od-rec-card__name {
   font-size: 12.5px;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: var(--color-ink);
   line-height: 1.42;
   display: -webkit-box;
@@ -1106,8 +1106,8 @@
 }
 
 .od-rec-card__price {
-  font-size: 15px;
-  font-weight: 800;
+  font-size: var(--fs-15);
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   font-family: var(--font-display);
   letter-spacing: -0.4px;
@@ -1136,8 +1136,8 @@
 }
 
 .od-timeline__title {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-semibold);
   color: var(--color-ink);
   margin: 0;
 }
@@ -1147,13 +1147,13 @@
 }
 
 .od-timeline__loading {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-soft);
   padding: 12px 0;
 }
 
 .od-tl-empty {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-soft);
   margin: 0 0 12px;
 }
@@ -1196,8 +1196,8 @@
 }
 
 .od-tl-card__label {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--fs-13);
+  font-weight: var(--fw-semibold);
   color: var(--color-ink);
   margin-bottom: 6px;
 }
@@ -1211,25 +1211,25 @@
 }
 
 .od-tl-card__note {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-soft);
   margin: 0 0 4px;
   white-space: pre-wrap;
 }
 
 .od-tl-card__date {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--color-ink-soft);
   opacity: 0.7;
 }
 
 .od-tl-upload-btn {
   margin-top: 6px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--color-accent);
   background: none;
   border: 1px solid var(--color-accent);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 3px 10px;
   cursor: pointer;
 }
@@ -1237,25 +1237,25 @@
 /* upload form */
 .od-tl-upload-form {
   background: var(--color-bg);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 12px;
   margin-bottom: 10px;
 }
 
 .od-tl-upload-form__label {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--fs-13);
+  font-weight: var(--fw-semibold);
   color: var(--color-ink);
   margin-bottom: 8px;
 }
 
 .od-tl-file-label {
   display: inline-block;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--color-accent);
   background: none;
   border: 1px solid var(--color-accent);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 4px 10px;
   cursor: pointer;
   margin-bottom: 8px;
@@ -1273,7 +1273,7 @@
   border: 1px solid var(--color-line);
   border-radius: 8px;
   color: var(--color-ink);
-  font-size: 13px;
+  font-size: var(--fs-13);
   padding: 8px 10px;
   margin-bottom: 8px;
   font-family: var(--font-body);
@@ -1291,8 +1291,8 @@
   border: none;
   border-radius: 8px;
   padding: 9px 0;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-semibold);
   cursor: pointer;
 }
 
@@ -1309,11 +1309,11 @@
   gap: 8px;
   background: var(--color-accent);
   color: #fff;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 10px 14px;
   margin-top: 10px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--fs-13);
+  font-weight: var(--fw-semibold);
 }
 
 .od-tl-arrived-badge--anim {
@@ -1326,12 +1326,12 @@
 }
 
 .od-tl-forest-btn {
-  background: rgba(255,255,255,0.2);
+  background: var(--color-white-tint-20);
   color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 5px 10px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
@@ -1350,7 +1350,7 @@
   border-radius: var(--radius-md);
   font-family: var(--font-body);
   font-size: var(--fs-base);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink-soft);
   cursor: pointer;
   transition: background var(--dur-fast) var(--ease-out);
@@ -1382,7 +1382,7 @@
 }
 .od-refund__badge {
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   padding: 4px 10px;
   border-radius: var(--radius-pill);
 }
@@ -1394,7 +1394,7 @@
 .od-refund__amount {
   font-family: var(--font-display);
   font-size: var(--fs-lg);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
 }
 .od-refund__reason {
@@ -1420,7 +1420,7 @@
   border-radius: var(--radius-md);
   font-family: var(--font-body);
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   cursor: pointer;
   border: none;
 }
@@ -1436,7 +1436,7 @@
   position: fixed;
   inset: 0;
   z-index: var(--z-modal, 1000);
-  background: rgba(0,0,0,0.45);
+  background: var(--color-overlay-dim);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -1469,13 +1469,13 @@
 .od-refund-sheet__header h2 {
   font-family: var(--font-display);
   font-size: var(--fs-lg);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   margin: 0;
 }
 .od-refund-sheet__close {
   background: none; border: none;
-  font-size: 18px; color: var(--color-ink-soft);
+  font-size: var(--fs-xl); color: var(--color-ink-soft);
   cursor: pointer; padding: 6px 10px;
 }
 .od-refund-sheet__body {
@@ -1486,13 +1486,13 @@
 }
 .od-refund-sheet__product {
   font-size: var(--fs-base);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   margin: 0 0 4px;
 }
 .od-refund-sheet__label {
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink-soft);
 }
 .od-refund-sheet__textarea {
@@ -1525,7 +1525,7 @@
   border-radius: var(--radius-md);
   font-family: var(--font-body);
   font-size: var(--fs-lg);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-bg);
   cursor: pointer;
 }
@@ -1544,7 +1544,7 @@
   border-radius: var(--radius-md);
   font-family: var(--font-body);
   font-size: var(--fs-base);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-accent);
   cursor: pointer;
   transition: background var(--dur-fast) var(--ease-out);
@@ -1568,12 +1568,12 @@
 }
 .od-review__badge {
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink-mute);
 }
 .od-review__stars { display: flex; gap: 2px; }
 .od-star {
-  font-size: 18px;
+  font-size: var(--fs-xl);
   color: var(--color-line);
   line-height: 1;
 }
@@ -1633,13 +1633,13 @@
 .od-review-sheet__header h2 {
   font-family: var(--font-display);
   font-size: var(--fs-lg);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   margin: 0;
 }
 .od-review-sheet__close {
   background: none; border: none;
-  font-size: 18px; color: var(--color-ink-soft);
+  font-size: var(--fs-xl); color: var(--color-ink-soft);
   cursor: pointer; padding: 6px 10px;
 }
 .od-review-sheet__body {
@@ -1650,7 +1650,7 @@
 }
 .od-review-sheet__product {
   font-size: var(--fs-base);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   margin: 0;
 }
@@ -1678,7 +1678,7 @@
 .od-star-btn:active { transform: scale(1.2); }
 .od-review-sheet__label {
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-ink-soft);
 }
 .od-review-sheet__optional {
@@ -1716,7 +1716,7 @@
   border-radius: var(--radius-md);
   font-family: var(--font-body);
   font-size: var(--fs-lg);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   color: var(--color-bg);
   cursor: pointer;
 }

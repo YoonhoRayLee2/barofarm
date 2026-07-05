@@ -24,7 +24,7 @@
 .mp-header__back {
   background: var(--color-bg);
   border: 1px solid var(--color-line);
-  font-size: 22px;
+  font-size: var(--fs-2xl);
   color: var(--color-ink);
   cursor: pointer;
   padding: 0;
@@ -44,8 +44,8 @@
 }
 
 .mp-header__title {
-  font-size: 17px;
-  font-weight: 800;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   letter-spacing: -0.02em;
   margin: 0;
@@ -71,7 +71,7 @@
   gap: 10px;
   padding: 60px 20px;
   color: var(--color-ink-mute);
-  font-size: 14px;
+  font-size: var(--fs-base);
 }
 .mp-loading__dot {
   width: 8px;
@@ -95,12 +95,12 @@
   color: var(--color-ink-mute);
 }
 .mp-empty__title {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
 }
 .mp-empty__desc {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-soft);
 }
 
@@ -108,7 +108,7 @@
 .mp-summary {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   padding: 18px 18px 16px;
   display: flex;
   flex-direction: column;
@@ -118,8 +118,8 @@
 }
 
 .mp-summary__cat {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
   padding: 2px 8px;
   border-radius: 4px;
   color: #fff;
@@ -133,14 +133,14 @@
 .mp-summary__cat--기타 { background: var(--cat-기타); }
 
 .mp-summary__name {
-  font-size: 22px;
-  font-weight: 800;
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   letter-spacing: -0.02em;
   margin: 0;
 }
 .mp-summary__kind {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-soft);
   margin: 0;
 }
@@ -152,24 +152,24 @@
 }
 .mp-summary__price {
   font-size: 32px;
-  font-weight: 900;
+  font-weight: var(--fw-black);
   color: var(--color-ink);
   letter-spacing: -0.03em;
   line-height: 1;
 }
 .mp-summary__won {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   margin-left: 2px;
 }
 .mp-summary__unit {
-  font-size: 14px;
+  font-size: var(--fs-base);
   color: var(--color-ink-mute);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 .mp-summary__date {
-  font-size: 13px;
+  font-size: var(--fs-13);
   color: var(--color-ink-mute);
   margin-top: 4px;
 }
@@ -178,10 +178,10 @@
 .mp-trend {
   display: inline-flex;
   align-items: center;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--fs-13);
+  font-weight: var(--fw-bold);
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   margin-top: 4px;
 }
 .mp-trend--up {
@@ -201,7 +201,7 @@
 .mp-chart-card {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   padding: 16px;
   box-shadow: 0 2px 8px rgba(20,30,15,.04);
 }
@@ -212,8 +212,8 @@
   margin-bottom: 10px;
 }
 .mp-chart-card__title {
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--fs-13);
+  font-weight: var(--fw-bold);
   color: var(--color-ink-soft);
 }
 
@@ -244,7 +244,7 @@
   display: flex;
   gap: 14px;
   margin-top: 10px;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--color-ink-soft);
 }
 .mp-chart__legend-item {
@@ -265,13 +265,13 @@
 .mp-history {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   padding: 16px 0 4px;
   box-shadow: 0 2px 8px rgba(20,30,15,.04);
 }
 .mp-history__title {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
   color: var(--color-ink);
   margin: 0 0 8px;
   padding: 0 16px;
@@ -288,7 +288,7 @@
   gap: 12px;
   padding: 12px 16px;
   border-top: 1px solid var(--color-line);
-  font-size: 13px;
+  font-size: var(--fs-13);
 }
 .mp-row:first-child { border-top: none; }
 .mp-row--today {
@@ -296,21 +296,21 @@
 }
 .mp-row--today .mp-row__date,
 .mp-row--today .mp-row__price {
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
 }
 .mp-row__date {
   color: var(--color-ink-soft);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 .mp-row__price {
   color: var(--color-ink);
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   text-align: right;
 }
 .mp-row__trend {
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
   min-width: 80px;
   text-align: right;
 }

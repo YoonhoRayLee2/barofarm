@@ -27,7 +27,7 @@
 .search-header__back {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
-  font-size: 18px;
+  font-size: var(--fs-xl);
   color: var(--color-ink);
   cursor: pointer;
   padding: 0;
@@ -117,7 +117,7 @@
   color: var(--color-ink-soft);
   font-family: var(--font-body);
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   cursor: pointer;
   transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
   -webkit-tap-highlight-color: transparent;
@@ -184,7 +184,7 @@
 .search-section-title {
   font-family: var(--font-display);
   font-size: var(--fs-base);
-  font-weight: 800;
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   margin: 0 0 10px;
 }
@@ -245,7 +245,7 @@
 }
 
 .search-seller-item__name {
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   font-size: var(--fs-base);
   color: var(--color-ink);
   white-space: nowrap;
@@ -290,7 +290,7 @@
 
 .search-empty__text {
   font-size: var(--fs-base);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: var(--color-ink-mute);
   line-height: 1.5;
 }

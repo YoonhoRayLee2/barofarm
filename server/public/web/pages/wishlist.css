@@ -27,7 +27,7 @@
 .wishlist-header__back {
   background: var(--color-surface);
   border: 1px solid var(--color-line);
-  font-size: 18px;
+  font-size: var(--fs-xl);
   color: var(--color-ink);
   cursor: pointer;
   padding: 0;
@@ -48,8 +48,8 @@
 
 .wishlist-header__title {
   font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 800;
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-extrabold);
   color: var(--color-ink);
   letter-spacing: -0.3px;
   flex: 1;
@@ -89,6 +89,6 @@
 
 .wishlist-empty__text {
   font-size: var(--fs-base);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
   color: var(--color-ink-mute);
 }
