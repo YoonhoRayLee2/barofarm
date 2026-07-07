@@ -115,6 +115,7 @@ export default async function load(params) {
           </svg>
           <span id="lb-viewer-count">0</span>
         </button>
+        <button class="lb-glass-btn" id="lb-memo-btn" aria-label="라이브 메모" title="라이브 메모">📝</button>
         <button class="lb-glass-btn" id="lb-mute-btn" title="음소거">🔇</button>
         <button class="lb-glass-btn" id="lb-back-btn" title="나가기">✕</button>
       </div>
@@ -1126,6 +1127,50 @@ export default async function load(params) {
     requestAnimationFrame(() => backdrop.classList.add('is-open'));
   }
 
+  // ---- Live memo sheet ----
+  function openMemoSheet() {
+    if (page.querySelector('.product-sheet-backdrop')) return; // 중복 방지
+    const backdrop = document.createElement('div');
+    backdrop.className = 'product-sheet-backdrop';
+    backdrop.dataset.theme = 'light';
+    backdrop.setAttribute('role', 'dialog');
+    backdrop.setAttribute('aria-modal', 'true');
+    backdrop.innerHTML = `
+      <div class="product-sheet">
+        <div class="product-sheet__header">
+          <span class="product-sheet__title">라이브 메모</span>
+          <button class="product-sheet__close-x" aria-label="닫기">✕</button>
+        </div>
+        <div class="product-sheet__content"></div>
+        <button class="product-sheet__close-btn">닫기</button>
+      </div>
+    `;
+
+    // memo는 textContent로만 렌더 (XSS 방지 + 개행 유지)
+    const content = backdrop.querySelector('.product-sheet__content');
+    const memo = liveInfo && typeof liveInfo.memo === 'string' ? liveInfo.memo : '';
+    const body = document.createElement('div');
+    if (memo.trim()) {
+      body.className = 'lb-memo-body';
+      body.textContent = memo;
+    } else {
+      body.className = 'ps-empty';
+      body.textContent = '등록된 메모가 없습니다';
+    }
+    content.appendChild(body);
+
+    function closeSheet() {
+      backdrop.classList.remove('is-open');
+      setTimeout(() => backdrop.remove(), 220);
+    }
+    backdrop.querySelector('.product-sheet__close-x').addEventListener('click', closeSheet);
+    backdrop.querySelector('.product-sheet__close-btn').addEventListener('click', closeSheet);
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeSheet(); });
+
+    page.appendChild(backdrop);
+    requestAnimationFrame(() => backdrop.classList.add('is-open'));
+  }
+
   // ---- Delivery address gate — deferred until page is in DOM ----
   // showDeliveryGate must NOT be awaited here: load() must return page first
   // so the router can insert it into #app-root. We defer the check with rAF.
@@ -1454,6 +1499,9 @@ export default async function load(params) {
 
   // Products button
   page.querySelector('#lb-products-btn').addEventListener('click', () => openProductSheet('sold'));
+
+  // Live memo button (예고 상태에서도 동작)
+  page.querySelector('#lb-memo-btn').addEventListener('click', openMemoSheet);
 
   // Emoji reaction bar
   page.querySelector('#lb-emoji-bar').addEventListener('click', (e) => {

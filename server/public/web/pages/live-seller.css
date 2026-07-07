@@ -396,6 +396,33 @@
 .product-sheet__close-x { background: none; border: none; color: var(--color-ink-mute); font-size: var(--fs-xl); cursor: pointer; }
 .product-sheet__content { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
 .ps-empty { font-size: var(--fs-13); color: var(--color-ink-soft); text-align: center; padding: 16px; }
+
+/* 라이브 메모 시트 (보기 + 수정) */
+.ls-memo-body {
+  white-space: pre-wrap; word-break: break-word;
+  font-size: var(--fs-sm); line-height: 1.6; color: var(--color-ink);
+  padding: 4px 2px;
+}
+.ls-memo-edit-btn {
+  align-self: flex-end;
+  padding: 7px 16px; border-radius: var(--radius-md);
+  background: var(--color-surface-alt); border: 1px solid var(--color-line);
+  color: var(--color-ink-soft); font-size: var(--fs-sm); font-weight: var(--fw-bold); cursor: pointer;
+}
+.ls-memo-textarea {
+  width: 100%; min-height: 120px; resize: vertical;
+  background: var(--color-surface-alt); border: 1px solid var(--color-line);
+  border-radius: var(--radius-md); padding: 10px 12px;
+  font-size: var(--fs-sm); font-family: var(--font-body); line-height: 1.6; color: var(--color-ink);
+}
+.ls-memo-textarea:focus { outline: none; border-color: var(--color-accent); }
+.ls-memo-counter { font-size: var(--fs-xs); color: var(--color-ink-mute); text-align: right; }
+.ls-memo-save-btn {
+  width: 100%; height: 42px; border-radius: var(--radius-md);
+  background: var(--color-accent); border: none;
+  color: #fff; font-size: var(--fs-base); font-weight: var(--fw-bold); cursor: pointer;
+}
+.ls-memo-save-btn:disabled { opacity: 0.6; cursor: default; }
 .product-sheet__close-btn {
   width: 100%; height: 46px; border-radius: var(--radius-md);
   background: var(--color-surface-alt); border: 1px solid var(--color-line);

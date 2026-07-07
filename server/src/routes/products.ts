@@ -1,10 +1,11 @@
 import { Router, Request, Response } from 'express';
+import type { Server } from 'socket.io';
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import pool from '../db/mysql';
 import { getBuyerTier, getSellerTier, calcBuyerDiscount, calcSellerFee } from '../services/tier';
-import { createNotificationsBulk } from '../services/notifications';
+import { createNotificationsBulk, getUsersByInterest, notifyUsers } from '../services/notifications';
 
 const UPLOADS_DIR = path.join(__dirname, '..', '..', 'public', 'uploads', 'products');
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -88,6 +89,13 @@ function formatProduct(row: ProductRow, extraImages: string[] = [], viewerIsSubs
 
 const router = Router();
 
+// 소켓 push용 io 주입 (index.ts에서 주입 후 라우터 반환)
+let ioRef: Server | null = null;
+export function createProductsRouter(io: Server): Router {
+  ioRef = io;
+  return router;
+}
+
 // POST /api/products — 상품 등록
 router.post('/', uploadFields, async (req: Request, res: Response) => {
   const { sellerId, name, description, price, stock, category, features, attributes, isSeasonalBundle, subscriberPrice, seasonLabel } = req.body;
@@ -163,6 +171,21 @@ router.post('/', uploadFields, async (req: Request, res: Response) => {
           link:  `/app/product-detail/${productId}`,
         }).catch((err: unknown) => console.error('[products] fan-out notification error:', err));
       }
+    }
+
+    // 관심 카테고리 사용자 fan-out 알림 (fire-and-forget — 응답 차단 금지)
+    if (category) {
+      (async () => {
+        const targets = (await getUsersByInterest(String(category))).filter(uid => uid !== Number(sellerId));
+        if (targets.length > 0 && ioRef) {
+          await notifyUsers(ioRef, targets, {
+            type:  'product_new',
+            title: '관심 카테고리 새 상품',
+            body:  name,
+            link:  `/app/product-detail/${productId}`,
+          });
+        }
+      })().catch((err: unknown) => console.error('[products] interest fan-out error:', err));
     }
 
     res.status(201).json(formatProduct(productRows[0], imgRows.map(r => r.image_url)));

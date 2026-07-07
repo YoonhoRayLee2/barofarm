@@ -4,8 +4,9 @@ import { Server } from 'socket.io';
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
-import { lives, auctions, endedBlindBids, createLive, endLive, createAuction, startTimer, endFcfsAuction } from '../store/memory';
+import { lives, auctions, endedBlindBids, createLive, endLive, createAuction, startTimer, endFcfsAuction, LiveState } from '../store/memory';
 import { endAuction } from '../services/livekit-service';
+import { getUsersByInterest, notifyUsers } from '../services/notifications';
 import pool from '../db/mysql';
 
 const UPLOADS_DIR = path.join(__dirname, '..', '..', 'public', 'uploads', 'auctions');
@@ -135,6 +136,38 @@ router.get('/health', async (_req: Request, res: Response) => {
 
 export default router;
 
+// 라이브 알림 fan-out — 팔로워 ∪ 해당 카테고리 관심 사용자 (판매자 본인 제외)
+// fire-and-forget 전용: 실패해도 본 API 응답에 영향 없음
+async function fanOutLiveNotification(
+  io: Server,
+  live: LiveState,
+  type: 'live_scheduled' | 'live_started',
+  title: string,
+): Promise<void> {
+  try {
+    const targets = new Set<number>();
+    const [followers] = await pool.execute(
+      'SELECT follower_id FROM follows WHERE following_id = ?',
+      [Number(live.sellerId)],
+    ) as [Array<{ follower_id: number }>, unknown];
+    followers.forEach(({ follower_id }) => targets.add(Number(follower_id)));
+    if (live.category) {
+      (await getUsersByInterest(live.category)).forEach(uid => targets.add(uid));
+    }
+    targets.delete(Number(live.sellerId));
+    if (targets.size > 0) {
+      await notifyUsers(io, [...targets], {
+        type,
+        title,
+        body: live.title,
+        link: `/app/live-buyer/${live.id}`,
+      });
+    }
+  } catch (err) {
+    console.error('[live] notification fan-out 실패:', (err as Error).message);
+  }
+}
+
 // io를 주입받는 라우터 팩토리
 export function createLiveRouter(io: Server) {
   const r = Router();
@@ -156,6 +189,7 @@ export function createLiveRouter(io: Server) {
             category: row.category ?? undefined,
             status: 'upcoming',
             scheduledAt: row.scheduled_at ? Number(row.scheduled_at) : undefined,
+            memo: row.memo ?? null,
             viewerCount: 0,
             currentAuctionId: null,
             createdAt: Number(row.created_at),
@@ -174,11 +208,18 @@ export function createLiveRouter(io: Server) {
     const apiSecret = process.env.LIVEKIT_SECRET;
     const liveKitUrl = process.env.LIVEKIT_URL;
 
-    const { sellerId, title, category, scheduledAt: scheduledAtRaw } = req.body as { sellerId?: string; title?: string; category?: string; scheduledAt?: string };
+    const { sellerId, title, category, scheduledAt: scheduledAtRaw, memo: memoRaw } = req.body as { sellerId?: string; title?: string; category?: string; scheduledAt?: string; memo?: string };
     const scheduledAt = scheduledAtRaw ? Number(scheduledAtRaw) : undefined;
     if (!sellerId || !title) {
       if (req.file) fs.unlink(req.file.path, () => {});
       res.status(400).json({ error: 'sellerId, title 은 필수입니다.' });
+      return;
+    }
+
+    const memo = memoRaw !== undefined ? String(memoRaw) : undefined;
+    if (memo !== undefined && memo.length > 2000) {
+      if (req.file) fs.unlink(req.file.path, () => {});
+      res.status(400).json({ error: 'memo 는 최대 2000자입니다.' });
       return;
     }
 
@@ -204,7 +245,7 @@ export function createLiveRouter(io: Server) {
       sellerName = sellerRow?.nickname || undefined;
     } catch { /* DB unavailable — proceed without sellerName */ }
 
-    const liveState = createLive(id, { sellerId: String(sellerId), sellerName, title, thumbnailUrl, category, scheduledAt });
+    const liveState = createLive(id, { sellerId: String(sellerId), sellerName, title, thumbnailUrl, category, scheduledAt, memo });
 
     // LiveKit 토큰 발급 (환경 변수 미설정이면 token 없이 응답)
     let token: string | null = null;
@@ -239,11 +280,11 @@ export function createLiveRouter(io: Server) {
     if (liveState.status === 'upcoming') {
       try {
         await pool.query(
-          `INSERT INTO lives (id, seller_id, seller_name, title, thumbnail_url, category, status, scheduled_at, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, 'upcoming', ?, ?)`,
+          `INSERT INTO lives (id, seller_id, seller_name, title, thumbnail_url, category, status, scheduled_at, memo, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, 'upcoming', ?, ?, ?)`,
           [liveState.id, Number(liveState.sellerId), liveState.sellerName ?? null,
            liveState.title, liveState.thumbnailUrl ?? null, liveState.category ?? null,
-           liveState.scheduledAt ?? null, liveState.createdAt]
+           liveState.scheduledAt ?? null, liveState.memo ?? null, liveState.createdAt]
         );
       } catch (err) {
         console.warn('[live] DB INSERT 실패:', (err as Error).message);
@@ -277,9 +318,18 @@ export function createLiveRouter(io: Server) {
       category: liveState.category ?? null,
       status: liveState.status,
       scheduledAt: liveState.scheduledAt ?? null,
+      memo: liveState.memo ?? null,
       token,
       serverUrl: liveKitUrl ?? null,
     });
+
+    // 팔로워 ∪ 관심 카테고리 사용자 DB 알림 + 소켓 push (fire-and-forget)
+    void fanOutLiveNotification(
+      io,
+      liveState,
+      liveState.status === 'upcoming' ? 'live_scheduled' : 'live_started',
+      liveState.status === 'upcoming' ? '라이브 예고' : '라이브 시작',
+    );
   });
 
   // GET /api/lives — 진행 중 방송 목록 (status='live')
@@ -306,6 +356,7 @@ export function createLiveRouter(io: Server) {
           title: row.title, thumbnailUrl: row.thumbnail_url ?? undefined,
           category: row.category ?? undefined, status: row.status,
           scheduledAt: row.scheduled_at ? Number(row.scheduled_at) : undefined,
+          memo: row.memo ?? null,
           viewerCount: 0, currentAuctionId: null, createdAt: Number(row.created_at),
         };
         lives.set(liveId, live);
@@ -320,8 +371,10 @@ export function createLiveRouter(io: Server) {
       sellerName: live.sellerName ?? null,
       title: live.title,
       thumbnailUrl: live.thumbnailUrl ?? null,
+      category: live.category ?? null,
       status: live.status,
       scheduledAt: live.scheduledAt ?? null,
+      memo: live.memo ?? null,
       startedAt: live.createdAt,
       currentAuction: currentAuction
         ? {
@@ -357,6 +410,7 @@ export function createLiveRouter(io: Server) {
           title: row.title, thumbnailUrl: row.thumbnail_url ?? undefined,
           category: row.category ?? undefined, status: row.status,
           scheduledAt: row.scheduled_at ? Number(row.scheduled_at) : undefined,
+          memo: row.memo ?? null,
           viewerCount: 0, currentAuctionId: null, createdAt: Number(row.created_at),
         };
         lives.set(liveId, live);
@@ -419,6 +473,63 @@ export function createLiveRouter(io: Server) {
     } catch { /* 알림 실패는 무시 */ }
 
     res.json({ id: liveId, token, serverUrl: liveKitUrl ?? null });
+
+    // 팔로워 ∪ 관심 카테고리 사용자 DB 알림 + 소켓 push (fire-and-forget)
+    void fanOutLiveNotification(io, live, 'live_started', '라이브 시작');
+  });
+
+  // PATCH /api/lives/:id/memo — 라이브 메모 수정 (셀러 본인 전용)
+  r.patch('/:id/memo', async (req: Request, res: Response) => {
+    const liveId = String(req.params.id);
+    const { sellerId, memo } = req.body as { sellerId?: string; memo?: string };
+
+    if (!sellerId) {
+      res.status(400).json({ error: 'sellerId 는 필수입니다.' });
+      return;
+    }
+    if (typeof memo !== 'string') {
+      res.status(400).json({ error: 'memo 는 문자열이어야 합니다.' });
+      return;
+    }
+    if (memo.length > 2000) {
+      res.status(400).json({ error: 'memo 는 최대 2000자입니다.' });
+      return;
+    }
+
+    let live = lives.get(liveId);
+    if (!live) {
+      try {
+        const [[row]]: any = await pool.query('SELECT * FROM lives WHERE id = ?', [liveId]);
+        if (!row) { res.status(404).json({ error: 'Live not found' }); return; }
+        live = {
+          id: row.id, sellerId: String(row.seller_id), sellerName: row.seller_name ?? undefined,
+          title: row.title, thumbnailUrl: row.thumbnail_url ?? undefined,
+          category: row.category ?? undefined, status: row.status,
+          scheduledAt: row.scheduled_at ? Number(row.scheduled_at) : undefined,
+          memo: row.memo ?? null,
+          viewerCount: 0, currentAuctionId: null, createdAt: Number(row.created_at),
+        };
+        lives.set(liveId, live);
+      } catch {
+        res.status(404).json({ error: 'Live not found' }); return;
+      }
+    }
+
+    if (live.sellerId !== String(sellerId)) {
+      res.status(403).json({ error: '셀러 권한이 없습니다.' });
+      return;
+    }
+
+    live.memo = memo;
+
+    // DB 동기 갱신 (DB 미영속 라이브면 0행 갱신 — 무해)
+    try {
+      await pool.query('UPDATE lives SET memo = ? WHERE id = ?', [memo, liveId]);
+    } catch (err) {
+      console.warn('[live] memo DB UPDATE 실패:', (err as Error).message);
+    }
+
+    res.json({ memo });
   });
 
   // PATCH /api/lives/:id/end — 방송 종료 (셀러 전용)

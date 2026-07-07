@@ -4,6 +4,7 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import pool from '../db/mysql';
+import { getUsersByInterest, notifyUsers } from '../services/notifications';
 
 const UPLOADS_DIR = path.join(__dirname, '..', '..', 'public', 'uploads', 'group-deals');
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -106,6 +107,19 @@ export function createGroupDealsRouter(io: Server) {
       );
 
       res.status(201).json(toCamel(row));
+
+      // 관심 카테고리 사용자 fan-out 알림 (fire-and-forget — 응답 차단 금지)
+      (async () => {
+        const targets = (await getUsersByInterest(category)).filter(uid => uid !== Number(sellerId));
+        if (targets.length > 0) {
+          await notifyUsers(io, targets, {
+            type:  'group_deal_new',
+            title: '관심 카테고리 새 공동구매',
+            body:  title,
+            link:  `/app/group-deals/${dealId}`,
+          });
+        }
+      })().catch((err: unknown) => console.error('[group-deals] interest fan-out error:', err));
     } catch (err) {
       if (req.file) fs.unlink(req.file.path, () => {});
       console.error('[group-deals] POST / error:', err);

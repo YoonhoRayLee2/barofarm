@@ -80,6 +80,7 @@ export default async function load(params) {
       <button class="ls-viewer-chip ls-viewer-chip--icon" id="ls-viewers" aria-label="시청자 목록">
         👁 <span id="ls-viewer-count">0</span>
       </button>
+      <button class="ls-ctrl-btn" id="ls-memo-btn" aria-label="라이브 메모" title="라이브 메모">📝</button>
       <button class="ls-ctrl-btn" id="ls-flip-btn" title="카메라 전환">🔄</button>
       <button class="ls-ctrl-btn" id="ls-mic-btn" title="마이크">🎙</button>
       <button class="ls-ctrl-btn ls-ctrl-btn--danger" id="ls-end-btn" title="방송 종료">✕</button>
@@ -1174,6 +1175,102 @@ export default async function load(params) {
         navigate('/app/order-detail/' + auctionId);
       }
     });
+  });
+
+  // ---- 라이브 메모 시트 (보기 + 수정) ----
+  page.querySelector('#ls-memo-btn').addEventListener('click', () => {
+    if (page.querySelector('.product-sheet-backdrop')) return; // 중복 방지
+    const backdrop = document.createElement('div');
+    backdrop.className = 'product-sheet-backdrop';
+    backdrop.dataset.theme = 'light';
+    backdrop.setAttribute('role', 'dialog');
+    backdrop.setAttribute('aria-modal', 'true');
+    backdrop.innerHTML = `
+      <div class="product-sheet">
+        <div class="product-sheet__header">
+          <span class="product-sheet__title">라이브 메모</span>
+          <button class="product-sheet__close-x" aria-label="닫기">✕</button>
+        </div>
+        <div class="product-sheet__content" id="ls-memo-content"></div>
+        <button class="product-sheet__close-btn">닫기</button>
+      </div>
+    `;
+    const content = backdrop.querySelector('#ls-memo-content');
+
+    // 보기 모드 — memo는 textContent로만 렌더 (개행 유지)
+    function renderView() {
+      content.innerHTML = '';
+      const memo = liveInfo && typeof liveInfo.memo === 'string' ? liveInfo.memo : '';
+      const body = document.createElement('div');
+      if (memo.trim()) {
+        body.className = 'ls-memo-body';
+        body.textContent = memo;
+      } else {
+        body.className = 'ps-empty';
+        body.textContent = '등록된 메모가 없습니다';
+      }
+      content.appendChild(body);
+
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'ls-memo-edit-btn';
+      editBtn.textContent = '수정';
+      editBtn.addEventListener('click', renderEdit);
+      content.appendChild(editBtn);
+    }
+
+    // 수정 모드 — textarea(2000자) + 저장 → PATCH /api/lives/:id/memo
+    function renderEdit() {
+      content.innerHTML = '';
+      const ta = document.createElement('textarea');
+      ta.className = 'ls-memo-textarea';
+      ta.maxLength = 2000;
+      ta.rows = 6;
+      ta.placeholder = '상품 정보·배송 안내 등 시청자에게 보여줄 메모';
+      ta.value = liveInfo && typeof liveInfo.memo === 'string' ? liveInfo.memo : '';
+      const counter = document.createElement('div');
+      counter.className = 'ls-memo-counter';
+      counter.textContent = `${ta.value.length}/2000`;
+      ta.addEventListener('input', () => { counter.textContent = `${ta.value.length}/2000`; });
+
+      const saveBtn = document.createElement('button');
+      saveBtn.type = 'button';
+      saveBtn.className = 'ls-memo-save-btn';
+      saveBtn.textContent = '저장';
+      saveBtn.addEventListener('click', async () => {
+        saveBtn.disabled = true;
+        saveBtn.textContent = '저장 중...';
+        try {
+          const res = await api.updateLiveMemo(liveId, ta.value, user.id);
+          if (!liveInfo) liveInfo = {};
+          liveInfo.memo = res && typeof res.memo === 'string' ? res.memo : ta.value;
+          showToast('메모가 저장되었습니다', 'success');
+          renderView();
+        } catch (err) {
+          showToast('메모 저장 실패: ' + (err.message || String(err)), 'error');
+          saveBtn.disabled = false;
+          saveBtn.textContent = '저장';
+        }
+      });
+
+      content.appendChild(ta);
+      content.appendChild(counter);
+      content.appendChild(saveBtn);
+      setTimeout(() => ta.focus(), 80);
+    }
+
+    renderView();
+
+    function close() {
+      backdrop.classList.remove('is-open');
+      setTimeout(() => backdrop.remove(), 220);
+    }
+    backdrop.querySelector('.product-sheet__close-x').addEventListener('click', close);
+    backdrop.querySelector('.product-sheet__close-btn').addEventListener('click', close);
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+
+    page.appendChild(backdrop);
+    requestAnimationFrame(() => backdrop.classList.add('is-open'));
   });
 
   const chatInput = page.querySelector('#ls-chat-input');

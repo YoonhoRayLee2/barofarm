@@ -57,6 +57,7 @@ export default async function load() {
   let title = '';
   let category = CATEGORIES[0];
   let welcomeMsg = '';
+  let memo = '';
   let camGranted = false;
   let micGranted = false;
   /** @type {File|null} */
@@ -201,6 +202,16 @@ export default async function load() {
       >${escapeHtml(welcomeMsg)}</textarea>
       <div class="lc-counter" id="lc-msg-counter">${welcomeMsg.length}/60</div>
 
+      <label class="lc-label" for="lc-memo-input">라이브 메모 (선택)</label>
+      <textarea
+        class="lc-textarea"
+        id="lc-memo-input"
+        placeholder="상품 정보·배송 안내 등 시청자에게 보여줄 메모"
+        rows="4"
+        maxlength="2000"
+      >${escapeHtml(memo)}</textarea>
+      <div class="lc-counter" id="lc-memo-counter">${memo.length}/2000</div>
+
       <div class="lc-info-banner" style="margin-top: var(--space-4)">
         <span class="lc-info-banner__icon">i</span>
         <span>라이브와 무관한 제목은 취소될 수 있습니다.</span>
@@ -226,6 +237,14 @@ export default async function load() {
     msgInput.addEventListener('input', () => {
       welcomeMsg = msgInput.value;
       msgCounter.textContent = `${welcomeMsg.length}/60`;
+    });
+
+    // Live memo
+    const memoInput = contentEl.querySelector('#lc-memo-input');
+    const memoCounter = contentEl.querySelector('#lc-memo-counter');
+    memoInput.addEventListener('input', () => {
+      memo = memoInput.value;
+      memoCounter.textContent = `${memo.length}/2000`;
     });
 
     // Category
@@ -394,6 +413,7 @@ export default async function load() {
         thumbnail: thumbnailFile,
         category,
         scheduledAt,
+        memo: memo.trim() || null,
       });
       const when = new Date(scheduledAt).toLocaleString('ko-KR');
       showToast(`라이브가 ${when}로 예약됐습니다`, { variant: 'success' });
@@ -529,6 +549,7 @@ export default async function load() {
         title,
         thumbnail: thumbnailFile,
         category,
+        memo: memo.trim() || null,
       });
       await replace(`/app/live-seller/${live.id}`);
     } catch (err) {

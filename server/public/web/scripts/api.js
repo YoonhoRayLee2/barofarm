@@ -303,10 +303,10 @@ export async function getSellerTier(userId) {
 /**
  * Create a live session.
  * thumbnail이 있으면 multipart/form-data, 없으면 JSON으로 전송한다.
- * @param {{ sellerId: string, title: string, thumbnail?: File|Blob|null, scheduledAt?: number|null }} payload
+ * @param {{ sellerId: string, title: string, thumbnail?: File|Blob|null, scheduledAt?: number|null, memo?: string|null }} payload
  * @returns {Promise<import('./models.js').Live>}
  */
-export async function createLive({ sellerId, title, thumbnail = null, category = null, scheduledAt = null }) {
+export async function createLive({ sellerId, title, thumbnail = null, category = null, scheduledAt = null, memo = null }) {
   if (thumbnail) {
     const fd = new FormData();
     fd.append('sellerId', String(sellerId));
@@ -314,11 +314,25 @@ export async function createLive({ sellerId, title, thumbnail = null, category =
     if (category) fd.append('category', String(category));
     fd.append('thumbnail', thumbnail);
     if (scheduledAt) fd.append('scheduledAt', String(scheduledAt));
+    if (memo) fd.append('memo', String(memo));
     return request('/api/lives', { method: 'POST', body: fd });
   }
   return request('/api/lives', {
     method: 'POST',
-    body: JSON.stringify({ sellerId, title, ...(category ? { category } : {}), ...(scheduledAt ? { scheduledAt } : {}) }),
+    body: JSON.stringify({ sellerId, title, ...(category ? { category } : {}), ...(scheduledAt ? { scheduledAt } : {}), ...(memo ? { memo } : {}) }),
+  });
+}
+
+/**
+ * Update a live's memo (seller only, Bearer auth attached by request()).
+ * @param {string} liveId
+ * @param {string} memo
+ * @returns {Promise<{ memo: string }>}
+ */
+export async function updateLiveMemo(liveId, memo, sellerId) {
+  return request(`/api/lives/${encodeURIComponent(liveId)}/memo`, {
+    method: 'PATCH',
+    body: JSON.stringify({ memo, sellerId }),
   });
 }
 

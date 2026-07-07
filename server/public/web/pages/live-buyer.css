@@ -599,6 +599,13 @@
 
 .ps-empty { font-size: var(--fs-13); color: var(--color-ink-mute); text-align: center; padding: 24px 0; }
 
+/* 라이브 메모 본문 — textContent 렌더, 개행 유지 */
+.lb-memo-body {
+  white-space: pre-wrap; word-break: break-word;
+  font-size: var(--fs-sm); line-height: 1.6; color: var(--color-ink);
+  padding: 4px 2px;
+}
+
 /* 진행중 상품 / 구매내역 / 경매결과 행 공통 */
 .ps-product-row, .ps-sold-row, .ps-history-row {
   display: flex; align-items: center; gap: 10px;

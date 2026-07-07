@@ -9,7 +9,7 @@ import liveRoutes, { createLiveRouter } from './routes/live';
 import userRoutes from './routes/users';
 import authRoutes from './routes/auth';
 import { createFavoritesRouter } from './routes/favorites';
-import productsRouter from './routes/products';
+import { createProductsRouter } from './routes/products';
 import auctionRouter from './routes/auctions';
 import trackingRouter from './routes/tracking';
 import chatRoomsRouter from './routes/chat-rooms';
@@ -101,7 +101,7 @@ app.use('/api/users', userRoutes);
 // JWT 기반 인증 라우트
 app.use('/api/auth', authRoutes);
 app.use('/api/favorites', createFavoritesRouter(io, pool));
-app.use('/api/products', productsRouter);
+app.use('/api/products', createProductsRouter(io));
 app.use('/api/auctions', auctionRouter);
 app.use('/api/tracking', trackingRouter);
 app.use('/api/chat-rooms', chatRoomsRouter);
