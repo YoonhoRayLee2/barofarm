@@ -100,7 +100,7 @@ router.post('/login', authLimiter, async (req: Request, res: Response): Promise<
 
   try {
     const [rows] = await pool.execute(
-      'SELECT id, username, password_hash, nickname, phone, interests, status FROM users WHERE username = ?',
+      'SELECT id, username, password_hash, nickname, phone, interests, status, role FROM users WHERE username = ?',
       [username],
     ) as [unknown[], unknown];
 
@@ -112,6 +112,7 @@ router.post('/login', authLimiter, async (req: Request, res: Response): Promise<
       phone: string;
       interests: string | null;
       status: string;
+      role: string;
     }>)[0];
 
     if (!user) {
@@ -138,7 +139,7 @@ router.post('/login', authLimiter, async (req: Request, res: Response): Promise<
       ? user.interests.split(',').map((s: string) => s.trim()).filter(Boolean)
       : [];
     res.json({
-      user: { id: user.id, username: user.username, nickname: user.nickname, phone: user.phone, interests },
+      user: { id: user.id, username: user.username, nickname: user.nickname, phone: user.phone, interests, role: user.role },
       token,
       refreshToken,
     });
