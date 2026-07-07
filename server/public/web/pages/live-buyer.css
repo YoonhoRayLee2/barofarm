@@ -102,6 +102,21 @@
   font-size: var(--fs-xs); font-weight: var(--fw-semibold);
 }
 
+/* 메모 플로팅 버튼 — 우측 가장자리, 상단 X와 화면 중앙 사이 */
+/* z-index 10: video(0) 위, 시트/모달(60·200) 아래 */
+.lb-memo-fab {
+  position: absolute; right: 14px; top: 30%; z-index: 10;
+  width: 46px; height: 46px; border-radius: 50%; padding: 0;
+  border: 1px solid rgba(237,241,226,0.18);
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  color: #fff; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  cursor: pointer; line-height: 1;
+}
+.lb-memo-fab__icon { font-size: var(--fs-base); }
+.lb-memo-fab__label { font-size: 9px; font-weight: var(--fw-semibold); margin-top: 1px; }
+
 /* Mute/HD row */
 .lb-mute-row {
   display: inline-flex; gap: 6px; align-items: center;
@@ -605,6 +620,10 @@
   font-size: var(--fs-sm); line-height: 1.6; color: var(--color-ink);
   padding: 4px 2px;
 }
+
+/* 라이브 메모 사진 — 세로 스택 */
+.lb-memo-imgs { display: flex; flex-direction: column; gap: 8px; }
+.lb-memo-imgs img { width: 100%; border-radius: var(--radius-md); display: block; }
 
 /* 진행중 상품 / 구매내역 / 경매결과 행 공통 */
 .ps-product-row, .ps-sold-row, .ps-history-row {

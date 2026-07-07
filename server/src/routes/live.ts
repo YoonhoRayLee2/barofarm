@@ -41,6 +41,17 @@ const upload = multer({
   },
 });
 
+// DB memo_images(JSON 문자열) → string[] (파싱 실패 시 [])
+function parseMemoImages(raw: unknown): string[] {
+  if (typeof raw !== 'string' || !raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
 const router = Router();
 
 type Role = 'seller' | 'buyer';
@@ -190,6 +201,7 @@ export function createLiveRouter(io: Server) {
             status: 'upcoming',
             scheduledAt: row.scheduled_at ? Number(row.scheduled_at) : undefined,
             memo: row.memo ?? null,
+            memoImages: parseMemoImages(row.memo_images),
             viewerCount: 0,
             currentAuctionId: null,
             createdAt: Number(row.created_at),
@@ -203,22 +215,30 @@ export function createLiveRouter(io: Server) {
   })();
 
   // POST /api/lives — Live 생성 + LiveKit 토큰 발급
-  r.post('/', uploadLiveThumbnail.single('thumbnail'), async (req: Request, res: Response) => {
+  r.post('/', uploadLiveThumbnail.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'memoImages', maxCount: 5 }]), async (req: Request, res: Response) => {
     const apiKey = process.env.LIVEKIT_KEY;
     const apiSecret = process.env.LIVEKIT_SECRET;
     const liveKitUrl = process.env.LIVEKIT_URL;
 
+    const files = req.files as { thumbnail?: Express.Multer.File[]; memoImages?: Express.Multer.File[] } | undefined;
+    const thumbnailFile = files?.thumbnail?.[0];
+    const memoImageFiles = files?.memoImages ?? [];
+    const unlinkUploaded = () => {
+      if (thumbnailFile) fs.unlink(thumbnailFile.path, () => {});
+      memoImageFiles.forEach(f => fs.unlink(f.path, () => {}));
+    };
+
     const { sellerId, title, category, scheduledAt: scheduledAtRaw, memo: memoRaw } = req.body as { sellerId?: string; title?: string; category?: string; scheduledAt?: string; memo?: string };
     const scheduledAt = scheduledAtRaw ? Number(scheduledAtRaw) : undefined;
     if (!sellerId || !title) {
-      if (req.file) fs.unlink(req.file.path, () => {});
+      unlinkUploaded();
       res.status(400).json({ error: 'sellerId, title 은 필수입니다.' });
       return;
     }
 
     const memo = memoRaw !== undefined ? String(memoRaw) : undefined;
     if (memo !== undefined && memo.length > 2000) {
-      if (req.file) fs.unlink(req.file.path, () => {});
+      unlinkUploaded();
       res.status(400).json({ error: 'memo 는 최대 2000자입니다.' });
       return;
     }
@@ -227,17 +247,31 @@ export function createLiveRouter(io: Server) {
 
     // 썸네일 파일이 있으면 liveId 기반 최종 경로로 rename
     let thumbnailUrl: string | undefined;
-    if (req.file) {
-      const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
+    if (thumbnailFile) {
+      const ext = path.extname(thumbnailFile.originalname).toLowerCase() || '.jpg';
       const finalName = `${id}${ext}`;
       const finalPath = path.join(LIVES_UPLOADS_DIR, finalName);
       try {
-        fs.renameSync(req.file.path, finalPath);
+        fs.renameSync(thumbnailFile.path, finalPath);
         thumbnailUrl = `/uploads/lives/${finalName}`;
       } catch (err) {
         console.error('[live] thumbnail rename failed:', (err as Error).message);
       }
     }
+
+    // 메모 이미지 rename — 실패한 파일만 제외하고 계속 진행 (라이브 생성은 항상 성공)
+    const memoImages: string[] = [];
+    memoImageFiles.forEach((file, i) => {
+      const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+      const finalName = `${id}_memo_${i}${ext}`;
+      const finalPath = path.join(LIVES_UPLOADS_DIR, finalName);
+      try {
+        fs.renameSync(file.path, finalPath);
+        memoImages.push(`/uploads/lives/${finalName}`);
+      } catch (err) {
+        console.error('[live] memo image rename failed:', (err as Error).message);
+      }
+    });
 
     let sellerName: string | undefined;
     try {
@@ -245,7 +279,7 @@ export function createLiveRouter(io: Server) {
       sellerName = sellerRow?.nickname || undefined;
     } catch { /* DB unavailable — proceed without sellerName */ }
 
-    const liveState = createLive(id, { sellerId: String(sellerId), sellerName, title, thumbnailUrl, category, scheduledAt, memo });
+    const liveState = createLive(id, { sellerId: String(sellerId), sellerName, title, thumbnailUrl, category, scheduledAt, memo, memoImages });
 
     // LiveKit 토큰 발급 (환경 변수 미설정이면 token 없이 응답)
     let token: string | null = null;
@@ -280,11 +314,13 @@ export function createLiveRouter(io: Server) {
     if (liveState.status === 'upcoming') {
       try {
         await pool.query(
-          `INSERT INTO lives (id, seller_id, seller_name, title, thumbnail_url, category, status, scheduled_at, memo, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, 'upcoming', ?, ?, ?)`,
+          `INSERT INTO lives (id, seller_id, seller_name, title, thumbnail_url, category, status, scheduled_at, memo, memo_images, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, 'upcoming', ?, ?, ?, ?)`,
           [liveState.id, Number(liveState.sellerId), liveState.sellerName ?? null,
            liveState.title, liveState.thumbnailUrl ?? null, liveState.category ?? null,
-           liveState.scheduledAt ?? null, liveState.memo ?? null, liveState.createdAt]
+           liveState.scheduledAt ?? null, liveState.memo ?? null,
+           liveState.memoImages && liveState.memoImages.length > 0 ? JSON.stringify(liveState.memoImages) : null,
+           liveState.createdAt]
         );
       } catch (err) {
         console.warn('[live] DB INSERT 실패:', (err as Error).message);
@@ -319,6 +355,7 @@ export function createLiveRouter(io: Server) {
       status: liveState.status,
       scheduledAt: liveState.scheduledAt ?? null,
       memo: liveState.memo ?? null,
+      memoImages: liveState.memoImages ?? [],
       token,
       serverUrl: liveKitUrl ?? null,
     });
@@ -338,7 +375,7 @@ export function createLiveRouter(io: Server) {
       .filter(l => l.status === 'live' || l.status === 'upcoming')
       .map(l => {
         const currentAuction = l.currentAuctionId ? (auctions.get(l.currentAuctionId) ?? null) : null;
-        return { ...l, sellerName: l.sellerName ?? null, scheduledAt: l.scheduledAt ?? null, currentAuction };
+        return { ...l, sellerName: l.sellerName ?? null, scheduledAt: l.scheduledAt ?? null, memoImages: l.memoImages ?? [], currentAuction };
       });
     res.json(result);
   });
@@ -357,6 +394,7 @@ export function createLiveRouter(io: Server) {
           category: row.category ?? undefined, status: row.status,
           scheduledAt: row.scheduled_at ? Number(row.scheduled_at) : undefined,
           memo: row.memo ?? null,
+          memoImages: parseMemoImages(row.memo_images),
           viewerCount: 0, currentAuctionId: null, createdAt: Number(row.created_at),
         };
         lives.set(liveId, live);
@@ -375,6 +413,7 @@ export function createLiveRouter(io: Server) {
       status: live.status,
       scheduledAt: live.scheduledAt ?? null,
       memo: live.memo ?? null,
+      memoImages: live.memoImages ?? [],
       startedAt: live.createdAt,
       currentAuction: currentAuction
         ? {
@@ -411,6 +450,7 @@ export function createLiveRouter(io: Server) {
           category: row.category ?? undefined, status: row.status,
           scheduledAt: row.scheduled_at ? Number(row.scheduled_at) : undefined,
           memo: row.memo ?? null,
+          memoImages: parseMemoImages(row.memo_images),
           viewerCount: 0, currentAuctionId: null, createdAt: Number(row.created_at),
         };
         lives.set(liveId, live);
@@ -507,6 +547,7 @@ export function createLiveRouter(io: Server) {
           category: row.category ?? undefined, status: row.status,
           scheduledAt: row.scheduled_at ? Number(row.scheduled_at) : undefined,
           memo: row.memo ?? null,
+          memoImages: parseMemoImages(row.memo_images),
           viewerCount: 0, currentAuctionId: null, createdAt: Number(row.created_at),
         };
         lives.set(liveId, live);

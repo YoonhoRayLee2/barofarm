@@ -58,6 +58,11 @@ export default async function load() {
   let category = CATEGORIES[0];
   let welcomeMsg = '';
   let memo = '';
+  const MAX_MEMO_IMAGES = 5;
+  /** @type {File[]} 메모 첨부 사진 */
+  const memoImageFiles = [];
+  /** @type {string[]} 메모 사진 미리보기 ObjectURL (memoImageFiles와 1:1) */
+  const memoImagePreviews = [];
   let camGranted = false;
   let micGranted = false;
   /** @type {File|null} */
@@ -212,6 +217,9 @@ export default async function load() {
       >${escapeHtml(memo)}</textarea>
       <div class="lc-counter" id="lc-memo-counter">${memo.length}/2000</div>
 
+      <label class="lc-label">메모 사진 (선택, 최대 5장)</label>
+      <div class="lc-memo-imgs" id="lc-memo-imgs"></div>
+
       <div class="lc-info-banner" style="margin-top: var(--space-4)">
         <span class="lc-info-banner__icon">i</span>
         <span>라이브와 무관한 제목은 취소될 수 있습니다.</span>
@@ -246,6 +254,74 @@ export default async function load() {
       memo = memoInput.value;
       memoCounter.textContent = `${memo.length}/2000`;
     });
+
+    // Memo images — 슬롯 렌더 (미리보기 + 개별 제거 + 추가 슬롯)
+    const memoImgsEl = contentEl.querySelector('#lc-memo-imgs');
+    function renderMemoImageSlots() {
+      memoImgsEl.innerHTML = '';
+      memoImagePreviews.forEach((url, i) => {
+        const slot = document.createElement('div');
+        slot.className = 'lc-memo-slot';
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = `메모 사진 ${i + 1}`;
+        slot.appendChild(img);
+        const rm = document.createElement('button');
+        rm.type = 'button';
+        rm.className = 'lc-memo-slot__remove';
+        rm.setAttribute('aria-label', `메모 사진 ${i + 1} 제거`);
+        rm.textContent = '✕';
+        rm.addEventListener('click', () => {
+          try { URL.revokeObjectURL(memoImagePreviews[i]); } catch {}
+          memoImageFiles.splice(i, 1);
+          memoImagePreviews.splice(i, 1);
+          renderMemoImageSlots();
+        });
+        slot.appendChild(rm);
+        memoImgsEl.appendChild(slot);
+      });
+
+      if (memoImageFiles.length < MAX_MEMO_IMAGES) {
+        const addSlot = document.createElement('div');
+        addSlot.className = 'lc-memo-slot lc-memo-slot--add';
+        addSlot.setAttribute('role', 'button');
+        addSlot.tabIndex = 0;
+        addSlot.setAttribute('aria-label', '메모 사진 추가');
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.style.display = 'none';
+        addSlot.appendChild(fileInput);
+        const plus = document.createElement('span');
+        plus.className = 'lc-memo-slot__add';
+        plus.textContent = '+';
+        addSlot.appendChild(plus);
+        const cap = document.createElement('span');
+        cap.className = 'lc-memo-slot__count';
+        cap.textContent = `${memoImageFiles.length}/${MAX_MEMO_IMAGES}`;
+        addSlot.appendChild(cap);
+
+        fileInput.addEventListener('change', () => {
+          const file = fileInput.files && fileInput.files[0];
+          if (!file || memoImageFiles.length >= MAX_MEMO_IMAGES) return;
+          memoImageFiles.push(file);
+          memoImagePreviews.push(URL.createObjectURL(file));
+          renderMemoImageSlots();
+        });
+        addSlot.addEventListener('click', (e) => {
+          if (e.target === fileInput) return;
+          fileInput.click();
+        });
+        addSlot.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            fileInput.click();
+          }
+        });
+        memoImgsEl.appendChild(addSlot);
+      }
+    }
+    renderMemoImageSlots();
 
     // Category
     const catSelect = contentEl.querySelector('#lc-category');
@@ -414,6 +490,7 @@ export default async function load() {
         category,
         scheduledAt,
         memo: memo.trim() || null,
+        memoImages: memoImageFiles,
       });
       const when = new Date(scheduledAt).toLocaleString('ko-KR');
       showToast(`라이브가 ${when}로 예약됐습니다`, { variant: 'success' });
@@ -550,6 +627,7 @@ export default async function load() {
         thumbnail: thumbnailFile,
         category,
         memo: memo.trim() || null,
+        memoImages: memoImageFiles,
       });
       await replace(`/app/live-seller/${live.id}`);
     } catch (err) {
@@ -587,6 +665,10 @@ export default async function load() {
       try { URL.revokeObjectURL(thumbnailPreviewUrl); } catch {}
       thumbnailPreviewUrl = null;
     }
+    memoImagePreviews.forEach((url) => {
+      try { URL.revokeObjectURL(url); } catch {}
+    });
+    memoImagePreviews.length = 0;
   });
 
   return page;

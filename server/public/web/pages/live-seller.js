@@ -80,13 +80,22 @@ export default async function load(params) {
       <button class="ls-viewer-chip ls-viewer-chip--icon" id="ls-viewers" aria-label="시청자 목록">
         👁 <span id="ls-viewer-count">0</span>
       </button>
-      <button class="ls-ctrl-btn" id="ls-memo-btn" aria-label="라이브 메모" title="라이브 메모">📝</button>
       <button class="ls-ctrl-btn" id="ls-flip-btn" title="카메라 전환">🔄</button>
       <button class="ls-ctrl-btn" id="ls-mic-btn" title="마이크">🎙</button>
       <button class="ls-ctrl-btn ls-ctrl-btn--danger" id="ls-end-btn" title="방송 종료">✕</button>
     </div>
   `;
   page.appendChild(topBar);
+
+  // 메모 플로팅 버튼 (우측 가장자리, 예고 상태에서도 표시)
+  const memoFab = document.createElement('button');
+  memoFab.type = 'button';
+  memoFab.className = 'ls-memo-fab';
+  memoFab.id = 'ls-memo-btn';
+  memoFab.setAttribute('aria-label', '라이브 메모');
+  memoFab.title = '라이브 메모';
+  memoFab.innerHTML = `<span class="ls-memo-fab__icon">📝</span><span class="ls-memo-fab__label">메모</span>`;
+  page.appendChild(memoFab);
 
   // Toast notifications are handled by the global showToast() component.
 
@@ -1197,19 +1206,35 @@ export default async function load(params) {
     `;
     const content = backdrop.querySelector('#ls-memo-content');
 
-    // 보기 모드 — memo는 textContent로만 렌더 (개행 유지)
+    // 보기 모드 — memo는 textContent로만 렌더 (개행 유지), 사진은 img.src 직접 할당
     function renderView() {
       content.innerHTML = '';
       const memo = liveInfo && typeof liveInfo.memo === 'string' ? liveInfo.memo : '';
-      const body = document.createElement('div');
+      const memoImgs = Array.isArray(liveInfo?.memoImages) ? liveInfo.memoImages : [];
       if (memo.trim()) {
+        const body = document.createElement('div');
         body.className = 'ls-memo-body';
         body.textContent = memo;
-      } else {
-        body.className = 'ps-empty';
-        body.textContent = '등록된 메모가 없습니다';
+        content.appendChild(body);
       }
-      content.appendChild(body);
+      if (memoImgs.length) {
+        const imgWrap = document.createElement('div');
+        imgWrap.className = 'ls-memo-imgs';
+        memoImgs.forEach((url) => {
+          const img = document.createElement('img');
+          img.loading = 'lazy';
+          img.alt = '메모 사진';
+          img.src = String(url);
+          imgWrap.appendChild(img);
+        });
+        content.appendChild(imgWrap);
+      }
+      if (!memo.trim() && !memoImgs.length) {
+        const empty = document.createElement('div');
+        empty.className = 'ps-empty';
+        empty.textContent = '등록된 메모가 없습니다';
+        content.appendChild(empty);
+      }
 
       const editBtn = document.createElement('button');
       editBtn.type = 'button';

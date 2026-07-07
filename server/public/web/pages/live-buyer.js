@@ -115,13 +115,22 @@ export default async function load(params) {
           </svg>
           <span id="lb-viewer-count">0</span>
         </button>
-        <button class="lb-glass-btn" id="lb-memo-btn" aria-label="라이브 메모" title="라이브 메모">📝</button>
         <button class="lb-glass-btn" id="lb-mute-btn" title="음소거">🔇</button>
         <button class="lb-glass-btn" id="lb-back-btn" title="나가기">✕</button>
       </div>
     </div>
   `;
   page.appendChild(topBar);
+
+  // ---- 메모 플로팅 버튼 (우측 가장자리, 예고 상태에서도 표시) ----
+  const memoFab = document.createElement('button');
+  memoFab.type = 'button';
+  memoFab.className = 'lb-memo-fab';
+  memoFab.id = 'lb-memo-btn';
+  memoFab.setAttribute('aria-label', '라이브 메모');
+  memoFab.title = '라이브 메모';
+  memoFab.innerHTML = `<span class="lb-memo-fab__icon">📝</span><span class="lb-memo-fab__label">메모</span>`;
+  page.appendChild(memoFab);
 
   // ---- Mute / HD info row ----
   const muteRow = document.createElement('div');
@@ -1146,18 +1155,34 @@ export default async function load(params) {
       </div>
     `;
 
-    // memo는 textContent로만 렌더 (XSS 방지 + 개행 유지)
+    // memo는 textContent로만 렌더 (XSS 방지 + 개행 유지), 사진은 img.src 직접 할당
     const content = backdrop.querySelector('.product-sheet__content');
     const memo = liveInfo && typeof liveInfo.memo === 'string' ? liveInfo.memo : '';
-    const body = document.createElement('div');
+    const memoImgs = Array.isArray(liveInfo?.memoImages) ? liveInfo.memoImages : [];
     if (memo.trim()) {
+      const body = document.createElement('div');
       body.className = 'lb-memo-body';
       body.textContent = memo;
-    } else {
-      body.className = 'ps-empty';
-      body.textContent = '등록된 메모가 없습니다';
+      content.appendChild(body);
     }
-    content.appendChild(body);
+    if (memoImgs.length) {
+      const imgWrap = document.createElement('div');
+      imgWrap.className = 'lb-memo-imgs';
+      memoImgs.forEach((url) => {
+        const img = document.createElement('img');
+        img.loading = 'lazy';
+        img.alt = '메모 사진';
+        img.src = String(url);
+        imgWrap.appendChild(img);
+      });
+      content.appendChild(imgWrap);
+    }
+    if (!memo.trim() && !memoImgs.length) {
+      const empty = document.createElement('div');
+      empty.className = 'ps-empty';
+      empty.textContent = '등록된 메모가 없습니다';
+      content.appendChild(empty);
+    }
 
     function closeSheet() {
       backdrop.classList.remove('is-open');

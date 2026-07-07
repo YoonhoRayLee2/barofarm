@@ -78,6 +78,21 @@
   background: rgba(229,86,74,0.4); border-color: rgba(229,86,74,0.6);
 }
 
+/* 메모 플로팅 버튼 — 우측 가장자리, 상단 X와 화면 중앙 사이 */
+/* z-index 10: video(0) 위, 시트/모달(60·200) 아래 */
+.ls-memo-fab {
+  position: absolute; right: 14px; top: 30%; z-index: 10;
+  width: 46px; height: 46px; border-radius: 50%; padding: 0;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  cursor: pointer; line-height: 1;
+}
+.ls-memo-fab__icon { font-size: var(--fs-base); }
+.ls-memo-fab__label { font-size: 9px; font-weight: var(--fw-semibold); margin-top: 1px; }
+
 /* Chat wrap (middle area) */
 .live-seller__chat-wrap {
   flex: 1; position: relative; z-index: 2;
@@ -403,6 +418,9 @@
   font-size: var(--fs-sm); line-height: 1.6; color: var(--color-ink);
   padding: 4px 2px;
 }
+/* 라이브 메모 사진 — 세로 스택 */
+.ls-memo-imgs { display: flex; flex-direction: column; gap: 8px; }
+.ls-memo-imgs img { width: 100%; border-radius: var(--radius-md); display: block; }
 .ls-memo-edit-btn {
   align-self: flex-end;
   padding: 7px 16px; border-radius: var(--radius-md);

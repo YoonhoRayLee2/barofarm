@@ -403,6 +403,55 @@
   text-align: center;
 }
 
+/* 메모 사진 슬롯 (최대 5장) */
+.lc-memo-imgs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.lc-memo-slot {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.lc-memo-slot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lc-memo-slot__remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.lc-memo-slot--add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  color: var(--color-ink-mute);
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.lc-memo-slot--add:active { border-color: var(--color-accent); }
+.lc-memo-slot__add { font-size: var(--fs-lg); line-height: 1; }
+.lc-memo-slot__count { font-size: var(--fs-xs); }
+
 /* Field label */
 .lc-label {
   font-size: var(--fs-13);

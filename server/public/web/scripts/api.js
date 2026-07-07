@@ -303,18 +303,20 @@ export async function getSellerTier(userId) {
 /**
  * Create a live session.
  * thumbnail이 있으면 multipart/form-data, 없으면 JSON으로 전송한다.
- * @param {{ sellerId: string, title: string, thumbnail?: File|Blob|null, scheduledAt?: number|null, memo?: string|null }} payload
+ * @param {{ sellerId: string, title: string, thumbnail?: File|Blob|null, scheduledAt?: number|null, memo?: string|null, memoImages?: File[] }} payload
  * @returns {Promise<import('./models.js').Live>}
  */
-export async function createLive({ sellerId, title, thumbnail = null, category = null, scheduledAt = null, memo = null }) {
-  if (thumbnail) {
+export async function createLive({ sellerId, title, thumbnail = null, category = null, scheduledAt = null, memo = null, memoImages = [] }) {
+  const memoFiles = Array.isArray(memoImages) ? memoImages.filter(Boolean) : [];
+  if (thumbnail || memoFiles.length) {
     const fd = new FormData();
     fd.append('sellerId', String(sellerId));
     fd.append('title', title);
     if (category) fd.append('category', String(category));
-    fd.append('thumbnail', thumbnail);
+    if (thumbnail) fd.append('thumbnail', thumbnail);
     if (scheduledAt) fd.append('scheduledAt', String(scheduledAt));
     if (memo) fd.append('memo', String(memo));
+    for (const f of memoFiles) fd.append('memoImages', f);
     return request('/api/lives', { method: 'POST', body: fd });
   }
   return request('/api/lives', {

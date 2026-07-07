@@ -10,6 +10,7 @@ export interface LiveState {
   status: 'live' | 'ended' | 'upcoming';
   scheduledAt?: number;
   memo?: string | null;
+  memoImages?: string[];
   viewerCount: number;
   currentAuctionId: string | null;
   createdAt: number;
@@ -73,9 +74,10 @@ interface CreateLiveParams {
   category?: string;
   scheduledAt?: number;
   memo?: string | null;
+  memoImages?: string[];
 }
 
-export function createLive(id: string, { sellerId, sellerName, title, thumbnailUrl, category, scheduledAt, memo }: CreateLiveParams): LiveState {
+export function createLive(id: string, { sellerId, sellerName, title, thumbnailUrl, category, scheduledAt, memo, memoImages }: CreateLiveParams): LiveState {
   const state: LiveState = {
     id,
     sellerId,
@@ -86,6 +88,7 @@ export function createLive(id: string, { sellerId, sellerName, title, thumbnailU
     status: scheduledAt ? 'upcoming' : 'live',
     scheduledAt,
     memo: memo ?? null,
+    memoImages: memoImages ?? [],
     viewerCount: 0,
     currentAuctionId: null,
     createdAt: Date.now(),
