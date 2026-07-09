@@ -34,12 +34,43 @@
 - `endLive` 종료 라이브 5분 유예 후 Map 제거 + 중복 호출 시 타이머 중복 등록 가드.
 - 채팅 `disconnecting` 핸들러로 비정상 종료 시 접속자 수 갱신(stale 방지).
 
-### D. 이번 라운드 미적용(보류) — 후속 권장
-- **Socket `user:identify` 무검증 room join** (알림/DM 도청 여지): 프론트가 handshake에 JWT를 실어보내는 선행 작업이 필요해 보류.
-- **`JWT_SECRET` 저엔트로피 값** + `requireAdmin`의 DB `is_admin` 미재확인, verify-identity 계정 열거/reset 토큰 1회성, 전역 rate limit·helmet, 업로드 magic-bytes 검증.
+### D. 이번 라운드 미적용(보류) → **대부분 2026-07-09 라운드 (2)에서 해결** (아래 참조)
+- ~~Socket `user:identify` 무검증 room join~~ → ✅ 해결(S5)
+- ~~`JWT_SECRET` 저엔트로피~~ → ✅ 해결(S6) · ~~`requireAdmin` DB 재확인~~ → ✅ 해결(S6) · ~~verify-identity 열거/reset 1회성~~ → ✅ 해결(S9) · ~~전역 rate limit·helmet~~ → ✅ 해결(S10)
+- **남은 것**: 업로드 magic-bytes 검증(현재 mimetype만), helmet CSP 세밀 튜닝(현재 비활성).
 
 ### 참고: 로컬 DB 스키마 드리프트
 감사 중 로컬 DB에 `028_seller_hanaro_allow.sql`(users.allow_hanaro_delivery), `033_product_stock.sql`(products.stock)이 미적용이었음 → 코드 기준으로 적용. 마이그레이션은 자동 적용되지 않으므로 배포 시 `SOURCE server/db/migrations/NNN.sql;` 수동 실행 필요.
+
+---
+
+## 2026-07-09 라운드 (2) — 잔여 하드닝 소진
+
+첫 라운드에서 후속 권장으로 남겼던 하드닝 항목을 병렬로 처리하고 **실서버로 검증**했다.
+
+### S6. JWT 키 강화 + admin 서버측 재검증
+- **`JWT_SECRET` 고엔트로피 교체**: 추측 가능하던 `barofarmjwt` → 48바이트 랜덤(base64url, 64자). `services/jwt.ts`의 취약 fallback 제거. **키 교체로 기존 토큰 전부 무효화**(로컬 4계정은 재로그인만 하면 됨). `.env`는 git 비추적이라 키 미노출.
+- **`requireAdmin` DB 재확인** (`admin.ts`): JWT의 `isAdmin` 클레임만 믿지 않고 `SELECT is_admin FROM users WHERE id=?`로 DB 실제 값 재확인, 아니면 403.
+- **검증**: 비-admin(id25)에 `isAdmin:true` 위조 토큰 → **403 차단**, 진짜 admin(id23) → 200. (강한 키 + DB 재확인 이중 방어)
+
+### S9. verify-identity 계정 열거 차단 + reset 토큰 1회성 (`auth.ts`)
+- verify-identity가 일치/불일치 **모두 200** 반환(불일치 시 resetToken 없이 동일 형태) → 상태코드로 계정 존재 확인 불가.
+- reset 토큰에 발급 시점 `password_hash` 앞 8자를 담고, reset-password에서 현재 hash와 비교 → 비밀번호 변경 시 hash가 바뀌어 **동일 토큰 재사용 자동 차단**(스키마·메모리 부담 없음).
+- **검증**: 존재계정+틀린전화 / 미존재계정 → 둘 다 200 동일 응답.
+
+### 팔로우 IDOR (`users.ts`)
+- `POST/DELETE /users/:id/follow`에 `requireAuth` + `follower_id`를 `req.user.userId`에서 취득(body의 followerId 무시). 자기 자신 팔로우 400.
+- **검증**: 무토큰 401, 자기팔로우 400, body에 `followerId:9999` 주입해도 실제 인증 본인(25)으로 저장.
+
+### S10. 전역 rate limit + helmet (`index.ts`)
+- **helmet**: `X-Content-Type-Options`, `X-Frame-Options: SAMEORIGIN`, `Strict-Transport-Security`, `Referrer-Policy` 등 보안 헤더. CSP는 SPA/LiveKit 호환 위해 비활성(별도 튜닝 과제), CORP는 `cross-origin`(이미지·WebView).
+- **전역 rate limit**: `/api`에 300req/분(정상 SPA 병렬 호출 여유). `/app`·`/uploads`·`/socket.io`는 제외. auth.ts의 엄격한 limiter(15분/20회)는 유지.
+- **검증**: `/app` 200 + 보안헤더, `/api`에 `RateLimit-Policy: 300;w=60`.
+
+### S5. Socket.io 도청 차단 (`socket.js` + `socket/*.ts` + `index.ts`)
+- 소켓 연결 handshake `auth`에 JWT를 실어보내고(`socket.js`), 서버 `io.use` 미들웨어가 검증해 `socket.data.userId` 설정. 토큰 없어도 연결은 허용(비로그인 시청 보호).
+- `user:identify`가 클라이언트 payload userId를 **무시**하고 인증된 `socket.data.userId`로만 `user:{id}` 개인 룸 조인.
+- **검증(실서버)**: 정상 토큰(25)은 `cr:unread` 수신, 무토큰으로 `user:identify {userId:25}` 사칭한 공격자는 **수신 안 됨**.
 
 ---
 

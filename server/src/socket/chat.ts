@@ -24,9 +24,11 @@ export function invalidateUserCache(userId: number): void {
 export default function registerChatSocket(io: Server): void {
   io.on('connection', (socket) => {
 
-    // user:identify { userId } — personal room join for cr:unread push
-    socket.on('user:identify', ({ userId }: { userId: number }) => {
-      socket.join(`user:${userId}`);
+    // user:identify — personal room join for cr:unread push.
+    // payload의 userId는 신뢰하지 않는다(사칭 방지) — handshake JWT로 인증된 socket.data.userId만 사용.
+    socket.on('user:identify', () => {
+      const authedUserId = socket.data.userId;
+      if (authedUserId) socket.join(`user:${authedUserId}`);
     });
 
     // cr:join { roomId, userId, userName }

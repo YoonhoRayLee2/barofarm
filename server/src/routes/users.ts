@@ -169,10 +169,9 @@ router.get('/:id/following', async (req: Request, res: Response) => {
 });
 
 // POST /api/users/:id/follow
-router.post('/:id/follow', async (req: Request, res: Response) => {
+router.post('/:id/follow', requireAuth, async (req: Request, res: Response) => {
   const followingId = Number(req.params.id);
-  const { followerId } = req.body as { followerId?: number };
-  if (!followerId) return res.status(400).json({ error: 'followerId required' });
+  const followerId = req.user!.userId;
   if (followerId === followingId) return res.status(400).json({ error: 'cannot follow yourself' });
 
   try {
@@ -189,10 +188,9 @@ router.post('/:id/follow', async (req: Request, res: Response) => {
 });
 
 // DELETE /api/users/:id/follow
-router.delete('/:id/follow', async (req: Request, res: Response) => {
+router.delete('/:id/follow', requireAuth, async (req: Request, res: Response) => {
   const followingId = Number(req.params.id);
-  const { followerId } = req.body as { followerId?: number };
-  if (!followerId) return res.status(400).json({ error: 'followerId required' });
+  const followerId = req.user!.userId;
 
   try {
     await pool.execute(

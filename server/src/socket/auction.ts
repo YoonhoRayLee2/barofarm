@@ -305,8 +305,10 @@ export default function registerAuctionSocket(io: Server): void {
       socket.emit('viewer:list', { viewers });
     });
 
-    socket.on('user:identify', ({ userId }: { userId: string }) => {
-      if (userId) socket.join(`user:${userId}`);
+    // payload의 userId는 신뢰하지 않는다(사칭 방지) — handshake JWT로 인증된 socket.data.userId만 사용.
+    socket.on('user:identify', () => {
+      const authedUserId = socket.data.userId;
+      if (authedUserId) socket.join(`user:${authedUserId}`);
     });
 
     socket.on('disconnect', () => {

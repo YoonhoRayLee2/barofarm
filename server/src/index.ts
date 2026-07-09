@@ -4,6 +4,8 @@ import http from 'http';
 import path from 'path';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 
 import liveRoutes, { createLiveRouter } from './routes/live';
 import userRoutes from './routes/users';
@@ -30,6 +32,7 @@ import reviewsRouter from './routes/reviews';
 import registerAuctionSocket from './socket/auction';
 import registerChatSocket from './socket/chat';
 import pool from './db/mysql';
+import { verifyToken } from './services/jwt';
 
 if (!process.env.JWT_SECRET) {
   console.error('FATAL: JWT_SECRET environment variable is not set');
@@ -56,8 +59,45 @@ const io = new Server(server, {
   cors: { origin: corsOrigin, credentials: true },
 });
 
+// handshake JWT 검증 — 인증된 userId만 socket.data.userId에 저장한다.
+// 토큰이 없거나 무효해도 연결은 허용(비로그인 소켓 기능 보호); 이 경우 socket.data.userId는 미설정.
+// user:identify 핸들러(chat.ts, auction.ts)가 이 값만 신뢰해 개인 룸에 조인해야 도청을 막을 수 있다.
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token;
+  if (typeof token === 'string' && token) {
+    const payload = verifyToken(token);
+    if (payload) {
+      socket.data.userId = payload.userId;
+    }
+  }
+  next();
+});
+
+// 보안 헤더 — CSP는 SPA/inline script·style 및 LiveKit을 깨뜨릴 수 있어 비활성화(별도 튜닝 작업으로 분리).
+// crossOriginResourcePolicy/crossOriginEmbedderPolicy는 /uploads 이미지·LiveKit 리소스가
+// 다른 origin(Flutter WebView 등)에서 로드될 수 있어 완화.
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginEmbedderPolicy: false,
+  }),
+);
+
 app.use(cors({ origin: corsOrigin, credentials: true }));
 app.use(express.json());
+
+// 전역 API rate limit — 정상 SPA 사용(홈 진입 시 병렬 API 호출)은 통과, 스크래핑/무차별만 차단.
+// /api 하위 라우트에만 적용되며 auth.ts의 authLimiter(더 엄격)는 그 위에 별도로 얹힌다.
+// Socket.io(/socket.io)와 정적 자산(/app, /live, /uploads)은 실시간 연결·이미지 로드가
+// 걸리면 안 되므로 제외.
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api', apiLimiter);
 
 // LiveKit WebView HTML (live-seller.html / live-buyer.html) 정적 서빙
 app.use('/live', express.static(path.join(__dirname, '..', 'public')));
