@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
 import pool from '../db/mysql';
 import { getRecommendations } from '../utils/productRecommender';
 import { createNotification } from '../services/notifications';
+import { requireAuth, optionalAuth } from '../middleware/auth';
 
 const router = Router();
 
@@ -65,7 +65,7 @@ const AUCTION_QUERY = `
   WHERE a.id = ?
 `;
 
-function formatAuction(row: AuctionRow) {
+function formatAuction(row: AuctionRow, isParty = true) {
   return {
     auctionId:       row.id,
     productName:     row.product_name,
@@ -83,7 +83,7 @@ function formatAuction(row: AuctionRow) {
     buyerName:       row.buyer_name ?? null,
     trackingCompany: row.tracking_company ?? null,
     trackingNumber:  row.tracking_number ?? null,
-    buyerDelivery:   row.top_bidder_id ? (() => {
+    buyerDelivery:   (row.top_bidder_id && isParty) ? (() => {
       const sellerAllowsHanaro = row.seller_allow_hanaro !== 0;
       const rawOption = row.delivery_option ?? 'standard';
       const effectiveOption = (rawOption === 'hanaro' && !sellerAllowsHanaro) ? 'standard' : rawOption;
@@ -112,21 +112,8 @@ function formatAuction(row: AuctionRow) {
 }
 
 // POST /api/auctions/batch-ship — 합배송 처리 (판매자: 구매자별 payment_complete 주문 일괄 배송비 자동 결제완료 처리)
-router.post('/batch-ship', async (req: Request, res: Response) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    res.status(401).json({ error: '인증이 필요합니다' });
-    return;
-  }
-  let sellerId: number;
-  try {
-    const token = authHeader.slice(7);
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: number };
-    sellerId = decoded.userId;
-  } catch {
-    res.status(401).json({ error: '인증이 필요합니다' });
-    return;
-  }
+router.post('/batch-ship', requireAuth, async (req: Request, res: Response) => {
+  const sellerId = req.user!.userId;
 
   const { buyerId, auctionIds } = req.body as {
     buyerId?: number;
@@ -178,13 +165,9 @@ router.post('/batch-ship', async (req: Request, res: Response) => {
 });
 
 // PATCH /api/auctions/:id/pay-shipping-fee — 구매자 배송비 결제
-router.patch('/:id/pay-shipping-fee', async (req: Request, res: Response) => {
+router.patch('/:id/pay-shipping-fee', requireAuth, async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { userId } = req.body as { userId?: string };
-  if (!userId) {
-    res.status(400).json({ error: 'userId required' });
-    return;
-  }
+  const userId = req.user!.userId;
   try {
     const [rows] = await pool.execute(AUCTION_QUERY, [id]) as [unknown[], unknown];
     const row = (rows as AuctionRow[])[0];
@@ -265,8 +248,8 @@ router.get('/:id/recommendations', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/auctions/:id
-router.get('/:id', async (req: Request, res: Response) => {
+// GET /api/auctions/:id — 배송지 PII(buyerDelivery)는 거래 당사자(구매자/판매자)에게만 포함
+router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const [rows] = await pool.execute(AUCTION_QUERY, [id]) as [unknown[], unknown];
@@ -275,7 +258,9 @@ router.get('/:id', async (req: Request, res: Response) => {
       res.status(404).json({ error: 'auction not found' });
       return;
     }
-    res.json(formatAuction(row));
+    const isParty = req.user != null &&
+      (String(req.user.userId) === String(row.seller_id) || String(req.user.userId) === String(row.top_bidder_id));
+    res.json(formatAuction(row, isParty));
   } catch (err) {
     console.error('[auctions] GET /:id error:', err);
     res.status(500).json({ error: 'database error' });
@@ -283,17 +268,17 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 // PATCH /api/auctions/:id/delivery-status
-router.patch('/:id/delivery-status', async (req: Request, res: Response) => {
+router.patch('/:id/delivery-status', requireAuth, async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { status, userId, trackingCompany, trackingNumber } = req.body as {
+  const userId = req.user!.userId;
+  const { status, trackingCompany, trackingNumber } = req.body as {
     status?: string;
-    userId?: string;
     trackingCompany?: string;
     trackingNumber?: string;
   };
 
-  if (!status || !userId) {
-    res.status(400).json({ error: 'status and userId are required' });
+  if (!status) {
+    res.status(400).json({ error: 'status is required' });
     return;
   }
 

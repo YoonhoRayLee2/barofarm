@@ -9,6 +9,7 @@
  *
  * @module pages/group-deal-list
  */
+import { request } from '/app/scripts/api.js';
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace, setCleanup } from '/app/scripts/router.js';
 import * as Sock from '/app/scripts/socket.js';
@@ -112,22 +113,17 @@ export default async function load() {
   async function fetchDeals() {
     try {
       const url = buildUrl();
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('failed');
-      const list = await res.json();
+      const list = await request(url);
 
       if (isMineView) {
         // 판매자 시점 결과도 합치기
         try {
-          const sres = await fetch(`/api/group-deals?mine=seller:${encodeURIComponent(user.id)}`);
-          if (sres.ok) {
-            const sellerList = await sres.json();
-            const merged = [...(list || []), ...(sellerList || [])];
-            const dedup = new Map();
-            merged.forEach((d) => dedup.set(d.id, d));
-            dealsList = Array.from(dedup.values());
-            return;
-          }
+          const sellerList = await request(`/api/group-deals?mine=seller:${encodeURIComponent(user.id)}`);
+          const merged = [...(list || []), ...(sellerList || [])];
+          const dedup = new Map();
+          merged.forEach((d) => dedup.set(d.id, d));
+          dealsList = Array.from(dedup.values());
+          return;
         } catch { /* ignore */ }
       }
       dealsList = Array.isArray(list) ? list : [];

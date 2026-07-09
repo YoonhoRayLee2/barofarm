@@ -8,7 +8,7 @@ import { showToast } from '/app/components/toast.js';
 import { personIconSVG } from '/app/scripts/person-icon.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
 import { formatPrice, formatDateShort } from '/app/scripts/format.js';
-import { subscribe, unsubscribe, getSellerReviews } from '/app/scripts/api.js';
+import { subscribe, unsubscribe, getSellerReviews, request } from '/app/scripts/api.js';
 
 const _cssId = 'page-css-user-profile';
 if (!document.getElementById(_cssId)) {
@@ -69,13 +69,10 @@ export default async function load(params) {
     msgBtn.addEventListener('click', async () => {
       msgBtn.disabled = true;
       try {
-        const res = await fetch('/api/chat-rooms/dm', {
+        const { roomId } = await request('/api/chat-rooms/dm', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: me.id, partnerId: targetId }),
         });
-        if (!res.ok) throw new Error('failed');
-        const { roomId } = await res.json();
         navigate('/app/chat-room/' + roomId);
       } catch {
         msgBtn.disabled = false;
@@ -88,9 +85,8 @@ export default async function load(params) {
   let isFollowing = false;
   let isSubscribed = false;
   try {
-    const res = await fetch(`/api/users/${targetId}/public-profile?viewerId=${me.id}`);
-    if (res.ok) {
-      const profile = await res.json();
+    const profile = await request(`/api/users/${targetId}/public-profile?viewerId=${me.id}`);
+    {
       page.querySelector('#up-name').textContent = profile.displayName || '사용자';
       page.querySelector('#up-sales').textContent = profile.salesCount ?? 0;
       page.querySelector('#up-followers').textContent = profile.followerCount ?? 0;
@@ -132,12 +128,15 @@ export default async function load(params) {
       followBtn.disabled = true;
       try {
         const method = isFollowing ? 'DELETE' : 'POST';
-        const res = await fetch(`/api/users/${targetId}/follow`, {
-          method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ followerId: me.id }),
-        });
-        if (!res.ok && res.status !== 409) throw new Error('failed');
+        try {
+          await request(`/api/users/${targetId}/follow`, {
+            method,
+            body: JSON.stringify({ followerId: me.id }),
+          });
+        } catch (err) {
+          if (err && err.status === 409) { /* 409 = already in target state, treat as success */ }
+          else throw err;
+        }
         isFollowing = !isFollowing;
         updateFollowBtn(isFollowing);
         // 팔로워 카운트 갱신
@@ -218,9 +217,7 @@ export default async function load(params) {
   async function loadSales() {
     const gridEl = page.querySelector('#up-grid');
     try {
-      const res = await fetch(`/api/users/${targetId}/sales`);
-      if (!res.ok) throw new Error('failed');
-      const list = await res.json();
+      const list = await request(`/api/users/${targetId}/sales`);
       if (!list || list.length === 0) {
         gridEl.innerHTML = '<div class="up-empty">판매 완료 상품이 없습니다</div>';
         return;

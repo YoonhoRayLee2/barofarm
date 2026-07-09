@@ -17,6 +17,7 @@
 import { getSecureItem, setSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import * as api from '/app/scripts/api.js';
+import { request } from '/app/scripts/api.js';
 import { personIconSVG } from '/app/scripts/person-icon.js';
 import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 import { showToast } from '/app/components/toast.js';
@@ -417,8 +418,7 @@ async function openUserListSheet(title, user, type) {
 
   const listEl = sheet.querySelector('#ul-list');
   try {
-    const items = await fetch(`/api/users/${encodeURIComponent(user.id)}/${type}`)
-      .then(r => r.json());
+    const items = await request(`/api/users/${encodeURIComponent(user.id)}/${type}`);
 
     if (!items.length) {
       listEl.innerHTML = `<div class="ul-empty">${title === '팔로워' ? '아직 팔로워가 없습니다' : '팔로우한 사용자가 없습니다'}</div>`;
@@ -527,15 +527,6 @@ function showTierHelp(type) {
 }
 
 /* ── 정산계좌 1원 인증 시트 ──────────────────────────────── */
-async function _authHeader() {
-  try {
-    const token = await api.getToken();
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  } catch {
-    return {};
-  }
-}
-
 function showBankVerifySheet(userId, onVerified) {
   const BANKS = ['NH농협은행','국민은행','신한은행','하나은행','우리은행','기업은행','카카오뱅크','토스뱅크'];
 
@@ -575,18 +566,16 @@ function showBankVerifySheet(userId, onVerified) {
       const btn = overlay.querySelector('#bv-req-btn');
       btn.disabled = true;
       try {
-        const res = await fetch(`/api/users/${encodeURIComponent(userId)}/bank/request`, {
+        await request(`/api/users/${encodeURIComponent(userId)}/bank/request`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...(await _authHeader()) },
           body: JSON.stringify({ bankName, accountNumber, holderName }),
         });
-        if (!res.ok) {
-          let e = {};
-          try { e = await res.json(); } catch {}
-          showToast(e.error || '요청 실패'); btn.disabled = false; return;
-        }
         renderStep2(bankName);
-      } catch { showToast('네트워크 오류'); btn.disabled = false; }
+      } catch (err) {
+        if (err && /^\[api\] network error/.test(err.message)) { showToast('네트워크 오류'); }
+        else { showToast((err && !/^HTTP \d+$/.test(err.message) && err.message) || '요청 실패'); }
+        btn.disabled = false;
+      }
     });
   }
 
@@ -606,18 +595,18 @@ function showBankVerifySheet(userId, onVerified) {
       const btn = overlay.querySelector('#bv-confirm-btn');
       btn.disabled = true;
       try {
-        const res = await fetch(`/api/users/${encodeURIComponent(userId)}/bank/confirm`, {
+        const data = await request(`/api/users/${encodeURIComponent(userId)}/bank/confirm`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...(await _authHeader()) },
           body: JSON.stringify({ code }),
-        });
-        let data = {};
-        try { data = await res.json(); } catch {}
-        if (!res.ok) { showToast(data.error || '인증 실패'); btn.disabled = false; return; }
+        }) || {};
         overlay.remove();
         showToast(data.isNhMember ? '🏦 NH농협 조합원 인증 완료!' : '✅ 계좌 인증 완료!', { variant: 'success', duration: 2500 });
         onVerified?.({ isNhMember: data.isNhMember, bankName });
-      } catch { showToast('네트워크 오류'); btn.disabled = false; }
+      } catch (err) {
+        if (err && /^\[api\] network error/.test(err.message)) { showToast('네트워크 오류'); }
+        else { showToast((err && !/^HTTP \d+$/.test(err.message) && err.message) || '인증 실패'); }
+        btn.disabled = false;
+      }
     });
   }
 
@@ -778,9 +767,7 @@ function buildCarbonStats() {
 
 async function loadCarbonStats(userId, wrap) {
   try {
-    const res = await fetch(`/api/users/${encodeURIComponent(userId)}/carbon-summary`);
-    if (!res.ok) return;
-    const s = await res.json();
+    const s = await request(`/api/users/${encodeURIComponent(userId)}/carbon-summary`);
     if (!s || !s.orderCount) return;
     const km = Number(s.totalSavedKm || 0);
     const co2 = Number(s.totalSavedCo2g || 0);
@@ -825,9 +812,7 @@ function buildCollectorPanel(profileUser, scrollEl, isMe) {
   if (isMe) {
     (async () => {
       try {
-        const res = await fetch(`/api/chat-rooms/unread-total?userId=${encodeURIComponent(profileUser.id)}&type=dm`);
-        if (!res.ok) return;
-        const { total } = await res.json();
+        const { total } = await request(`/api/chat-rooms/unread-total?userId=${encodeURIComponent(profileUser.id)}&type=dm`);
         const count = Number(total) || 0;
         const badgeEl = iconRow.querySelector('.profile-icon-action__badge');
         if (badgeEl && count > 0) {
@@ -1282,9 +1267,7 @@ export default async function load() {
   // 비동기 조회 (실패 시 — 유지)
   ;(async () => {
     try {
-      const res = await fetch(`/api/users/${encodeURIComponent(profileUser.id)}/bids`);
-      if (!res.ok) return;
-      const bids = await res.json();
+      const bids = await request(`/api/users/${encodeURIComponent(profileUser.id)}/bids`);
       const list = Array.isArray(bids) ? bids : (Array.isArray(bids?.bids) ? bids.bids : []);
       const wonEl = statsCard.querySelector('#ps-won');
       const biddingEl = statsCard.querySelector('#ps-bidding');

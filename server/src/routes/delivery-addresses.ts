@@ -1,7 +1,9 @@
 import { Router, Request, Response } from 'express';
 import pool from '../db/mysql';
+import { requireAuth } from '../middleware/auth';
 
 const router = Router();
+router.use(requireAuth);
 
 async function syncDefaultToUsers(
   userId: number,
@@ -13,10 +15,9 @@ async function syncDefaultToUsers(
   );
 }
 
-// GET /api/delivery-addresses?userId=
+// GET /api/delivery-addresses
 router.get('/', async (req: Request, res: Response) => {
-  const userId = Number(req.query.userId);
-  if (!userId) return res.status(400).json({ error: 'userId required' });
+  const userId = req.user!.userId;
 
   try {
     const [rows] = await pool.query<any[]>(
@@ -41,25 +42,26 @@ router.get('/', async (req: Request, res: Response) => {
 
 // POST /api/delivery-addresses
 router.post('/', async (req: Request, res: Response) => {
-  const { userId, name, phone, zipcode, address, detail } = req.body;
-  if (!userId || !name || !phone || !zipcode || !address) {
+  const userId = req.user!.userId;
+  const { name, phone, zipcode, address, detail } = req.body;
+  if (!name || !phone || !zipcode || !address) {
     return res.status(400).json({ error: 'required fields missing' });
   }
 
   try {
     const [existing] = await pool.query<any[]>(
       'SELECT COUNT(*) AS cnt FROM delivery_addresses WHERE user_id = ?',
-      [Number(userId)],
+      [userId],
     );
     const isDefault = existing[0].cnt === 0 ? 1 : 0;
 
     const [result] = await pool.query<any>(
       'INSERT INTO delivery_addresses (user_id, name, phone, zipcode, address, detail, is_default) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [Number(userId), name, phone, zipcode, address, detail ?? null, isDefault],
+      [userId, name, phone, zipcode, address, detail ?? null, isDefault],
     );
 
     if (isDefault) {
-      await syncDefaultToUsers(Number(userId), { name, phone, zipcode, address, detail: detail ?? null });
+      await syncDefaultToUsers(userId, { name, phone, zipcode, address, detail: detail ?? null });
     }
 
     res.status(201).json({ id: result.insertId, isDefault: Boolean(isDefault) });
@@ -72,15 +74,16 @@ router.post('/', async (req: Request, res: Response) => {
 // PATCH /api/delivery-addresses/:id
 router.patch('/:id', async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  const { userId, name, phone, zipcode, address, detail } = req.body;
-  if (!userId || !name || !phone || !zipcode || !address) {
+  const userId = req.user!.userId;
+  const { name, phone, zipcode, address, detail } = req.body;
+  if (!name || !phone || !zipcode || !address) {
     return res.status(400).json({ error: 'required fields missing' });
   }
 
   try {
     const [result] = await pool.query<any>(
       'UPDATE delivery_addresses SET name=?, phone=?, zipcode=?, address=?, detail=? WHERE id=? AND user_id=?',
-      [name, phone, zipcode, address, detail ?? null, id, Number(userId)],
+      [name, phone, zipcode, address, detail ?? null, id, userId],
     );
     if (result.affectedRows === 0) return res.status(404).json({ error: 'not_found' });
 
@@ -89,7 +92,7 @@ router.patch('/:id', async (req: Request, res: Response) => {
       [id],
     );
     if (rows.length && rows[0].is_default) {
-      await syncDefaultToUsers(Number(userId), { name, phone, zipcode, address, detail: detail ?? null });
+      await syncDefaultToUsers(userId, { name, phone, zipcode, address, detail: detail ?? null });
     }
 
     res.json({ ok: true });
@@ -99,11 +102,10 @@ router.patch('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// DELETE /api/delivery-addresses/:id?userId=
+// DELETE /api/delivery-addresses/:id
 router.delete('/:id', async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  const userId = Number(req.query.userId);
-  if (!userId) return res.status(400).json({ error: 'userId required' });
+  const userId = req.user!.userId;
 
   try {
     const [rows] = await pool.query<any[]>(
@@ -141,16 +143,15 @@ router.delete('/:id', async (req: Request, res: Response) => {
 // PATCH /api/delivery-addresses/:id/set-default
 router.patch('/:id/set-default', async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  const { userId } = req.body;
-  if (!userId) return res.status(400).json({ error: 'userId required' });
+  const userId = req.user!.userId;
 
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    await conn.query('UPDATE delivery_addresses SET is_default=0 WHERE user_id=?', [Number(userId)]);
+    await conn.query('UPDATE delivery_addresses SET is_default=0 WHERE user_id=?', [userId]);
     const [result] = await conn.query<any>(
       'UPDATE delivery_addresses SET is_default=1 WHERE id=? AND user_id=?',
-      [id, Number(userId)],
+      [id, userId],
     );
     if (result.affectedRows === 0) {
       await conn.rollback();
@@ -162,7 +163,7 @@ router.patch('/:id/set-default', async (req: Request, res: Response) => {
     );
     await conn.commit();
 
-    await syncDefaultToUsers(Number(userId), rows[0]);
+    await syncDefaultToUsers(userId, rows[0]);
     res.json({ ok: true });
   } catch (err) {
     await conn.rollback();

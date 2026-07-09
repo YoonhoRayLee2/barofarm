@@ -10,7 +10,7 @@ import { replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
 import { formatPrice, formatDate } from '/app/scripts/format.js';
-import { createReview, getReviewByAuction } from '/app/scripts/api.js';
+import { createReview, getReviewByAuction, request } from '/app/scripts/api.js';
 import { openLightbox } from '/app/components/lightbox.js';
 
 const _cssId = 'page-css-order-detail';
@@ -180,9 +180,7 @@ export default async function load(params) {
       </div>
     `;
     try {
-      const res = await fetch(`/api/auctions/${encodeURIComponent(auctionId)}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await request(`/api/auctions/${encodeURIComponent(auctionId)}`);
       renderDetail(contentEl, data);
     } catch (err) {
       contentEl.innerHTML = `
@@ -568,12 +566,10 @@ export default async function load(params) {
         if (!tracking) { showToast('운송장 번호를 입력해주세요', { duration: 1800 }); trackingEl && trackingEl.focus(); return; }
         actionBtn.disabled = true;
         try {
-          const res = await fetch(`/api/auctions/${encodeURIComponent(data.auctionId)}/delivery-status`, {
+          await request(`/api/auctions/${encodeURIComponent(data.auctionId)}/delivery-status`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: 'shipped', userId: user.id, trackingCompany: courier, trackingNumber: tracking }),
           });
-          if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || `HTTP ${res.status}`); }
           showToast('발송 처리가 완료되었습니다', { variant: 'success', duration: 1800 });
           await loadDetail();
         } catch (err) {
@@ -587,12 +583,10 @@ export default async function load(params) {
       actionBtn.addEventListener('click', async () => {
         actionBtn.disabled = true;
         try {
-          const res = await fetch(`/api/auctions/${encodeURIComponent(data.auctionId)}/delivery-status`, {
+          await request(`/api/auctions/${encodeURIComponent(data.auctionId)}/delivery-status`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: nextStatus, userId: user.id }),
           });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
           showToast('상태가 변경되었습니다', { variant: 'success', duration: 1600 });
           await loadDetail();
         } catch (err) {
@@ -677,8 +671,7 @@ async function loadRefundSection(container, data, user, isSeller, status, reload
 
   let refund = null;
   try {
-    const res = await fetch(`/api/refunds/by-auction/${encodeURIComponent(data.auctionId)}`);
-    if (res.ok) refund = await res.json();
+    refund = await request(`/api/refunds/by-auction/${encodeURIComponent(data.auctionId)}`);
   } catch { /* ignore */ }
 
   // 활성 환불 건이 있으면 상태 카드 표시
@@ -742,12 +735,10 @@ function bindRefundActions(section, refund, user, reload) {
   approveBtn?.addEventListener('click', async () => {
     approveBtn.disabled = true;
     try {
-      const res = await fetch(`/api/refunds/${refund.id}/approve`, {
+      await request(`/api/refunds/${refund.id}/approve`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sellerId: user.id }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       showToast('환불 요청을 승인했습니다', { variant: 'success', duration: 1600 });
       await reload();
     } catch {
@@ -761,12 +752,10 @@ function bindRefundActions(section, refund, user, reload) {
     if (reason === null) return; // 취소
     rejectBtn.disabled = true;
     try {
-      const res = await fetch(`/api/refunds/${refund.id}/reject`, {
+      await request(`/api/refunds/${refund.id}/reject`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sellerId: user.id, rejectReason: reason }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       showToast('환불 요청을 거절했습니다', { variant: 'success', duration: 1600 });
       await reload();
     } catch {
@@ -778,12 +767,10 @@ function bindRefundActions(section, refund, user, reload) {
   completeBtn?.addEventListener('click', async () => {
     completeBtn.disabled = true;
     try {
-      const res = await fetch(`/api/refunds/${refund.id}/complete`, {
+      await request(`/api/refunds/${refund.id}/complete`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sellerId: user.id }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       showToast('환불 완료 처리되었습니다', { variant: 'success', duration: 1600 });
       await reload();
     } catch {
@@ -833,15 +820,10 @@ function openRefundRequestSheet(data, user, reload) {
     submitBtn.disabled = true;
     submitBtn.textContent = '신청 중...';
     try {
-      const res = await fetch('/api/refunds', {
+      await request('/api/refunds', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ auctionId: data.auctionId, buyerId: user.id, reason }),
       });
-      if (!res.ok) {
-        const e = await res.json().catch(() => ({}));
-        throw new Error(e.error || `HTTP ${res.status}`);
-      }
       showToast('반품·환불 신청이 접수되었습니다', { variant: 'success', duration: 1800 });
       close();
       await reload();
@@ -994,9 +976,7 @@ async function loadRecommendations(container, auctionId) {
   if (isNhmallRecHidden()) { section.classList.add('is-hidden'); return; }
 
   try {
-    const res = await fetch(`/api/auctions/${encodeURIComponent(auctionId)}/recommendations`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const { recommendations } = await res.json();
+    const { recommendations } = await request(`/api/auctions/${encodeURIComponent(auctionId)}/recommendations`);
 
     if (!recommendations || recommendations.length === 0) {
       section.querySelector('.od-recommendations__loading').textContent = '추천 상품이 없습니다';
@@ -1091,11 +1071,8 @@ async function loadTimeline(container, auctionId, user, isSeller, carbon) {
 
   let items = [];
   try {
-    const res = await fetch(`/api/timelines/${encodeURIComponent(auctionId)}?userId=${encodeURIComponent(user.id)}`);
-    if (res.ok) {
-      const json = await res.json();
-      items = Array.isArray(json.items) ? json.items : [];
-    }
+    const json = await request(`/api/timelines/${encodeURIComponent(auctionId)}?userId=${encodeURIComponent(user.id)}`);
+    items = Array.isArray(json.items) ? json.items : [];
   } catch { /* keep empty */ }
 
   renderTimelineBody(body, items, auctionId, user, isSeller, carbon);
@@ -1229,13 +1206,12 @@ function bindUploadForms(body, auctionId, user, carbon, uploadedStages) {
         if (note) fd.append('farmer_note', note);
         if (file) fd.append('photo', file);
 
-        const res = await fetch('/api/timelines', { method: 'POST', body: fd });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        await request('/api/timelines', { method: 'POST', body: fd });
 
         /* 재조회 후 리렌더 */
-        const refreshRes = await fetch(`/api/timelines/${encodeURIComponent(auctionId)}?userId=${encodeURIComponent(user.id)}`);
-        const json = refreshRes.ok ? await refreshRes.json() : { items: [] };
-        const items = Array.isArray(json.items) ? json.items : [];
+        let refreshed = { items: [] };
+        try { refreshed = await request(`/api/timelines/${encodeURIComponent(auctionId)}?userId=${encodeURIComponent(user.id)}`); } catch { /* keep empty */ }
+        const items = Array.isArray(refreshed.items) ? refreshed.items : [];
         renderTimelineBody(body, items, auctionId, user, true, carbon);
       } catch (err) {
         btn.disabled = false;

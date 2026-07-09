@@ -1,7 +1,18 @@
 import { Router, Request, Response } from 'express';
 import pool from '../db/mysql';
+import { requireAuth } from '../middleware/auth';
 
 const router = Router();
+router.use(requireAuth);
+
+// 멤버십 검증: (roomId, userId)가 chat_room_members에 존재해야 true
+async function isMember(roomId: number, userId: number): Promise<boolean> {
+  const [rows] = await pool.query<any[]>(
+    'SELECT 1 FROM chat_room_members WHERE room_id = ? AND user_id = ? LIMIT 1',
+    [roomId, userId],
+  );
+  return rows.length > 0;
+}
 
 // GET /api/chat-rooms?search= — 그룹 채팅방만 (is_dm=0)
 router.get('/', async (req: Request, res: Response) => {
@@ -48,11 +59,10 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/chat-rooms/unread-total?userId=&type=dm|group
+// GET /api/chat-rooms/unread-total?type=dm|group
 // type 없으면 전체(하위호환), type=dm → is_dm=1, type=group → is_dm=0
 router.get('/unread-total', async (req: Request, res: Response) => {
-  const userId = Number(req.query.userId);
-  if (!userId) return res.status(400).json({ error: 'userId required' });
+  const userId = req.user!.userId;
 
   const type = req.query.type;
   let dmFilter = '';
@@ -77,10 +87,9 @@ router.get('/unread-total', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/chat-rooms/mine?userId=&type=group|dm
+// GET /api/chat-rooms/mine?type=group|dm
 router.get('/mine', async (req: Request, res: Response) => {
-  const userId = Number(req.query.userId);
-  if (!userId) return res.status(400).json({ error: 'userId required' });
+  const userId = req.user!.userId;
 
   const type = req.query.type === 'dm' ? 'dm' : 'group';
 
@@ -150,8 +159,9 @@ router.get('/mine', async (req: Request, res: Response) => {
 
 // POST /api/chat-rooms — 그룹 채팅방 생성
 router.post('/', async (req: Request, res: Response) => {
-  const { name, description, avatarUrl, createdBy } = req.body;
-  if (!name || !createdBy) return res.status(400).json({ error: 'name and createdBy required' });
+  const createdBy = req.user!.userId;
+  const { name, description, avatarUrl } = req.body;
+  if (!name) return res.status(400).json({ error: 'name required' });
 
   const conn = await pool.getConnection();
   try {
@@ -185,11 +195,12 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/chat-rooms/dm — DM 룸 찾기 or 생성
+// POST /api/chat-rooms/dm — DM 룸 찾기 or 생성 (요청자 = 참여자 중 한 명)
 router.post('/dm', async (req: Request, res: Response) => {
-  const { userId, partnerId } = req.body;
-  if (!userId || !partnerId) return res.status(400).json({ error: 'userId and partnerId required' });
-  if (Number(userId) === Number(partnerId)) return res.status(400).json({ error: 'cannot DM yourself' });
+  const userId = req.user!.userId;
+  const { partnerId } = req.body;
+  if (!partnerId) return res.status(400).json({ error: 'partnerId required' });
+  if (userId === Number(partnerId)) return res.status(400).json({ error: 'cannot DM yourself' });
 
   // 1. 기존 DM 룸 탐색
   const [existing] = await pool.query<any[]>(
@@ -244,10 +255,10 @@ router.get('/:id/members', async (req: Request, res: Response) => {
   })));
 });
 
-// GET /api/chat-rooms/:id?viewerId= — 단일 방 메타
+// GET /api/chat-rooms/:id — 단일 방 메타
 router.get('/:id', async (req: Request, res: Response) => {
   const roomId = Number(req.params.id);
-  const viewerId = Number(req.query.viewerId) || 0;
+  const viewerId = req.user!.userId;
 
   const [rows] = await pool.query<any[]>(
     `SELECT cr.id, cr.name, cr.is_dm, cr.avatar_url, cr.created_at, cr.created_by,
@@ -285,8 +296,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 // POST /api/chat-rooms/:id/join
 router.post('/:id/join', async (req: Request, res: Response) => {
   const roomId = Number(req.params.id);
-  const { userId } = req.body;
-  if (!userId) return res.status(400).json({ error: 'userId required' });
+  const userId = req.user!.userId;
 
   try {
     await pool.query(
@@ -304,8 +314,8 @@ router.post('/:id/join', async (req: Request, res: Response) => {
 // DELETE /api/chat-rooms/:id/leave
 router.delete('/:id/leave', async (req: Request, res: Response) => {
   const roomId = Number(req.params.id);
-  const { userId } = req.body;
-  if (!userId) return res.status(400).json({ error: 'userId required' });
+  const userId = req.user!.userId;
+  if (!(await isMember(roomId, userId))) return res.status(403).json({ error: 'not_a_member' });
 
   try {
     await pool.query(
@@ -322,8 +332,11 @@ router.delete('/:id/leave', async (req: Request, res: Response) => {
 // GET /api/chat-rooms/:id/messages?before=&limit=50
 router.get('/:id/messages', async (req: Request, res: Response) => {
   const roomId = Number(req.params.id);
+  const userId = req.user!.userId;
   const limit = Math.min(Number(req.query.limit) || 50, 100);
   const before = req.query.before ? Number(req.query.before) : null;
+
+  if (!(await isMember(roomId, userId))) return res.status(403).json({ error: 'not_a_member' });
 
   try {
     const params: any[] = [roomId];
@@ -370,8 +383,8 @@ router.get('/:id/messages', async (req: Request, res: Response) => {
 // PATCH /api/chat-rooms/:id/read
 router.patch('/:id/read', async (req: Request, res: Response) => {
   const roomId = Number(req.params.id);
-  const { userId } = req.body;
-  if (!userId) return res.status(400).json({ error: 'userId required' });
+  const userId = req.user!.userId;
+  if (!(await isMember(roomId, userId))) return res.status(403).json({ error: 'not_a_member' });
 
   try {
     await pool.query(

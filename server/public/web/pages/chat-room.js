@@ -6,6 +6,7 @@
  */
 
 import { getSecureItem } from '/app/scripts/native-bridge.js';
+import { request } from '/app/scripts/api.js';
 import { replace, setCleanup } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
 import { connect } from '/app/scripts/socket.js';
@@ -185,9 +186,7 @@ export default async function load(params) {
       // 멤버 목록 로드
       const listEl = panel.querySelector('#cr-menu-list');
       try {
-        const res = await fetch(`/api/chat-rooms/${roomId}/members`);
-        if (!res.ok) throw new Error('failed');
-        const members = await res.json();
+        const members = await request(`/api/chat-rooms/${roomId}/members`);
         if (!listEl) return;
         listEl.innerHTML = '';
         members.forEach((m) => {
@@ -235,9 +234,7 @@ export default async function load(params) {
 
   /* ---------------- Load messages ---------------- */
   try {
-    const res = await fetch(`/api/chat-rooms/${roomId}/messages?limit=50`);
-    if (!res.ok) throw new Error('failed');
-    const list = await res.json();
+    const list = await request(`/api/chat-rooms/${roomId}/messages?limit=50`);
     messagesEl.innerHTML = '';
     list.forEach((m) => {
       seenIds.add(m.id);
@@ -253,9 +250,8 @@ export default async function load(params) {
   }
 
   /* ---------------- Mark read ---------------- */
-  fetch(`/api/chat-rooms/${roomId}/read`, {
+  request(`/api/chat-rooms/${roomId}/read`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId: user.id }),
   }).catch(() => { /* non-critical */ });
 
@@ -306,9 +302,8 @@ export default async function load(params) {
       scrollToBottom();
       // 상대방 메시지가 오면 즉시 읽음 처리
       if (Number(msg.userId) !== Number(user.id)) {
-        fetch(`/api/chat-rooms/${roomId}/read`, {
+        request(`/api/chat-rooms/${roomId}/read`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: user.id }),
         }).catch(() => {});
       }
@@ -520,9 +515,7 @@ export default async function load(params) {
 
 async function fetchRoomMeta(roomId, viewerId) {
   try {
-    const res = await fetch(`/api/chat-rooms/${roomId}?viewerId=${viewerId}`);
-    if (!res.ok) return null;
-    return res.json();
+    return await request(`/api/chat-rooms/${roomId}?viewerId=${viewerId}`);
   } catch { return null; }
 }
 

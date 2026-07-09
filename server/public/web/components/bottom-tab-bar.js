@@ -6,6 +6,7 @@
  * @module components/bottom-tab-bar
  */
 
+import { request } from '/app/scripts/api.js';
 import { navigate } from '/app/scripts/router.js';
 import { openFabModal } from '/app/components/fab-modal.js';
 import { connect, identifyUser } from '/app/scripts/socket.js';
@@ -95,9 +96,7 @@ export function createBottomTabBar(opts = {}) {
 async function refreshUnreadBadge() {
   if (!badgeUserId) return;
   try {
-    const res = await fetch(`/api/chat-rooms/unread-total?userId=${encodeURIComponent(badgeUserId)}`);
-    if (!res.ok) return;
-    const { total } = await res.json();
+    const { total } = await request(`/api/chat-rooms/unread-total?userId=${encodeURIComponent(badgeUserId)}`);
     if (currentBadgeEl) renderBadge(currentBadgeEl, Number(total) || 0);
   } catch { /* non-critical */ }
 }

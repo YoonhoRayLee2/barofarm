@@ -1,9 +1,59 @@
 import { Server } from 'socket.io';
+import crypto from 'crypto';
 import { lives, auctions, endFcfsAuction } from '../store/memory';
 import { endAuction } from '../services/livekit-service';
+import { getBuyerTier, getSellerTier, calcBuyerDiscount, calcSellerFee } from '../services/tier';
+import { createNotification } from '../services/notifications';
+import pool from '../db/mysql';
 
 // liveId → Map<socketId, { userName: string; avatarUrl: string | null }>
 const viewerCounts = new Map<string, Map<string, { userName: string; avatarUrl: string | null }>>();
+
+// FCFS(선착순) 경매: 구매 시점마다 개별 주문(auctions row + bids row)을 즉시 영속화한다.
+// 하나의 auction id에 여러 구매자가 존재할 수 있으므로 매 구매마다 새 UUID를 발급해 별도 row로 저장한다.
+async function persistFcfsPurchase(
+  auction: import('../store/memory').AuctionState,
+  buyerId: string,
+): Promise<void> {
+  const buyerIdNum = Number(buyerId);
+  const [buyerTier, sellerTier] = await Promise.all([
+    getBuyerTier(buyerIdNum),
+    getSellerTier(Number(auction.sellerId)),
+  ]);
+  const unitPrice = auction.currentPrice;
+  const totalPrice = unitPrice * (auction.unitCount || 1);
+  const { discountAmt, buyerDiscountRate } = calcBuyerDiscount(totalPrice, buyerTier);
+  const { feeAmt, sellerFeeRate }          = calcSellerFee(totalPrice, sellerTier);
+  const orderId = crypto.randomUUID();
+
+  await pool.execute(
+    `INSERT INTO auctions
+       (id, seller_id, live_id, product_name, start_price, current_price, mode, image_url, status, delivery_status, top_bidder_id, ends_at,
+        buyer_tier, buyer_discount_rate, buyer_discount_amt, seller_fee_rate, seller_fee_amt, unit_count, unit_label)
+     VALUES (?, ?, ?, ?, ?, ?, 'fcfs', ?, 'ended', 'payment_complete', ?, NOW(), ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      orderId, Number(auction.sellerId), auction.liveId, auction.productName,
+      auction.startPrice, totalPrice, auction.imageUrl ?? null, buyerIdNum,
+      buyerTier, buyerDiscountRate, discountAmt, sellerFeeRate, feeAmt,
+      auction.unitCount, auction.unitLabel,
+    ],
+  );
+  await pool.execute(
+    'INSERT IGNORE INTO bids (auction_id, bidder_id, price) VALUES (?, ?, ?)',
+    [orderId, buyerIdNum, auction.currentPrice],
+  );
+
+  try {
+    await createNotification(buyerIdNum, {
+      type: 'auction_won',
+      title: '구매가 완료되었어요',
+      body: `${auction.productName} 상품을 ${auction.currentPrice.toLocaleString()}원에 구매했습니다.`,
+      link: `/app/order-detail/${orderId}`,
+    });
+  } catch (notifErr) {
+    console.error('[auction] FCFS purchase notification failed:', notifErr);
+  }
+}
 
 export default function registerAuctionSocket(io: Server): void {
   io.on('connection', (socket) => {
@@ -151,15 +201,23 @@ export default function registerAuctionSocket(io: Server): void {
           return;
         }
 
+        // 재고 차감은 동기적으로 즉시 수행 — await 이전에 처리해 동시 purchase 이벤트 간 경쟁을 차단한다.
         auction.stockSold = (auction.stockSold ?? 0) + 1;
         const soldIndex = auction.stockSold;
 
-        // 구매자를 topBidder로 갱신 (대표 낙찰자)
+        // 구매자를 topBidder로 갱신 (대표/최종 낙찰자 표시용 — 실제 주문은 개별 저장됨)
         auction.topBidder = userId;
         if (userName) auction.topBidderName = userName;
 
         const ts = Date.now();
         io.to(liveId).emit('purchase:made', { userId, userName, soldIndex, price: auction.currentPrice, ts });
+
+        // FCFS는 다수 구매자가 존재할 수 있으므로, 구매 시점마다 개별 주문을 즉시 DB에 영속화한다.
+        // (종료 시점까지 미루면 endAuction이 topBidder 1명만 저장해 나머지 구매자의 주문이 유실된다.)
+        void persistFcfsPurchase(auction, userId).catch((err) => {
+          console.error(`[auction] FCFS 개별 주문 저장 실패 (auction=${auctionId}, buyer=${userId}):`, (err as Error).message);
+          socket.emit('error', { message: '주문 저장 중 오류가 발생했습니다. 고객센터에 문의해주세요.' });
+        });
 
         // 매진 시 즉시 종료
         if (auction.stockSold >= (auction.stockTotal ?? 0)) {

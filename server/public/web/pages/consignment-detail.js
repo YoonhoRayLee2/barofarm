@@ -2,6 +2,7 @@
  * Consignment Detail Page — 위탁 상세 + 매칭 신청
  * Route: /app/consignment/:id
  */
+import { request } from '/app/scripts/api.js';
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
@@ -44,9 +45,7 @@ export default async function load(params) {
 
   let data = null;
   try {
-    const res = await fetch(`/api/consignments/${id}`);
-    if (!res.ok) throw new Error('failed');
-    data = await res.json();
+    data = await request(`/api/consignments/${id}`);
   } catch {
     const el = page.querySelector('#cd-content');
     el.innerHTML = `<div class="cd-empty"><span class="cd-empty__text">위탁 정보를 불러올 수 없습니다</span></div>`;
@@ -157,19 +156,16 @@ function renderDetail(page, data, user) {
     actionBtn.addEventListener('click', async () => {
       actionBtn.disabled = true;
       try {
-        const res = await fetch(`/api/consignments/${data.id}/match`, {
+        const json = await request(`/api/consignments/${data.id}/match`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sellerId: user.id }),
         });
-        if (res.status === 409) {
+        navigate('/app/chat-room/' + json.roomId);
+      } catch (err) {
+        if (err && err.status === 409) {
           showToast('이미 매칭된 상품입니다', { variant: 'error', duration: 2000 });
           return;
         }
-        if (!res.ok) throw new Error('failed');
-        const json = await res.json();
-        navigate('/app/chat-room/' + json.roomId);
-      } catch {
         actionBtn.disabled = false;
         showToast('매칭 신청에 실패했습니다', { variant: 'error', duration: 2000 });
       }

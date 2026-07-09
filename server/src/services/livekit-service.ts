@@ -27,8 +27,14 @@ export async function deleteRoom(roomName: string): Promise<void> {
 
 export async function endAuction(state: AuctionState): Promise<void> {
   try {
+    // FCFS(선착순)는 구매 시점마다 socket/auction.ts의 persistFcfsPurchase가 개별 주문(별도 UUID row)을
+    // 이미 저장한다. 여기서 topBidder(마지막 구매자) 1명을 이 auction id row에 낙찰자로 다시 기록하면
+    // 중복 주문(row)이 생기므로, FCFS는 placeholder row(생성 시 status='pending')를 topBidder 없이
+    // 'ended'로만 마감한다 — 실제 판매 기록은 개별 row에만 남는다.
+    const isFcfsWithSales = state.mode === 'fcfs' && !!state.topBidder;
+
     // 유찰(top_bidder_id IS NULL)은 낙찰가 무효 — 시작가가 그대로 저장되지 않도록 0 으로 기록.
-    const isVoid = !state.topBidder;
+    const isVoid = !state.topBidder || isFcfsWithSales;
     const finalPrice = isVoid ? 0 : state.currentPrice;
 
     let buyerTier: string = 'sprout';
@@ -79,13 +85,13 @@ export async function endAuction(state: AuctionState): Promise<void> {
         finalPrice,
         state.mode,
         state.imageUrl ?? null,
-        state.topBidder ?? null,
+        isFcfsWithSales ? null : (state.topBidder ?? null),
         buyerTier, buyerDiscountRate, discountAmt, sellerFeeRate, feeAmt,
         state.unitCount, state.unitLabel,
       ],
     );
-    // 낙찰자가 있으면 bids 테이블에도 기록
-    if (state.topBidder) {
+    // 낙찰자가 있으면 bids 테이블에도 기록 (FCFS는 개별 주문에서 이미 기록했으므로 제외)
+    if (state.topBidder && !isFcfsWithSales) {
       await db.query(
         'INSERT IGNORE INTO bids (auction_id, bidder_id, price) VALUES (?, ?, ?)',
         [state.id, Number(state.topBidder), state.currentPrice],
@@ -103,6 +109,10 @@ export async function endAuction(state: AuctionState): Promise<void> {
     }
   } catch (e) {
     console.error('[auction] end DB save failed:', (e as Error).message);
+    // DB 저장 실패는 상위(endAuctionState)로 전파 — 실패 시 메모리 상태를 보존해 재시도/수동 복구가 가능하도록 한다.
+    // LiveKit room 정리는 DB 저장 여부와 무관하게 항상 시도한다.
+    await deleteRoom(state.id);
+    throw e;
   }
   await deleteRoom(state.id);
 }

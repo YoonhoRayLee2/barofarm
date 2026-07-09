@@ -5,6 +5,7 @@
  * @module pages/my-forest
  */
 
+import { request } from '/app/scripts/api.js';
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { replace } from '/app/scripts/router.js';
 import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
@@ -59,8 +60,10 @@ export default async function load() {
   page.appendChild(createBottomTabBar());
 
   try {
-    const res = await fetch(`/api/users/${encodeURIComponent(user.id)}/carbon-summary`);
-    const summary = res.ok ? await res.json() : null;
+    let summary = null;
+    try {
+      summary = await request(`/api/users/${encodeURIComponent(user.id)}/carbon-summary`);
+    } catch { summary = null; }
 
     const trees        = summary ? Math.max(0, Math.floor(Number(summary.treeEquiv || 0))) : 0;
     const orderCount   = summary ? Number(summary.orderCount   || 0) : 0;

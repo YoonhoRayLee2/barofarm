@@ -205,9 +205,7 @@ export default async function load(params = {}) {
     try {
       const params = new URLSearchParams({ name });
       if (category) params.set('category', category);
-      const res = await fetch(`/api/market-prices/match?${params.toString()}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await api.request(`/api/market-prices/match?${params.toString()}`);
       if (seq !== marketReqSeq) return; // stale response
       renderMarketBox(data);
     } catch {

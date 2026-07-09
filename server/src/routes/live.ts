@@ -8,6 +8,7 @@ import { lives, auctions, endedBlindBids, createLive, endLive, createAuction, st
 import { endAuction } from '../services/livekit-service';
 import { getUsersByInterest, notifyUsers } from '../services/notifications';
 import pool from '../db/mysql';
+import { requireAuth } from '../middleware/auth';
 
 const UPLOADS_DIR = path.join(__dirname, '..', '..', 'public', 'uploads', 'auctions');
 
@@ -432,10 +433,10 @@ export function createLiveRouter(io: Server) {
     });
   });
 
-  // PATCH /api/lives/:id/go-live — upcoming 라이브 방송 시작
-  r.patch('/:id/go-live', async (req: Request, res: Response) => {
+  // PATCH /api/lives/:id/go-live — upcoming 라이브 방송 시작 (셀러 본인 전용)
+  r.patch('/:id/go-live', requireAuth, async (req: Request, res: Response) => {
     const liveId = String(req.params.id);
-    const { sellerId } = req.body as { sellerId?: string };
+    const sellerId = String(req.user!.userId);
 
     let live = lives.get(liveId);
 
@@ -462,7 +463,7 @@ export function createLiveRouter(io: Server) {
     if (live.status !== 'upcoming') {
       res.status(409).json({ error: '이미 시작됐거나 종료된 라이브입니다.' }); return;
     }
-    if (sellerId && live.sellerId !== String(sellerId)) {
+    if (live.sellerId !== sellerId) {
       res.status(403).json({ error: '셀러 권한이 없습니다.' }); return;
     }
 
@@ -519,14 +520,11 @@ export function createLiveRouter(io: Server) {
   });
 
   // PATCH /api/lives/:id/memo — 라이브 메모 수정 (셀러 본인 전용)
-  r.patch('/:id/memo', async (req: Request, res: Response) => {
+  r.patch('/:id/memo', requireAuth, async (req: Request, res: Response) => {
     const liveId = String(req.params.id);
-    const { sellerId, memo } = req.body as { sellerId?: string; memo?: string };
+    const sellerId = String(req.user!.userId);
+    const { memo } = req.body as { memo?: string };
 
-    if (!sellerId) {
-      res.status(400).json({ error: 'sellerId 는 필수입니다.' });
-      return;
-    }
     if (typeof memo !== 'string') {
       res.status(400).json({ error: 'memo 는 문자열이어야 합니다.' });
       return;
@@ -574,9 +572,9 @@ export function createLiveRouter(io: Server) {
   });
 
   // PATCH /api/lives/:id/end — 방송 종료 (셀러 전용)
-  r.patch('/:id/end', async (req: Request, res: Response) => {
+  r.patch('/:id/end', requireAuth, async (req: Request, res: Response) => {
     const liveId = String(req.params.id);
-    const { sellerId } = req.body as { sellerId?: string };
+    const sellerId = String(req.user!.userId);
 
     const live = lives.get(liveId);
     if (!live) {
@@ -584,7 +582,7 @@ export function createLiveRouter(io: Server) {
       return;
     }
 
-    if (sellerId && live.sellerId !== String(sellerId)) {
+    if (live.sellerId !== sellerId) {
       res.status(403).json({ error: '셀러 권한이 없습니다.' });
       return;
     }
@@ -614,14 +612,19 @@ export function createLiveRouter(io: Server) {
     res.json({ success: true });
   });
 
-  // POST /api/lives/:liveId/auctions — 방송 중 상품 등록 (multipart/form-data 또는 JSON 모두 지원)
-  r.post('/:liveId/auctions', upload.single('image'), async (req: Request, res: Response) => {
+  // POST /api/lives/:liveId/auctions — 방송 중 상품 등록 (셀러 본인 전용, multipart/form-data 또는 JSON 모두 지원)
+  r.post('/:liveId/auctions', requireAuth, upload.single('image'), async (req: Request, res: Response) => {
     const liveId = String(req.params.liveId);
     const live = lives.get(liveId);
     if (!live || live.status !== 'live') {
       // 업로드된 임시 파일 정리
       if (req.file) fs.unlink(req.file.path, () => {});
       res.status(404).json({ error: 'Live not found or not active' });
+      return;
+    }
+    if (live.sellerId !== String(req.user!.userId)) {
+      if (req.file) fs.unlink(req.file.path, () => {});
+      res.status(403).json({ error: '셀러 권한이 없습니다.' });
       return;
     }
 
@@ -771,12 +774,16 @@ export function createLiveRouter(io: Server) {
   });
 
   // PATCH /api/lives/:liveId/auctions/:auctionId/start — 경매 시작
-  r.patch('/:liveId/auctions/:auctionId/start', (req: Request, res: Response) => {
+  r.patch('/:liveId/auctions/:auctionId/start', requireAuth, (req: Request, res: Response) => {
     const liveId = String(req.params.liveId);
     const auctionId = String(req.params.auctionId);
     const live = lives.get(liveId);
     if (!live || live.status !== 'live') {
       res.status(404).json({ error: 'Live not found or not active' });
+      return;
+    }
+    if (live.sellerId !== String(req.user!.userId)) {
+      res.status(403).json({ error: '셀러 권한이 없습니다.' });
       return;
     }
     const auction = auctions.get(auctionId);
@@ -812,10 +819,10 @@ export function createLiveRouter(io: Server) {
   });
 
   // PATCH /api/lives/:liveId/auctions/:auctionId/end-fcfs — 선착순 셀러 중도 종료
-  r.patch('/:liveId/auctions/:auctionId/end-fcfs', (req: Request, res: Response) => {
+  r.patch('/:liveId/auctions/:auctionId/end-fcfs', requireAuth, (req: Request, res: Response) => {
     const liveId = String(req.params.liveId);
     const auctionId = String(req.params.auctionId);
-    const { sellerId } = req.body as { sellerId?: string };
+    const sellerId = String(req.user!.userId);
 
     const live = lives.get(liveId);
     if (!live || live.status !== 'live') {
@@ -834,7 +841,7 @@ export function createLiveRouter(io: Server) {
       return;
     }
 
-    if (sellerId && auction.sellerId !== String(sellerId)) {
+    if (auction.sellerId !== sellerId) {
       res.status(403).json({ error: '셀러 권한이 없습니다.' });
       return;
     }

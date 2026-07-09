@@ -1,6 +1,6 @@
 # 바로팜 — 산지직송 P2C 라이브 커머스 PRD
 
-> 최종 갱신: 2026-04-27 (rev 2) · 요구사항 추가
+> 최종 갱신: 2026-07-09 (rev 3) · 전수 보안·정합성 감사 반영 (상세 → `SECURITY.md`)
 
 ---
 
@@ -261,6 +261,12 @@ DB_NAME=barofarm
 | W4 | `routes/live.ts:59` | `LIVEKIT_URL` 미설정 시 `serverUrl: null` 그대로 응답 | 중간 |
 | W5 | `store/memory.ts` | 서버 재시작 시 진행 중 경매 메모리 손실 | 낮음 (Redis 2차 도입) |
 | M1 | `app/lib/main.dart` | 기본 Flutter 템플릿 미연결 (LoginScreen 진입 필요) | 긴급 |
+
+### 11-A. 2026-07-09 보안·정합성 감사 결과 (요약 — 상세 `SECURITY.md`)
+
+**해결 완료**: 요청 body의 신원(userId/sellerId/buyerId) 신뢰 제거 → 전 보호 라우트 JWT(`req.user`) 기반 인가 · 타인 프로필 민감정보(계좌·배송지) 노출 차단 · 즉시구매 재고 초과판매(oversell) 방지(트랜잭션+원자 차감, 실서버 검증) · FCFS 다수 낙찰자 보존 · 낙찰 저장 실패 시 상태 보존 · 공동구매 정원 초과 방지 · 소켓/타이머/캐시 누수 정리.
+
+**후속 권장(미적용)**: Socket `user:identify` 무검증(도청 여지), `JWT_SECRET` 강화 + admin DB 재확인, verify-identity 계정 열거, 전역 rate limit·helmet. → `SECURITY.md` "잔여 하드닝 항목" 참조.
 
 ---
 

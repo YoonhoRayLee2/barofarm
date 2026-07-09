@@ -227,8 +227,9 @@ export function createGroupDealsRouter(io: Server) {
       return;
     }
 
+    const conn = await pool.getConnection();
     try {
-      const [[deal]]: any = await pool.execute(
+      const [[deal]]: any = await conn.execute(
         'SELECT id, status, closes_at, current_participants, max_participants FROM group_deals WHERE id = ?',
         [dealId],
       );
@@ -245,27 +246,40 @@ export function createGroupDealsRouter(io: Server) {
         res.status(409).json({ error: '마감된 공동구매입니다.' });
         return;
       }
-      if (deal.max_participants != null && deal.current_participants >= deal.max_participants) {
+
+      await conn.beginTransaction();
+
+      // 정원 검사 + 증가를 원자적으로 수행 — max_participants가 없으면(무제한) 조건 없이 증가.
+      const capSql = deal.max_participants != null
+        ? 'UPDATE group_deals SET current_participants = current_participants + 1 WHERE id = ? AND current_participants < max_participants'
+        : 'UPDATE group_deals SET current_participants = current_participants + 1 WHERE id = ?';
+      const [capResult]: any = await conn.execute(capSql, [dealId]);
+
+      if (capResult.affectedRows === 0) {
+        await conn.rollback();
         res.status(409).json({ error: '최대 참여 인원에 도달했습니다.' });
         return;
       }
 
-      const [insertResult]: any = await pool.execute(
+      const [insertResult]: any = await conn.execute(
         'INSERT IGNORE INTO group_deal_participants (deal_id, buyer_id, quantity) VALUES (?, ?, ?)',
         [dealId, Number(buyerId), Number(quantity)],
       );
 
-      if (insertResult.affectedRows > 0) {
-        await pool.execute(
-          'UPDATE group_deals SET current_participants = current_participants + 1 WHERE id = ?',
+      // 이미 참여 중이었던 경우(INSERT IGNORE로 무시됨) — 위에서 증가시킨 current_participants를 되돌린다.
+      if (insertResult.affectedRows === 0) {
+        await conn.execute(
+          'UPDATE group_deals SET current_participants = GREATEST(current_participants - 1, 0) WHERE id = ?',
           [dealId],
         );
       }
 
-      const [[updated]]: any = await pool.execute(
+      const [[updated]]: any = await conn.execute(
         'SELECT current_participants, status FROM group_deals WHERE id = ?',
         [dealId],
       );
+
+      await conn.commit();
 
       io.emit('group-deal:updated', {
         dealId,
@@ -278,8 +292,11 @@ export function createGroupDealsRouter(io: Server) {
         currentParticipants: updated.current_participants,
       });
     } catch (err) {
+      try { await conn.rollback(); } catch { /* 이미 rollback/commit된 경우 무시 */ }
       console.error('[group-deals] POST /:id/join error:', err);
       res.status(500).json({ error: 'database error' });
+    } finally {
+      conn.release();
     }
   });
 

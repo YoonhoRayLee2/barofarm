@@ -2,7 +2,6 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
-import jwt from 'jsonwebtoken';
 import pool from '../db/mysql';
 import { lives, auctions } from '../store/memory';
 import {
@@ -11,7 +10,8 @@ import {
   BUYER_TIER_ORDER, SELLER_TIER_ORDER,
   BuyerTierKey, SellerTierKey,
 } from '../services/tier';
-import { requireAuth } from '../middleware/auth';
+import { requireAuth, optionalAuth } from '../middleware/auth';
+import { invalidateUserCache } from '../socket/chat';
 
 // 정산계좌 1원 인증 대기 상태 (key: userId)
 const pendingBankVerify = new Map<number, {
@@ -321,13 +321,14 @@ router.get('/:id/seller-tier', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/users/:id — 퍼블릭 프로필
-router.get('/:id', async (req: Request, res: Response) => {
+// GET /api/users/:id — 퍼블릭 프로필 (본인 조회 시에만 민감 필드 포함)
+router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
   const userId = req.params.id;
   if (!userId) {
     res.status(400).json({ error: 'user id is required' });
     return;
   }
+  const isSelf = req.user?.userId === Number(userId);
 
   try {
     const [rows] = await pool.execute(
@@ -375,13 +376,27 @@ router.get('/:id', async (req: Request, res: Response) => {
       return;
     }
 
-    res.json({
+    const base = {
       id: user.id,
       displayName: user.nickname || user.name,
       nickname: user.nickname,
       avatarUrl: user.avatar_url,
       role: user.role,
       nicknameChangedAt: user.nickname_changed_at ?? null,
+      interests: user.interests ? user.interests.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+      sellerShippingFee: user.seller_shipping_fee ?? 3000,
+      // 판매자 신뢰도 뱃지용 공개 필드 (계좌번호는 self 전용으로 유지)
+      isNhMember:     !!user.is_nh_member,
+      bankVerifiedAt: user.bank_verified_at ?? null,
+    };
+
+    if (!isSelf) {
+      res.json(base);
+      return;
+    }
+
+    res.json({
+      ...base,
       hasDeliveryAddress: !!user.delivery_address,
       delivery: user.delivery_address ? {
         name:    user.delivery_name,
@@ -392,18 +407,14 @@ router.get('/:id', async (req: Request, res: Response) => {
       } : null,
       farmZipcode: user.farm_zipcode ?? null,
       farmAddress: user.farm_address ?? null,
-      interests: user.interests ? user.interests.split(',').map((s: string) => s.trim()).filter(Boolean) : [],
       bankName:       user.bank_name ?? null,
       bankAccount:    user.bank_account
         ? '****' + user.bank_account.slice(-4)
         : null,
       bankHolder:     user.bank_holder ?? null,
-      bankVerifiedAt: user.bank_verified_at ?? null,
-      isNhMember:     !!user.is_nh_member,
       deliveryOption:  user.delivery_option ?? 'standard',
       hanaroMartName:  user.hanaro_mart_name ?? null,
       hanaroMartAddr:  user.hanaro_mart_addr ?? null,
-      sellerShippingFee:     user.seller_shipping_fee ?? 3000,
       allowHanaroDelivery:   user.allow_hanaro_delivery !== 0,
     });
   } catch (err) {
@@ -413,26 +424,16 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 // PATCH /api/users/:id — 프로필 수정 (아바타·닉네임)
-router.patch('/:id', uploadAvatar.single('avatar'), async (req: Request, res: Response) => {
+router.patch('/:id', requireAuth, uploadAvatar.single('avatar'), async (req: Request, res: Response) => {
   const userId = String(req.params.id);
   if (!userId) {
     res.status(400).json({ error: 'user id is required' });
     return;
   }
 
-  const authHeader = req.headers.authorization;
-  if (authHeader?.startsWith('Bearer ')) {
-    try {
-      const token = authHeader.slice(7);
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: number };
-      if (decoded.userId !== parseInt(userId, 10)) {
-        res.status(403).json({ error: '권한이 없습니다' });
-        return;
-      }
-    } catch {
-      res.status(401).json({ error: '인증이 필요합니다' });
-      return;
-    }
+  if (req.user!.userId !== parseInt(userId, 10)) {
+    res.status(403).json({ error: '권한이 없습니다' });
+    return;
   }
 
   const { nickname, interests, farmZipcode, farmAddress, sellerShippingFee } = req.body as {
@@ -552,6 +553,9 @@ router.patch('/:id', uploadAvatar.single('avatar'), async (req: Request, res: Re
       res.status(404).json({ error: 'user not found' });
       return;
     }
+
+    // 닉네임·아바타가 변경됐을 수 있으므로 채팅 소켓의 캐시를 무효화 — 다음 조회 시 최신 정보를 다시 가져온다.
+    invalidateUserCache(Number(userId));
 
     res.json({
       id: user.id,

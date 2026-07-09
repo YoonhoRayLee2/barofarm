@@ -97,10 +97,20 @@ export function createLive(id: string, { sellerId, sellerName, title, thumbnailU
   return state;
 }
 
+// 종료된 라이브를 lives Map에서 지연 삭제하기까지의 유예 시간.
+// GET /api/lives/:id, favorites 등이 종료 직후 라이브를 조회해도 메모리 상태를 그대로 반환할 수 있게
+// 짧은 유예를 두고, 그 이후엔 DB 조회로 자연히 fallback되므로(live.ts, favorites.ts 모두 DB fallback 보유) 안전하다.
+const LIVE_CLEANUP_DELAY_MS = 5 * 60 * 1000;
+
 export function endLive(id: string): void {
   const live = lives.get(id);
-  if (live) {
+  // 이미 ended면 재호출로 인한 cleanup 타이머 중복 등록을 막는다.
+  if (live && live.status !== 'ended') {
     live.status = 'ended';
+    setTimeout(() => {
+      const current = lives.get(id);
+      if (current && current.status === 'ended') lives.delete(id);
+    }, LIVE_CLEANUP_DELAY_MS);
   }
 }
 
@@ -157,11 +167,11 @@ export function createAuction(
   auctions.set(id, state);
 }
 
-export function endAuctionState(
+export async function endAuctionState(
   auc: AuctionState,
   io: Server,
-  onEnd?: (state: AuctionState) => void,
-): void {
+  onEnd?: (state: AuctionState) => Promise<void> | void,
+): Promise<void> {
   auc.timeLeft = 0;
   auc.status = 'ended';
 
@@ -214,16 +224,20 @@ export function endAuctionState(
   });
 
   stopTimer(auc.id);
-  onEnd?.(auc);
 
-  // 블라인드는 endedBlindBids에 복사 후 삭제
-  auctions.delete(auc.id);
+  // DB 저장(onEnd)이 성공한 경우에만 메모리에서 삭제 — 실패 시 상태를 보존해 재시도/수동 복구가 가능하도록 한다.
+  try {
+    await onEnd?.(auc);
+    auctions.delete(auc.id);
+  } catch (err) {
+    console.error(`[memory] endAuctionState: onEnd 실패, auction ${auc.id} 메모리 보존:`, (err as Error).message);
+  }
 }
 
 export function startTimer(
   id: string,
   io: Server,
-  onEnd?: (state: AuctionState) => void,
+  onEnd?: (state: AuctionState) => Promise<void> | void,
 ): void {
   stopTimer(id); // 중복 방지
   const auction = auctions.get(id);
@@ -241,7 +255,9 @@ export function startTimer(
     }
     auc.timeLeft -= 1;
     if (auc.timeLeft <= 0) {
-      endAuctionState(auc, io, onEnd);
+      endAuctionState(auc, io, onEnd).catch((err) => {
+        console.error(`[memory] startTimer: endAuctionState rejected for ${id}:`, (err as Error).message);
+      });
     } else {
       io.to(auc.liveId).emit('auction:update', auc);
     }
@@ -260,15 +276,19 @@ export function stopTimer(id: string): void {
 /**
  * 선착순(fcfs) 경매를 즉시 종료한다.
  * endAuctionState를 호출하고 onEnd 콜백을 트리거한다.
+ * 반환된 boolean은 종료 "시작" 성공 여부이며, DB 저장(onEnd) 완료를 기다리지 않는다 —
+ * 호출부에서 저장 완료까지 기다릴 필요가 없으면 결과를 무시해도 안전하다(내부에서 rejection을 처리함).
  */
 export function endFcfsAuction(
   id: string,
   io: Server,
-  onEnd?: (state: AuctionState) => void,
+  onEnd?: (state: AuctionState) => Promise<void> | void,
 ): boolean {
   const auc = auctions.get(id);
   if (!auc || auc.mode !== 'fcfs' || auc.status !== 'live') return false;
   stopTimer(id);
-  endAuctionState(auc, io, onEnd);
+  endAuctionState(auc, io, onEnd).catch((err) => {
+    console.error(`[memory] endFcfsAuction: endAuctionState rejected for ${id}:`, (err as Error).message);
+  });
   return true;
 }

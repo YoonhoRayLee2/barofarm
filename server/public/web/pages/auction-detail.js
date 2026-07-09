@@ -7,6 +7,7 @@
  * @module pages/auction-detail
  */
 
+import { request } from '/app/scripts/api.js';
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
@@ -71,9 +72,7 @@ export default async function load(params) {
 
   // Fetch live data
   try {
-    const res = await fetch(`/api/lives/${encodeURIComponent(liveId)}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const live = await res.json();
+    const live = await request(`/api/lives/${encodeURIComponent(liveId)}`);
     renderLive(content, live, user);
   } catch (err) {
     content.innerHTML = `

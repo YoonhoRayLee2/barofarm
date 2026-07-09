@@ -7,6 +7,7 @@
  */
 
 import * as api from '/app/scripts/api.js';
+import { request } from '/app/scripts/api.js';
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
@@ -361,13 +362,10 @@ export default async function load(params = {}) {
       // 배송지 조회: 일반배송(delivery-addresses) 또는 하나로마트 반값택배(users.deliveryOption)
       let deliveryAddr = null;
       try {
-        const res = await fetch(`/api/delivery-addresses?userId=${encodeURIComponent(currentUser.id)}`);
-        if (res.ok) {
-          const addresses = await res.json();
-          const defaultAddr = addresses.find(a => a.isDefault) || addresses[0];
-          if (defaultAddr) {
-            deliveryAddr = `${defaultAddr.address}${defaultAddr.detail ? ' ' + defaultAddr.detail : ''}`;
-          }
+        const addresses = await request(`/api/delivery-addresses?userId=${encodeURIComponent(currentUser.id)}`);
+        const defaultAddr = addresses.find(a => a.isDefault) || addresses[0];
+        if (defaultAddr) {
+          deliveryAddr = `${defaultAddr.address}${defaultAddr.detail ? ' ' + defaultAddr.detail : ''}`;
         }
       } catch { /* ignore */ }
 
@@ -444,13 +442,10 @@ export default async function load(params = {}) {
       overlay.querySelector('.pd-confirm-sheet__ok').addEventListener('click', async () => {
         overlay.querySelector('.pd-confirm-sheet__ok').disabled = true;
         try {
-          const res = await fetch(`/api/products/${product.id}/purchase`, {
+          const data = await request(`/api/products/${product.id}/purchase`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ buyerId: currentUser.id, quantity: selectedQty }),
           });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || '구매 실패');
           overlay.remove();
           navigate('/app/order-detail/' + data.orderId);
         } catch (err) {
@@ -474,9 +469,7 @@ async function loadMarketReference(page, name, category) {
   try {
     const params = new URLSearchParams({ name });
     if (category) params.set('category', category);
-    const res = await fetch(`/api/market-prices/match?${params.toString()}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    const data = await request(`/api/market-prices/match?${params.toString()}`);
     if (!data || !data.matched || !data.price) return;
 
     const p = data.price;
@@ -517,9 +510,7 @@ async function loadProductRecommendations(page, category) {
     const params = category
       ? `categories=${encodeURIComponent(category)}&limit=6`
       : 'limit=6';
-    const res = await fetch(`/api/recommendations/by-interests?${params}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const { recommendations } = await res.json();
+    const { recommendations } = await request(`/api/recommendations/by-interests?${params}`);
 
     if (!recommendations || recommendations.length === 0) return;
 

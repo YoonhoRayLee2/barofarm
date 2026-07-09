@@ -6,6 +6,7 @@
  *
  * @module pages/group-deal-create
  */
+import { request } from '/app/scripts/api.js';
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
@@ -215,13 +216,7 @@ export default async function load() {
     if (thumbFile) fd.append('image', thumbFile);
 
     try {
-      const res = await fetch('/api/group-deals', { method: 'POST', body: fd });
-      if (!res.ok) {
-        let err = {};
-        try { err = await res.json(); } catch {}
-        throw new Error(err.error || `HTTP ${res.status}`);
-      }
-      const data = await res.json();
+      const data = await request('/api/group-deals', { method: 'POST', body: fd });
       showToast('공동구매가 개설되었습니다!', { variant: 'success' });
       navigate('/app/group-deals/' + data.id);
     } catch (err) {

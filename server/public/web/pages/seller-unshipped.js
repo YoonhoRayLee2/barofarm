@@ -6,6 +6,7 @@ import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import { personIconSVG } from '/app/scripts/person-icon.js';
 import * as api from '/app/scripts/api.js';
+import { request } from '/app/scripts/api.js';
 import { showToast } from '/app/components/toast.js';
 import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
@@ -64,9 +65,7 @@ export default async function load() {
   async function loadList() {
     const el = page.querySelector('#unshipped-content');
     try {
-      const res = await fetch(`/api/users/${encodeURIComponent(user.id)}/unshipped`);
-      if (!res.ok) throw new Error('failed');
-      const list = await res.json();
+      const list = await request(`/api/users/${encodeURIComponent(user.id)}/unshipped`);
       render(el, list);
     } catch {
       el.innerHTML = `<div class="unshipped-empty"><span>데이터를 불러올 수 없습니다</span><button class="unshipped-retry-btn" id="unshipped-retry">다시 시도</button></div>`;
@@ -170,20 +169,10 @@ export default async function load() {
 
     btn.disabled = true;
     try {
-      const token = await api.getToken();
-      const headers = { 'Content-Type': 'application/json' };
-      if (token) headers.Authorization = `Bearer ${token}`;
-
-      const res = await fetch('/api/auctions/batch-ship', {
+      const data = await request('/api/auctions/batch-ship', {
         method: 'POST',
-        headers,
         body: JSON.stringify({ sellerId: user.id, buyerId: Number(buyerId), auctionIds }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${res.status}`);
-      }
-      const data = await res.json();
       showToast(`합배송 처리 완료! 배송비 ${Number(data.shippingFee || 0).toLocaleString('ko-KR')}원 자동 포함`, { variant: 'success', duration: 2400 });
       loadList();
     } catch (err) {

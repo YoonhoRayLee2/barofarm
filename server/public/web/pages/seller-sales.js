@@ -5,6 +5,7 @@
  * @module pages/seller-sales
  */
 
+import { request } from '/app/scripts/api.js';
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import { personIconSVG } from '/app/scripts/person-icon.js';
@@ -136,9 +137,7 @@ export default async function load() {
       </div>
     `;
     try {
-      const res = await fetch(`/api/users/${encodeURIComponent(user.id)}/sales`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      _allSales = await res.json();
+      _allSales = await request(`/api/users/${encodeURIComponent(user.id)}/sales`);
       applyFilter();
     } catch (err) {
       contentEl.innerHTML = `

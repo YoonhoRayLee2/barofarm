@@ -1,8 +1,10 @@
 import { Router, Request, Response } from 'express';
 import pool from '../db/mysql';
 import { createNotification } from '../services/notifications';
+import { requireAuth } from '../middleware/auth';
 
 const router = Router();
+router.use(requireAuth);
 
 // 신청 가능한 주문(배송) 상태
 const REFUNDABLE_STATUSES = ['shipped', 'purchase_confirmed'];
@@ -25,35 +27,38 @@ function serialize(r: any) {
   };
 }
 
-// GET /api/refunds/by-auction/:auctionId — 해당 주문의 최신 환불 건 (없으면 null)
+// GET /api/refunds/by-auction/:auctionId — 해당 주문의 최신 환불 건 (없으면 null, 당사자만)
 router.get('/by-auction/:auctionId', async (req: Request, res: Response) => {
   try {
     const [rows] = await pool.query<any[]>(
       'SELECT * FROM refunds WHERE auction_id = ? ORDER BY id DESC LIMIT 1',
       [req.params.auctionId],
     );
-    res.json(rows.length ? serialize(rows[0]) : null);
+    if (!rows.length) return res.json(null);
+    const r = rows[0];
+    const userId = req.user!.userId;
+    if (r.buyer_id !== userId && r.seller_id !== userId) {
+      return res.status(403).json({ error: 'not your order' });
+    }
+    res.json(serialize(r));
   } catch (err) {
     console.error('[refunds] GET /by-auction', err);
     res.status(500).json({ error: 'internal_error' });
   }
 });
 
-// GET /api/refunds?sellerId= | ?buyerId= — 목록
+// GET /api/refunds?role=seller|buyer — 요청자 관련 건 목록 (기본 seller)
 router.get('/', async (req: Request, res: Response) => {
-  const sellerId = req.query.sellerId ? Number(req.query.sellerId) : null;
-  const buyerId = req.query.buyerId ? Number(req.query.buyerId) : null;
-  if (!sellerId && !buyerId) return res.status(400).json({ error: 'sellerId or buyerId required' });
+  const userId = req.user!.userId;
+  const col = req.query.role === 'buyer' ? 'r.buyer_id' : 'r.seller_id';
 
   try {
-    const col = sellerId ? 'r.seller_id' : 'r.buyer_id';
-    const val = sellerId ?? buyerId;
     const [rows] = await pool.query<any[]>(
       `SELECT r.*, a.product_name, a.image_url
          FROM refunds r JOIN auctions a ON a.id = r.auction_id
         WHERE ${col} = ?
         ORDER BY r.id DESC`,
-      [val],
+      [userId],
     );
     res.json(rows.map(serialize));
   } catch (err) {
@@ -62,12 +67,13 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/refunds — 환불 신청 (구매자)
-// body: { auctionId, buyerId, reason }
+// POST /api/refunds — 환불 신청 (구매자 본인)
+// body: { auctionId, reason }
 router.post('/', async (req: Request, res: Response) => {
-  const { auctionId, buyerId, reason } = req.body;
-  if (!auctionId || !buyerId || !reason || !String(reason).trim()) {
-    return res.status(400).json({ error: 'auctionId, buyerId, reason required' });
+  const buyerId = req.user!.userId;
+  const { auctionId, reason } = req.body;
+  if (!auctionId || !reason || !String(reason).trim()) {
+    return res.status(400).json({ error: 'auctionId, reason required' });
   }
 
   try {
@@ -79,7 +85,7 @@ router.post('/', async (req: Request, res: Response) => {
     );
     const a = aRows[0];
     if (!a) return res.status(404).json({ error: 'order not found' });
-    if (String(a.top_bidder_id) !== String(buyerId)) {
+    if (a.top_bidder_id !== buyerId) {
       return res.status(403).json({ error: 'not your order' });
     }
     if (!REFUNDABLE_STATUSES.includes(a.delivery_status)) {
@@ -119,11 +125,9 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // PATCH /api/refunds/:id/approve — 판매자 승인
-// body: { sellerId }
 router.patch('/:id/approve', async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  const sellerId = Number(req.body.sellerId);
-  if (!sellerId) return res.status(400).json({ error: 'sellerId required' });
+  const sellerId = req.user!.userId;
 
   try {
     const [rows] = await pool.query<any[]>(
@@ -132,7 +136,7 @@ router.patch('/:id/approve', async (req: Request, res: Response) => {
     );
     const r = rows[0];
     if (!r) return res.status(404).json({ error: 'refund not found' });
-    if (String(r.seller_id) !== String(sellerId)) return res.status(403).json({ error: 'not your refund' });
+    if (r.seller_id !== sellerId) return res.status(403).json({ error: 'not your refund' });
     if (r.status !== 'requested') return res.status(409).json({ error: 'not in requested state' });
 
     await pool.query("UPDATE refunds SET status='approved', decided_at=NOW() WHERE id=?", [id]);
@@ -150,12 +154,11 @@ router.patch('/:id/approve', async (req: Request, res: Response) => {
 });
 
 // PATCH /api/refunds/:id/reject — 판매자 거절
-// body: { sellerId, rejectReason }
+// body: { rejectReason }
 router.patch('/:id/reject', async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  const sellerId = Number(req.body.sellerId);
+  const sellerId = req.user!.userId;
   const rejectReason = String(req.body.rejectReason ?? '').trim();
-  if (!sellerId) return res.status(400).json({ error: 'sellerId required' });
 
   try {
     const [rows] = await pool.query<any[]>(
@@ -164,7 +167,7 @@ router.patch('/:id/reject', async (req: Request, res: Response) => {
     );
     const r = rows[0];
     if (!r) return res.status(404).json({ error: 'refund not found' });
-    if (String(r.seller_id) !== String(sellerId)) return res.status(403).json({ error: 'not your refund' });
+    if (r.seller_id !== sellerId) return res.status(403).json({ error: 'not your refund' });
     if (r.status !== 'requested') return res.status(409).json({ error: 'not in requested state' });
 
     await pool.query(
@@ -186,11 +189,9 @@ router.patch('/:id/reject', async (req: Request, res: Response) => {
 
 // PATCH /api/refunds/:id/complete — 환불 완료 처리 (판매자)
 // 승인된 건을 완료 상태로 전환하고, 주문은 환불 처리 표시
-// body: { sellerId }
 router.patch('/:id/complete', async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  const sellerId = Number(req.body.sellerId);
-  if (!sellerId) return res.status(400).json({ error: 'sellerId required' });
+  const sellerId = req.user!.userId;
 
   const conn = await pool.getConnection();
   try {
@@ -200,7 +201,7 @@ router.patch('/:id/complete', async (req: Request, res: Response) => {
     );
     const r = rows[0];
     if (!r) { conn.release(); return res.status(404).json({ error: 'refund not found' }); }
-    if (String(r.seller_id) !== String(sellerId)) { conn.release(); return res.status(403).json({ error: 'not your refund' }); }
+    if (r.seller_id !== sellerId) { conn.release(); return res.status(403).json({ error: 'not your refund' }); }
     if (r.status !== 'approved') { conn.release(); return res.status(409).json({ error: 'not in approved state' }); }
 
     await conn.beginTransaction();
