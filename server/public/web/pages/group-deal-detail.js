@@ -14,6 +14,7 @@ import { showToast } from '/app/components/toast.js';
 import { personIconSVG } from '/app/scripts/person-icon.js';
 import { thumbFallback } from '/app/components/brand-assets.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
+import { openLightbox, closeLightbox } from '/app/components/lightbox.js';
 
 const _cssId = 'page-css-group-deal-detail';
 if (!document.getElementById(_cssId)) {
@@ -130,7 +131,7 @@ export default async function load(params) {
     const emoji = CAT_EMOJI[d.category] || '🛒';
 
     const heroHtml = d.imageUrl
-      ? `<img class="gdd-hero__img" src="${escapeAttr(d.imageUrl)}" alt="">`
+      ? `<img class="gdd-hero__img" src="${escapeAttr(d.imageUrl)}" alt="" role="button" tabindex="0" style="cursor:zoom-in">`
       : `<div class="gdd-hero__fallback" style="width:100%;height:100%;line-height:0;flex-shrink:0">${thumbFallback(d.category || '기타')}</div>`;
 
     const sellerAvatarHtml = d.sellerAvatar
@@ -183,6 +184,18 @@ export default async function load(params) {
     scrollEl.querySelector('#gdd-seller-link').addEventListener('click', () => {
       if (d.sellerId) navigate('/app/user/' + d.sellerId);
     });
+
+    const heroImg = scrollEl.querySelector('.gdd-hero__img');
+    if (heroImg && d.imageUrl) {
+      const openHero = () => openLightbox(d.imageUrl);
+      heroImg.addEventListener('click', openHero);
+      heroImg.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openHero();
+        }
+      });
+    }
 
     renderActionBar(d, isSeller);
     startCountdown(d.closesAt);
@@ -359,6 +372,7 @@ export default async function load(params) {
     if (countdownTimer) clearInterval(countdownTimer);
     socket.off('group-deal:updated', onUpdated);
     socket.disconnect();
+    closeLightbox();
   });
 
   await loadDetail();

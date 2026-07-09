@@ -1225,6 +1225,13 @@ export default async function load(params) {
           img.loading = 'lazy';
           img.alt = '메모 사진';
           img.src = String(url);
+          img.setAttribute('role', 'button');
+          img.tabIndex = 0;
+          img.style.cursor = 'zoom-in';
+          img.addEventListener('click', () => openImgZoom(img.src));
+          img.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openImgZoom(img.src); }
+          });
           imgWrap.appendChild(img);
         });
         content.appendChild(imgWrap);
@@ -1355,6 +1362,12 @@ export default async function load(params) {
     imgZoomImg.src = '';
   }
   imgZoomOverlay.addEventListener('click', closeImgZoom);
+
+  const onImgZoomEsc = (e) => {
+    if (e.key === 'Escape' && imgZoomOverlay.classList.contains('ls-img-zoom-overlay--visible')) closeImgZoom();
+  };
+  document.addEventListener('keydown', onImgZoomEsc);
+  unsubFns.push(() => document.removeEventListener('keydown', onImgZoomEsc));
 
   const lsThumb = page.querySelector('#ls-product-thumb');
   if (lsThumb) {

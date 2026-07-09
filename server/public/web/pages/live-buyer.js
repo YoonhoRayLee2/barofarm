@@ -1173,6 +1173,13 @@ export default async function load(params) {
         img.loading = 'lazy';
         img.alt = '메모 사진';
         img.src = String(url);
+        img.setAttribute('role', 'button');
+        img.tabIndex = 0;
+        img.style.cursor = 'zoom-in';
+        img.addEventListener('click', () => openImgZoom(img.src));
+        img.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openImgZoom(img.src); }
+        });
         imgWrap.appendChild(img);
       });
       content.appendChild(imgWrap);
@@ -1487,11 +1494,19 @@ export default async function load(params) {
 
   // 이벤트 위임: #lb-product-thumb img 와 .ps-product-thumb (product-sheet)
   page.addEventListener('click', (e) => {
+    const memoImg = e.target.closest('.lb-memo-imgs img');
+    if (memoImg) { openImgZoom(memoImg.src); return; }
     const thumbImg = e.target.closest('#lb-product-thumb img');
     const psThumb = e.target.closest('.ps-product-thumb:not(.ps-product-thumb--empty)');
     if (thumbImg) { openImgZoom(thumbImg.src); return; }
     if (psThumb && psThumb.tagName === 'IMG') { openImgZoom(psThumb.src); }
   });
+
+  const onImgZoomEsc = (e) => {
+    if (e.key === 'Escape' && imgZoomOverlay.classList.contains('lb-img-zoom-overlay--visible')) closeImgZoom();
+  };
+  document.addEventListener('keydown', onImgZoomEsc);
+  unsubFns.push(() => document.removeEventListener('keydown', onImgZoomEsc));
 
   // ---- Event listeners ----
   page.querySelector('#lb-back-btn').addEventListener('click', () => window.history.back());

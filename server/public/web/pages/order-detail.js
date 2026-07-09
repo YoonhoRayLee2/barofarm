@@ -11,6 +11,7 @@ import { showToast } from '/app/components/toast.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
 import { formatPrice, formatDate } from '/app/scripts/format.js';
 import { createReview, getReviewByAuction } from '/app/scripts/api.js';
+import { openLightbox } from '/app/components/lightbox.js';
 
 const _cssId = 'page-css-order-detail';
 if (!document.getElementById(_cssId)) {
@@ -222,7 +223,7 @@ export default async function load(params) {
       <section class="od-card">
         <div class="od-card__thumb">
           ${imgSrc
-            ? `<img src="${escapeAttr(imgSrc)}" alt="${escapeHtml(data.productName)}" loading="lazy">`
+            ? `<img src="${escapeAttr(imgSrc)}" alt="${escapeHtml(data.productName)}" loading="lazy" role="button" tabindex="0" style="cursor:zoom-in">`
             : `<span class="od-card__thumb-fallback">🌿</span>`}
         </div>
         <div class="od-card__body">
@@ -491,6 +492,32 @@ export default async function load(params) {
     const reviewHtml = `<section class="od-review" id="od-review"></section>`;
 
     container.innerHTML = card + stepperHtml + feeHtml + shippingFeeHtml + trackingHtml + deliveryHtml + carbonHtml + timelineHtml + actionHtml + refundHtml + reviewHtml + recommendationsHtml;
+
+    /* 상품 사진 라이트박스 */
+    if (imgSrc) {
+      const cardImg = container.querySelector('.od-card__thumb img');
+      if (cardImg) {
+        const openCard = () => openLightbox(imgSrc);
+        cardImg.addEventListener('click', openCard);
+        cardImg.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCard(); }
+        });
+      }
+    }
+
+    /* 타임라인 사진 라이트박스 (이벤트 위임 — 비동기 렌더 대응) */
+    const timelineBody = container.querySelector('#od-timeline-body');
+    if (timelineBody) {
+      timelineBody.addEventListener('click', (e) => {
+        const photo = e.target.closest('.od-tl-card__photo');
+        if (photo && photo.src) openLightbox(photo.src);
+      });
+      timelineBody.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const photo = e.target.closest('.od-tl-card__photo');
+        if (photo && photo.src) { e.preventDefault(); openLightbox(photo.src); }
+      });
+    }
 
     /* 환불 섹션 로드 */
     loadRefundSection(container, data, user, isSeller, status, loadDetail);
@@ -1088,7 +1115,7 @@ function renderTimelineBody(body, items, auctionId, user, isSeller, carbon) {
   const cards = items.map(it => {
     const meta = TIMELINE_STAGE_META[it.stage] || { icon: '📌', label: it.stage };
     const photoHtml = it.photoUrl
-      ? `<img class="od-tl-card__photo" src="${escapeAttr(it.photoUrl)}" alt="${escapeHtml(meta.label)} 사진" loading="lazy">`
+      ? `<img class="od-tl-card__photo" src="${escapeAttr(it.photoUrl)}" alt="${escapeHtml(meta.label)} 사진" loading="lazy" role="button" tabindex="0" style="cursor:zoom-in">`
       : '';
     const noteHtml = it.farmerNote
       ? `<p class="od-tl-card__note">${escapeHtml(it.farmerNote)}</p>`

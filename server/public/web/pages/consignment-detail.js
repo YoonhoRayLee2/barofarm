@@ -8,6 +8,7 @@ import { showToast } from '/app/components/toast.js';
 import { personIconSVG } from '/app/scripts/person-icon.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
 import { formatPrice } from '/app/scripts/format.js';
+import { openLightbox } from '/app/components/lightbox.js';
 
 const _cssId = 'page-css-consignment-detail';
 if (!document.getElementById(_cssId)) {
@@ -119,21 +120,34 @@ function renderDetail(page, data, user) {
   });
 
   // Carousel
+  let carouselIdx = 0;
+  const carouselImgEl = contentEl.querySelector('#cd-carousel-img');
   if (images.length > 1) {
-    let idx = 0;
-    const imgEl = contentEl.querySelector('#cd-carousel-img');
     const counterEl = contentEl.querySelector('#cd-counter');
     const update = () => {
-      imgEl.src = images[idx];
-      counterEl.textContent = `${idx + 1}/${images.length}`;
+      carouselImgEl.src = images[carouselIdx];
+      counterEl.textContent = `${carouselIdx + 1}/${images.length}`;
     };
     contentEl.querySelector('#cd-prev').addEventListener('click', () => {
-      idx = (idx - 1 + images.length) % images.length;
+      carouselIdx = (carouselIdx - 1 + images.length) % images.length;
       update();
     });
     contentEl.querySelector('#cd-next').addEventListener('click', () => {
-      idx = (idx + 1) % images.length;
+      carouselIdx = (carouselIdx + 1) % images.length;
       update();
+    });
+  }
+  if (carouselImgEl && images.length > 0) {
+    carouselImgEl.style.cursor = 'zoom-in';
+    carouselImgEl.setAttribute('role', 'button');
+    carouselImgEl.setAttribute('tabindex', '0');
+    const openCarousel = () => openLightbox(images, carouselIdx);
+    carouselImgEl.addEventListener('click', openCarousel);
+    carouselImgEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openCarousel();
+      }
     });
   }
 

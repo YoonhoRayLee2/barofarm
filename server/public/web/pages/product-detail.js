@@ -15,6 +15,7 @@ import { personIconSVG } from '/app/scripts/person-icon.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
 import { formatPriceRaw } from '/app/scripts/format.js';
 import { thumbFallback } from '/app/components/brand-assets.js';
+import { openLightbox, closeLightbox } from '/app/components/lightbox.js';
 
 /* ── CSS injection ─────────────────────────────────────────── */
 const _cssId = 'page-css-product-detail';
@@ -200,7 +201,16 @@ export default async function load(params = {}) {
     const url = allImages[currentImgIndex];
     galleryMain.innerHTML = `<img src="${escapeAttr(url)}" alt="${escapeAttr(
       product.name || ''
-    )}" />`;
+    )}" role="button" tabindex="0" style="cursor:zoom-in" />`;
+    const mainImg = galleryMain.querySelector('img');
+    const openMain = () => openLightbox(allImages, currentImgIndex);
+    mainImg.addEventListener('click', openMain);
+    mainImg.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openMain();
+      }
+    });
   }
 
   function renderStrip() {
