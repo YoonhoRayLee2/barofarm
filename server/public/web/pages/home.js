@@ -5,7 +5,7 @@
  * @module pages/home
  */
 
-import { getLives, getProducts, getUser, getNotifications } from '/app/scripts/api.js';
+import { getLives, getProducts, getUser, getNotifications, request } from '/app/scripts/api.js';
 import { getSecureItem, setSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace, setCleanup } from '/app/scripts/router.js';
 import * as Sock from '/app/scripts/socket.js';
@@ -207,9 +207,7 @@ export default async function load() {
   // 비동기로 시세 로드
   (async () => {
     try {
-      const res = await fetch('/api/market-prices');
-      if (!res.ok) throw new Error('failed');
-      const items = await res.json();
+      const items = await request('/api/market-prices');
       const track = page.querySelector('#home-ticker-track');
       if (!track || !items.length) return;
 
@@ -491,9 +489,7 @@ export default async function load() {
   // ── 공동구매 섹션 (모집중 4건만) ──
   async function fetchAndRenderGroupDeals() {
     try {
-      const res = await fetch('/api/group-deals?status=recruiting&limit=4');
-      if (!res.ok) return;
-      const list = await res.json();
+      const list = await request('/api/group-deals?status=recruiting&limit=4');
       renderGroupDealsSection(Array.isArray(list) ? list : []);
     } catch {
       // 조용히 실패 — 섹션 숨김 유지
@@ -747,11 +743,7 @@ async function loadHomeRecommendations(feed) {
   if (isNhmallRecHidden()) { section.classList.add('is-hidden'); return; }
 
   try {
-    const token = await getSecureItem('barofarm_token');
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
-    const res = await fetch('/api/recommendations/personalized?limit=8', { headers });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const { recommendations } = await res.json();
+    const { recommendations } = await request('/api/recommendations/personalized?limit=8');
 
     if (!recommendations || recommendations.length === 0) return;
 

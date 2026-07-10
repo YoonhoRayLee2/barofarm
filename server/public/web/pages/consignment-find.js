@@ -3,6 +3,7 @@
  * Route: /app/consignment/find
  */
 import { getSecureItem } from '/app/scripts/native-bridge.js';
+import { request } from '/app/scripts/api.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 
@@ -55,9 +56,7 @@ export default async function load() {
     el.innerHTML = `<div class="cf-loading"><div class="cf-loading__dot"></div><span>불러오는 중...</span></div>`;
     try {
       const url = '/api/consignments' + (category ? `?category=${encodeURIComponent(category)}` : '');
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('failed');
-      const list = await res.json();
+      const list = await request(url);
       render(el, list);
     } catch {
       el.innerHTML = `<div class="cf-empty"><span class="cf-empty__text">데이터를 불러올 수 없습니다</span><button class="cf-retry-btn" id="cf-retry">다시 시도</button></div>`;

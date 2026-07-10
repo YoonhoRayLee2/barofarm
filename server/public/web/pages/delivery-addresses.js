@@ -9,6 +9,7 @@
  */
 
 import { getSecureItem } from '/app/scripts/native-bridge.js';
+import { request } from '/app/scripts/api.js';
 import { replace, navigate } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
 import { showConfirmDialog } from '/app/components/confirm-dialog.js';
@@ -65,9 +66,7 @@ export default async function load() {
       </div>
     `;
     try {
-      const res = await fetch(`/api/delivery-addresses?userId=${encodeURIComponent(user.id)}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const list = await res.json();
+      const list = await request(`/api/delivery-addresses?userId=${encodeURIComponent(user.id)}`);
       renderList(list);
     } catch (err) {
       listEl.innerHTML = `
@@ -147,10 +146,9 @@ export default async function load() {
     });
     if (!ok) return;
     try {
-      const res = await fetch(`/api/delivery-addresses/${addr.id}?userId=${encodeURIComponent(user.id)}`, {
+      await request(`/api/delivery-addresses/${addr.id}?userId=${encodeURIComponent(user.id)}`, {
         method: 'DELETE',
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       showToast('배송지가 삭제되었습니다', { variant: 'success', duration: 1600 });
       await loadList();
     } catch {
@@ -160,12 +158,10 @@ export default async function load() {
 
   async function onSetDefault(addr) {
     try {
-      const res = await fetch(`/api/delivery-addresses/${addr.id}/set-default`, {
+      await request(`/api/delivery-addresses/${addr.id}/set-default`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       showToast('기본배송지로 설정되었습니다', { variant: 'success', duration: 1600 });
       await loadList();
     } catch {
@@ -290,12 +286,10 @@ export default async function load() {
           ? `/api/delivery-addresses/${addr.id}`
           : '/api/delivery-addresses';
         const method = isEdit ? 'PATCH' : 'POST';
-        const res = await fetch(url, {
+        await request(url, {
           method,
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         showToast(isEdit ? '배송지가 수정되었습니다' : '배송지가 등록되었습니다', { variant: 'success', duration: 1600 });
         if (!isEdit && returnTo) {
           close();
@@ -458,8 +452,7 @@ export default async function load() {
       gpsBtn.textContent = '⏳';
       gpsBtn.disabled = true;
       try {
-        const res = await fetch(`/api/hanaro-stores?lat=${lat}&lng=${lng}&radius=10`);
-        const stores = await res.json();
+        const stores = await request(`/api/hanaro-stores?lat=${lat}&lng=${lng}&radius=10`);
         renderStores(stores);
         if (!stores.length) {
           listEl.innerHTML = '<li class="hanaro-search-empty">10km 이내 하나로마트가 없습니다. 지역명으로 검색해보세요</li>';
@@ -499,8 +492,7 @@ export default async function load() {
       }
       _searchTimer = setTimeout(async () => {
         try {
-          const res = await fetch(`/api/hanaro-stores?q=${encodeURIComponent(q)}`);
-          renderStores(await res.json());
+          renderStores(await request(`/api/hanaro-stores?q=${encodeURIComponent(q)}`));
         } catch (_) {}
       }, 300);
     });
@@ -522,9 +514,7 @@ export default async function load() {
   // ── Load saved option ────────────────────────────────────────────────
   async function loadDeliveryOption() {
     try {
-      const res = await fetch(`/api/users/${encodeURIComponent(user.id)}`);
-      if (!res.ok) return;
-      const data = await res.json();
+      const data = await request(`/api/users/${encodeURIComponent(user.id)}`);
       const option = data.deliveryOption || 'standard';
       cardsEl.querySelectorAll('.delivery-option-card').forEach((c) => {
         c.classList.toggle('is-active', c.dataset.option === option);
@@ -548,16 +538,14 @@ export default async function load() {
     }
 
     try {
-      const res = await fetch(`/api/users/${encodeURIComponent(user.id)}/delivery-option`, {
+      await request(`/api/users/${encodeURIComponent(user.id)}/delivery-option`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           deliveryOption,
           hanaroMartName: _selectedStore?.name ?? null,
           hanaroMartAddr: _selectedStore?.address ?? null,
         }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       showToast('배송 방법이 저장되었습니다', { variant: 'success', duration: 1600 });
     } catch {
       showToast('저장에 실패했습니다', { variant: 'error', duration: 2000 });

@@ -11,6 +11,7 @@
  * @module pages/profile-orders
  */
 
+import { request } from '/app/scripts/api.js';
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import { escapeHtml, escapeAttr } from '/app/scripts/dom.js';
@@ -148,9 +149,7 @@ export default async function load() {
       </div>
     `;
     try {
-      const res = await fetch(`/api/users/${encodeURIComponent(user.id)}/orders`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      let orders = await res.json();
+      let orders = await request(`/api/users/${encodeURIComponent(user.id)}/orders`);
       if (sellerIdFilter) {
         orders = orders.filter(o => String(o.sellerId) === String(sellerIdFilter));
       }

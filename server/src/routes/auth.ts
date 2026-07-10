@@ -202,18 +202,24 @@ router.post('/verify-identity', authLimiter, async (req: Request, res: Response)
 
   try {
     const [rows] = await pool.execute(
-      'SELECT id FROM users WHERE username = ? AND phone = ?',
+      'SELECT id, password_hash FROM users WHERE username = ? AND phone = ?',
       [username, normalizedPhone],
     ) as [unknown[], unknown];
 
-    const user = (rows as Array<{ id: number }>)[0];
+    const user = (rows as Array<{ id: number; password_hash: string }>)[0];
+
+    // 계정 열거 방지: 일치/불일치 모두 동일한 200 응답 형태를 반환한다.
+    // 일치할 때만 resetToken을 채워주고, 불일치 시에는 필드 자체를 비운다.
+    // (프론트 forgot-password.js는 data.resetToken 유무로 다음 단계 진행 여부를 판단하므로
+    //  기존 흐름은 그대로 유지되고, 응답 코드/타이밍 차이로 계정 존재 여부를 알 수 없게 된다.)
     if (!user) {
-      res.status(404).json({ error: '일치하는 계정을 찾을 수 없습니다' });
+      res.json({ resetToken: null });
       return;
     }
 
+    // 토큰에 발급 시점 password_hash 앞 8자를 넣어 1회성 보장(아래 reset-password에서 비교).
     const resetToken = jwt.sign(
-      { userId: user.id, purpose: 'reset' },
+      { userId: user.id, purpose: 'reset', ph: user.password_hash.slice(0, 8) },
       JWT_SECRET,
       { algorithm: 'HS256', expiresIn: '10m' },
     );
@@ -238,9 +244,21 @@ router.post('/reset-password', authLimiter, async (req: Request, res: Response):
   }
 
   try {
-    const decoded = jwt.verify(resetToken, JWT_SECRET) as jwt.JwtPayload;
-    if (decoded.purpose !== 'reset') {
+    const decoded = jwt.verify(resetToken, JWT_SECRET) as jwt.JwtPayload & { ph?: string };
+    if (decoded.purpose !== 'reset' || typeof decoded.ph !== 'string') {
       res.status(400).json({ error: '유효하지 않은 토큰입니다' });
+      return;
+    }
+
+    // 1회성 보장: 토큰 발급 시점의 password_hash 앞 8자와 현재 hash를 비교한다.
+    // 이미 비밀번호가 변경됐다면(=이 토큰으로 재사용 시도) 현재 hash가 달라져 거부된다.
+    const [rows] = await pool.execute(
+      'SELECT password_hash FROM users WHERE id = ?',
+      [decoded.userId],
+    ) as [unknown[], unknown];
+    const user = (rows as Array<{ password_hash: string }>)[0];
+    if (!user || user.password_hash.slice(0, 8) !== decoded.ph) {
+      res.status(400).json({ error: '토큰이 만료됐거나 유효하지 않습니다' });
       return;
     }
 

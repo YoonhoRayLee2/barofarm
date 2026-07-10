@@ -6,6 +6,7 @@ import path from 'path';
 import pool from '../db/mysql';
 import { getBuyerTier, getSellerTier, calcBuyerDiscount, calcSellerFee } from '../services/tier';
 import { createNotificationsBulk, getUsersByInterest, notifyUsers } from '../services/notifications';
+import { requireAuth } from '../middleware/auth';
 
 const UPLOADS_DIR = path.join(__dirname, '..', '..', 'public', 'uploads', 'products');
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -97,13 +98,14 @@ export function createProductsRouter(io: Server): Router {
 }
 
 // POST /api/products — 상품 등록
-router.post('/', uploadFields, async (req: Request, res: Response) => {
-  const { sellerId, name, description, price, stock, category, features, attributes, isSeasonalBundle, subscriberPrice, seasonLabel } = req.body;
+router.post('/', requireAuth, uploadFields, async (req: Request, res: Response) => {
+  const sellerId = req.user!.userId;
+  const { name, description, price, stock, category, features, attributes, isSeasonalBundle, subscriberPrice, seasonLabel } = req.body;
   const files = (req.files ?? {}) as UploadedFiles;
 
-  if (!sellerId || !name || !price) {
+  if (!name || !price) {
     unlockTmpFiles(files);
-    res.status(400).json({ error: 'sellerId, name, price는 필수입니다.' });
+    res.status(400).json({ error: 'name, price는 필수입니다.' });
     return;
   }
 
@@ -272,8 +274,8 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// PATCH /api/products/:id — 상품 수정
-router.patch('/:id', uploadFields, async (req: Request, res: Response) => {
+// PATCH /api/products/:id — 상품 수정 (판매자 본인 전용)
+router.patch('/:id', requireAuth, uploadFields, async (req: Request, res: Response) => {
   const productId = Number(req.params.id);
   const { name, description, price, stock, category, features, attributes, status } = req.body;
   const files = (req.files ?? {}) as UploadedFiles;
@@ -287,6 +289,11 @@ router.patch('/:id', uploadFields, async (req: Request, res: Response) => {
     if (!existing) {
       unlockTmpFiles(files);
       res.status(404).json({ error: '상품을 찾을 수 없습니다.' });
+      return;
+    }
+    if (existing.seller_id !== req.user!.userId) {
+      unlockTmpFiles(files);
+      res.status(403).json({ error: '권한이 없습니다.' });
       return;
     }
 
@@ -365,14 +372,14 @@ router.patch('/:id', uploadFields, async (req: Request, res: Response) => {
   }
 });
 
-// DELETE /api/products/:id — 소프트 삭제 (status='hidden')
-router.delete('/:id', async (req: Request, res: Response) => {
+// DELETE /api/products/:id — 소프트 삭제 (status='hidden', 판매자 본인 전용)
+router.delete('/:id', requireAuth, async (req: Request, res: Response) => {
   const productId = Number(req.params.id);
 
   try {
     const [result] = await pool.execute(
-      "UPDATE products SET status = 'hidden' WHERE id = ?",
-      [productId],
+      "UPDATE products SET status = 'hidden' WHERE id = ? AND seller_id = ?",
+      [productId, req.user!.userId],
     ) as [InsertResult, unknown];
     if (result.affectedRows === 0) {
       res.status(404).json({ error: '상품을 찾을 수 없습니다.' });
@@ -386,20 +393,21 @@ router.delete('/:id', async (req: Request, res: Response) => {
 });
 
 // POST /api/products/:id/purchase — 즉시 구매
-router.post('/:id/purchase', async (req: Request, res: Response) => {
+router.post('/:id/purchase', requireAuth, async (req: Request, res: Response) => {
   const productId = Number(req.params.id);
-  const buyerId   = Number(req.body.buyerId);
-  if (!productId || !buyerId) {
+  const buyerId   = req.user!.userId;
+  if (!productId) {
     res.status(400).json({ error: 'invalid params' });
     return;
   }
 
-  try {
-    // 0. quantity 파라미터
-    const quantity = Math.max(1, Number(req.body.quantity) || 1);
+  // 0. quantity 파라미터
+  const quantity = Math.max(1, Number(req.body.quantity) || 1);
 
-    // 1. 상품 조회
-    const [productRows] = await pool.execute(
+  const conn = await pool.getConnection();
+  try {
+    // 1. 상품 조회 (검증용 — 원자적 차감은 3단계에서 별도로 재확인)
+    const [productRows] = await conn.execute(
       'SELECT id, seller_id, name, price, image_url, status, stock FROM products WHERE id = ?',
       [productId],
     ) as [unknown[], unknown];
@@ -415,13 +423,13 @@ router.post('/:id/purchase', async (req: Request, res: Response) => {
     // 2. 구매자 배송지 확인
     //    - 일반배송: delivery_addresses 테이블에 주소가 있으면 OK
     //    - 하나로마트 반값택배: users.delivery_option='hanaro' + 마트 주소가 설정돼 있으면 OK
-    const [addrRows] = await pool.execute(
+    const [addrRows] = await conn.execute(
       'SELECT address, detail FROM delivery_addresses WHERE user_id = ? ORDER BY is_default DESC, id ASC LIMIT 1',
       [buyerId],
     ) as [unknown[], unknown];
     const addrRow = (addrRows as Array<{ address: string; detail: string | null }>)[0];
 
-    const [optRows] = await pool.execute(
+    const [optRows] = await conn.execute(
       'SELECT delivery_option, hanaro_mart_addr FROM users WHERE id = ?',
       [buyerId],
     ) as [unknown[], unknown];
@@ -433,7 +441,7 @@ router.post('/:id/purchase', async (req: Request, res: Response) => {
       return;
     }
 
-    // 3. 구매 처리 — auctions row 생성 + 재고 차감
+    // 3. 구매 처리 — 트랜잭션 시작. 재고 차감을 원자적 UPDATE로 수행해 동시 요청 오버셀 방지.
     const [buyerTier, sellerTier] = await Promise.all([
       getBuyerTier(buyerId),
       getSellerTier(product.seller_id),
@@ -443,7 +451,23 @@ router.post('/:id/purchase', async (req: Request, res: Response) => {
     const { discountAmt, buyerDiscountRate } = calcBuyerDiscount(totalPrice, buyerTier);
     const { feeAmt, sellerFeeRate }           = calcSellerFee(totalPrice, sellerTier);
     const orderId = crypto.randomUUID();
-    await pool.execute(
+
+    await conn.beginTransaction();
+
+    // 원자적 재고 차감: stock >= quantity 조건을 WHERE에서 재검증 (SELECT 시점과 UPDATE 시점 사이의 동시 요청을 차단)
+    const [stockResult] = await conn.execute(
+      `UPDATE products SET stock = stock - ?, status = IF(stock - ? <= 0, 'sold', status)
+       WHERE id = ? AND status = 'active' AND stock >= ?`,
+      [quantity, quantity, productId, quantity],
+    ) as [InsertResult, unknown];
+
+    if (stockResult.affectedRows === 0) {
+      await conn.rollback();
+      res.status(409).json({ error: 'insufficient stock' });
+      return;
+    }
+
+    await conn.execute(
       `INSERT INTO auctions
          (id, seller_id, product_name, start_price, current_price, mode, image_url, status, top_bidder_id, ends_at,
           buyer_tier, buyer_discount_rate, buyer_discount_amt, seller_fee_rate, seller_fee_amt)
@@ -454,16 +478,16 @@ router.post('/:id/purchase', async (req: Request, res: Response) => {
         buyerTier, buyerDiscountRate, discountAmt, sellerFeeRate, feeAmt,
       ],
     );
-    const newStock = product.stock - quantity;
-    await pool.execute(
-      'UPDATE products SET stock = ?, status = ? WHERE id = ?',
-      [newStock, newStock <= 0 ? 'sold' : 'active', productId],
-    );
+
+    await conn.commit();
 
     res.json({ orderId });
   } catch (err) {
+    try { await conn.rollback(); } catch { /* 이미 rollback/commit된 경우 무시 */ }
     console.error('[products] POST /:id/purchase error:', err);
     res.status(500).json({ error: '서버 오류가 발생했습니다' });
+  } finally {
+    conn.release();
   }
 });
 

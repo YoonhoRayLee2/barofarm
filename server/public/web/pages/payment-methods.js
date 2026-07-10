@@ -8,6 +8,7 @@
  * @module pages/payment-methods
  */
 
+import { request } from '/app/scripts/api.js';
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
@@ -67,9 +68,8 @@ export default async function load() {
   async function loadList() {
     listEl.innerHTML = '<div class="pm-loading"><span>불러오는 중...</span></div>';
     try {
-      const res = await fetch(`/api/payment-methods?userId=${encodeURIComponent(user.id)}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      renderList(await res.json());
+      const data = await request(`/api/payment-methods?userId=${encodeURIComponent(user.id)}`);
+      renderList(data);
     } catch {
       listEl.innerHTML = `
         <div class="pm-empty">
@@ -147,8 +147,7 @@ export default async function load() {
     });
     if (!ok) return;
     try {
-      const res = await fetch(`/api/payment-methods/${pm.id}?userId=${encodeURIComponent(user.id)}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await request(`/api/payment-methods/${pm.id}?userId=${encodeURIComponent(user.id)}`, { method: 'DELETE' });
       showToast('결제수단이 삭제되었습니다', { variant: 'success', duration: 1600 });
       await loadList();
     } catch {
@@ -158,12 +157,10 @@ export default async function load() {
 
   async function onSetDefault(pm) {
     try {
-      const res = await fetch(`/api/payment-methods/${pm.id}/set-default`, {
+      await request(`/api/payment-methods/${pm.id}/set-default`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       showToast('기본 결제수단으로 설정되었습니다', { variant: 'success', duration: 1600 });
       await loadList();
     } catch {
@@ -336,12 +333,10 @@ export default async function load() {
       submitBtn.disabled = true;
       submitBtn.textContent = '등록 중...';
       try {
-        const res = await fetch('/api/payment-methods', {
+        await request('/api/payment-methods', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         showToast('결제수단이 등록되었습니다', { variant: 'success', duration: 1600 });
         close();
         await loadList();

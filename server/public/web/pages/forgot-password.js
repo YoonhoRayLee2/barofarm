@@ -7,8 +7,8 @@
  * @module pages/forgot-password
  */
 
+import { request } from '/app/scripts/api.js';
 import { navigate } from '/app/scripts/router.js';
-import { escapeHtml } from '/app/scripts/dom.js';
 import { showToast } from '/app/components/toast.js';
 
 // Inject CSS once
@@ -161,23 +161,20 @@ export default async function load() {
     step1Submit.textContent = '확인 중...';
 
     try {
-      const res = await fetch('/api/auth/verify-identity', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, phone }),
-      });
-
-      if (!res.ok) {
-        let msg = '아이디 또는 휴대폰 번호가 일치하지 않습니다.';
-        try {
-          const data = await res.json();
-          if (data && data.message) msg = escapeHtml(data.message);
-        } catch { /* ignore parse errors */ }
-        step1Error.textContent = msg;
-        return;
+      let data;
+      try {
+        data = await request('/api/auth/verify-identity', {
+          method: 'POST',
+          body: JSON.stringify({ username, phone }),
+        });
+      } catch (reqErr) {
+        if (reqErr && typeof reqErr.status === 'number') {
+          step1Error.textContent = '아이디 또는 휴대폰 번호가 일치하지 않습니다.';
+          return;
+        }
+        throw reqErr;
       }
 
-      const data = await res.json();
       if (!data || !data.resetToken) {
         step1Error.textContent = '서버 응답이 올바르지 않습니다.';
         return;
@@ -211,20 +208,17 @@ export default async function load() {
     step2Submit.textContent = '변경 중...';
 
     try {
-      const res = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resetToken, newPassword: pw }),
-      });
-
-      if (!res.ok) {
-        let msg = '비밀번호 변경에 실패했습니다.';
-        try {
-          const data = await res.json();
-          if (data && data.message) msg = escapeHtml(data.message);
-        } catch { /* ignore parse errors */ }
-        step2Error.textContent = msg;
-        return;
+      try {
+        await request('/api/auth/reset-password', {
+          method: 'POST',
+          body: JSON.stringify({ resetToken, newPassword: pw }),
+        });
+      } catch (reqErr) {
+        if (reqErr && typeof reqErr.status === 'number') {
+          step2Error.textContent = '비밀번호 변경에 실패했습니다.';
+          return;
+        }
+        throw reqErr;
       }
 
       showToast('비밀번호가 변경됐습니다', { variant: 'success' });

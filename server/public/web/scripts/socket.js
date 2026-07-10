@@ -5,8 +5,14 @@
  * @module socket
  */
 
+import { getToken } from './api.js';
+
 /**
  * Connect to the Socket.io server.
+ * Handshake에 저장된 access token을 실어보낸다(개인 룸 조인용). 토큰이 없어도
+ * 연결 자체는 허용된다 — 비로그인 상태의 라이브 시청 등 기능을 깨지 않기 위함.
+ * auth를 함수형으로 주면 재연결 시에도 최신 토큰이 실린다(socket.io-client는
+ * async auth 콜백을 지원 — 콜백을 나중에 호출해도 그 시점에 handshake가 진행됨).
  * @param {string} [baseUrl] Defaults to same-origin.
  * @returns {Socket}
  */
@@ -22,6 +28,15 @@ export function connect(baseUrl = '') {
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
     autoConnect: true,
+    auth: async (cb) => {
+      let token = '';
+      try {
+        token = (await getToken()) || '';
+      } catch {
+        /* 토큰 조회 실패 시 비로그인으로 연결 진행 */
+      }
+      cb({ token });
+    },
   });
   return socket;
 }

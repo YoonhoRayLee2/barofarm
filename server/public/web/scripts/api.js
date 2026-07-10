@@ -126,7 +126,7 @@ async function _rawRequest(path, opts = {}) {
  * @param {boolean} [_isRetry] - true on second attempt (after refresh)
  * @returns {Promise<any>}
  */
-async function request(path, opts = {}, _isRetry = false) {
+export async function request(path, opts = {}, _isRetry = false) {
   const url = `${BASE}${path}`;
   const token = await getToken();
   const isFormData = (typeof FormData !== 'undefined') && (opts.body instanceof FormData);

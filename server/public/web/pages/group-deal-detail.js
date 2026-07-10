@@ -8,6 +8,7 @@
  * @module pages/group-deal-detail
  */
 import { getSecureItem } from '/app/scripts/native-bridge.js';
+import { request } from '/app/scripts/api.js';
 import { navigate, replace, setCleanup } from '/app/scripts/router.js';
 import * as Sock from '/app/scripts/socket.js';
 import { showToast } from '/app/components/toast.js';
@@ -103,9 +104,7 @@ export default async function load(params) {
 
   async function loadDetail() {
     try {
-      const res = await fetch(`/api/group-deals/${encodeURIComponent(dealId)}?viewerId=${encodeURIComponent(user.id)}`);
-      if (!res.ok) throw new Error('failed');
-      dealData = await res.json();
+      dealData = await request(`/api/group-deals/${encodeURIComponent(dealId)}?viewerId=${encodeURIComponent(user.id)}`);
       renderDetail();
     } catch {
       page.querySelector('#gdd-scroll').innerHTML = `
@@ -269,16 +268,10 @@ export default async function load(params) {
     const btn = page.querySelector('#gdd-join-btn');
     if (btn) btn.disabled = true;
     try {
-      const res = await fetch(`/api/group-deals/${encodeURIComponent(dealId)}/join`, {
+      await request(`/api/group-deals/${encodeURIComponent(dealId)}/join`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ buyerId: user.id, quantity: 1 }),
       });
-      if (!res.ok) {
-        let err = {};
-        try { err = await res.json(); } catch {}
-        throw new Error(err.error || `HTTP ${res.status}`);
-      }
       showToast('공동구매에 참여했습니다!', { variant: 'success' });
       await loadDetail();
     } catch (err) {
@@ -291,16 +284,10 @@ export default async function load(params) {
     const btn = page.querySelector('#gdd-leave-btn');
     if (btn) btn.disabled = true;
     try {
-      const res = await fetch(`/api/group-deals/${encodeURIComponent(dealId)}/join`, {
+      await request(`/api/group-deals/${encodeURIComponent(dealId)}/join`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ buyerId: user.id }),
       });
-      if (!res.ok) {
-        let err = {};
-        try { err = await res.json(); } catch {}
-        throw new Error(err.error || `HTTP ${res.status}`);
-      }
       showToast('참여를 취소했습니다');
       await loadDetail();
     } catch (err) {
@@ -313,16 +300,10 @@ export default async function load(params) {
     const btn = page.querySelector(`#gdd-${verb}-btn`);
     if (btn) btn.disabled = true;
     try {
-      const res = await fetch(`/api/group-deals/${encodeURIComponent(dealId)}/${verb}`, {
+      await request(`/api/group-deals/${encodeURIComponent(dealId)}/${verb}`, {
         method,
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sellerId: user.id }),
       });
-      if (!res.ok) {
-        let err = {};
-        try { err = await res.json(); } catch {}
-        throw new Error(err.error || `HTTP ${res.status}`);
-      }
       const okMsg = {
         confirm: '공동구매가 확정되었습니다!',
         cancel:  '공동구매가 취소되었습니다',

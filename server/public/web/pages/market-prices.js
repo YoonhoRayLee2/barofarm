@@ -5,6 +5,7 @@
  * @module pages/market-prices
  */
 
+import { request } from '/app/scripts/api.js';
 import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 
 const _cssId = 'page-css-market-prices';
@@ -47,19 +48,14 @@ export default async function load(params) {
   (async () => {
     try {
       const url = `/api/market-prices/${encodeURIComponent(itemCode)}/history?kindName=${encodeURIComponent(kindName)}&days=30`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('failed');
-      const history = await res.json();
+      const history = await request(url);
 
       // Try to fetch item meta from list endpoint to get itemName/unit/category
       let meta = null;
       try {
-        const listRes = await fetch('/api/market-prices');
-        if (listRes.ok) {
-          const list = await listRes.json();
-          meta = list.find(it => String(it.itemCode) === String(itemCode) && (!kindName || it.kindName === kindName))
-              || list.find(it => String(it.itemCode) === String(itemCode));
-        }
+        const list = await request('/api/market-prices');
+        meta = list.find(it => String(it.itemCode) === String(itemCode) && (!kindName || it.kindName === kindName))
+            || list.find(it => String(it.itemCode) === String(itemCode));
       } catch {}
 
       renderDetail(scrollEl, { itemCode, kindName, history, meta });

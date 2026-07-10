@@ -2,6 +2,7 @@
  * Consignment Apply Page — 딜러 위탁 신청하기
  * Route: /app/consignment/apply
  */
+import { request } from '/app/scripts/api.js';
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
@@ -174,8 +175,7 @@ export default async function load() {
     });
 
     try {
-      const res = await fetch('/api/consignments', { method: 'POST', body: fd });
-      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || `HTTP ${res.status}`); }
+      await request('/api/consignments', { method: 'POST', body: fd });
       showToast('위탁 신청이 완료되었습니다!', { variant: 'success', duration: 2000 });
       setTimeout(() => window.history.back(), 1500);
     } catch (err) {

@@ -7,6 +7,7 @@
  */
 
 import { getSecureItem } from '/app/scripts/native-bridge.js';
+import { request } from '/app/scripts/api.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import { createBottomTabBar, createTabSpacer } from '/app/components/bottom-tab-bar.js';
 import { showToast } from '/app/components/toast.js';
@@ -133,9 +134,7 @@ export default async function load() {
 async function renderMine(container, user) {
   let rooms = [];
   try {
-    const res = await fetch(`/api/chat-rooms/mine?userId=${encodeURIComponent(user.id)}&type=group`);
-    if (!res.ok) throw new Error('failed');
-    rooms = await res.json();
+    rooms = await request(`/api/chat-rooms/mine?userId=${encodeURIComponent(user.id)}&type=group`);
   } catch (err) {
     container.innerHTML = `
       <div class="ch-empty">
@@ -236,11 +235,8 @@ async function renderAll(container, user) {
 
   let myRoomIds = new Set();
   try {
-    const r = await fetch(`/api/chat-rooms/mine?userId=${encodeURIComponent(user.id)}&type=group`);
-    if (r.ok) {
-      const mine = await r.json();
-      myRoomIds = new Set(mine.map((m) => m.id));
-    }
+    const mine = await request(`/api/chat-rooms/mine?userId=${encodeURIComponent(user.id)}&type=group`);
+    myRoomIds = new Set(mine.map((m) => m.id));
   } catch {
     // non-critical: proceed with empty set
   }
@@ -257,9 +253,7 @@ async function renderAll(container, user) {
       const url = search.length >= 2
         ? `/api/chat-rooms?search=${encodeURIComponent(search)}`
         : '/api/chat-rooms';
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('failed');
-      const rooms = await res.json();
+      const rooms = await request(url);
       renderAllList(listEl, rooms, user, myRoomIds);
     } catch {
       listEl.innerHTML = `
@@ -328,12 +322,14 @@ function renderAllList(listEl, rooms, user, myRoomIds) {
         joinBtn.disabled = true;
         joinBtn.textContent = '참여 중...';
         try {
-          const res = await fetch(`/api/chat-rooms/${room.id}/join`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: user.id }),
-          });
-          if (!res.ok && res.status !== 409) throw new Error('failed');
+          try {
+            await request(`/api/chat-rooms/${room.id}/join`, {
+              method: 'POST',
+              body: JSON.stringify({ userId: user.id }),
+            });
+          } catch (e) {
+            if (e.status !== 409) throw e;
+          }
           myRoomIds.add(room.id);
           await navigate('/app/chat-room/' + room.id);
         } catch {
@@ -396,13 +392,10 @@ function openCreateOverlay(page, user, onCreated) {
     submit.disabled = true;
     submit.textContent = '만드는 중...';
     try {
-      const res = await fetch('/api/chat-rooms', {
+      const room = await request('/api/chat-rooms', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, createdBy: user.id }),
       });
-      if (!res.ok) throw new Error('failed');
-      const room = await res.json();
       close();
       if (typeof onCreated === 'function') await onCreated(room);
     } catch {

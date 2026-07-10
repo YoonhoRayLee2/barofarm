@@ -13,7 +13,7 @@ function getSecret(): string {
   return process.env.JWT_SECRET!;
 }
 
-function requireAdmin(req: Request, res: Response, next: NextFunction): void {
+async function requireAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
   const auth = req.headers.authorization;
   if (!auth?.startsWith('Bearer ')) {
     res.status(401).json({ error: 'unauthorized' });
@@ -22,6 +22,16 @@ function requireAdmin(req: Request, res: Response, next: NextFunction): void {
   try {
     const payload = jwt.verify(auth.slice(7), getSecret()) as { userId: number; isAdmin?: boolean };
     if (!payload.isAdmin) {
+      res.status(403).json({ error: 'forbidden' });
+      return;
+    }
+    // JWT의 isAdmin 클레임은 발급 시점 값일 뿐이므로, DB의 실제 is_admin을 재확인한다.
+    const [rows] = await pool.query<any[]>(
+      'SELECT is_admin FROM users WHERE id = ? LIMIT 1',
+      [payload.userId],
+    );
+    const user = rows[0];
+    if (!user || !user.is_admin) {
       res.status(403).json({ error: 'forbidden' });
       return;
     }

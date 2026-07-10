@@ -1,7 +1,9 @@
 import { Router, Request, Response } from 'express';
 import pool from '../db/mysql';
+import { requireAuth } from '../middleware/auth';
 
 const router = Router();
+router.use(requireAuth);
 
 type PmType = 'card' | 'easy' | 'barofarm_pay';
 const VALID_TYPES: PmType[] = ['card', 'easy', 'barofarm_pay'];
@@ -21,10 +23,9 @@ function serialize(r: any) {
   };
 }
 
-// GET /api/payment-methods?userId=
+// GET /api/payment-methods
 router.get('/', async (req: Request, res: Response) => {
-  const userId = Number(req.query.userId);
-  if (!userId) return res.status(400).json({ error: 'userId required' });
+  const userId = req.user!.userId;
 
   try {
     const [rows] = await pool.query<any[]>(
@@ -44,9 +45,10 @@ router.get('/', async (req: Request, res: Response) => {
 // 간편결제: { easyProvider }
 // 바로팜페이: 추가 필드 없음
 router.post('/', async (req: Request, res: Response) => {
-  const { userId, type } = req.body;
-  if (!userId || !VALID_TYPES.includes(type)) {
-    return res.status(400).json({ error: 'userId and valid type required' });
+  const userId = req.user!.userId;
+  const { type } = req.body;
+  if (!VALID_TYPES.includes(type)) {
+    return res.status(400).json({ error: 'valid type required' });
   }
 
   let label = String(req.body.label ?? '').trim();
@@ -78,7 +80,7 @@ router.post('/', async (req: Request, res: Response) => {
   try {
     const [existing] = await pool.query<any[]>(
       'SELECT COUNT(*) AS cnt FROM payment_methods WHERE user_id = ?',
-      [Number(userId)],
+      [userId],
     );
     const isDefault = existing[0].cnt === 0 ? 1 : 0;
 
@@ -86,7 +88,7 @@ router.post('/', async (req: Request, res: Response) => {
       `INSERT INTO payment_methods
          (user_id, type, label, card_brand, card_last4, card_expiry, card_holder, easy_provider, is_default)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [Number(userId), type, label, cardBrand, cardLast4, cardExpiry, cardHolder, easyProvider, isDefault],
+      [userId, type, label, cardBrand, cardLast4, cardExpiry, cardHolder, easyProvider, isDefault],
     );
 
     res.status(201).json({ id: result.insertId, isDefault: Boolean(isDefault) });
@@ -96,11 +98,10 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
-// DELETE /api/payment-methods/:id?userId=
+// DELETE /api/payment-methods/:id
 router.delete('/:id', async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  const userId = Number(req.query.userId);
-  if (!userId) return res.status(400).json({ error: 'userId required' });
+  const userId = req.user!.userId;
 
   try {
     const [rows] = await pool.query<any[]>(
@@ -133,16 +134,15 @@ router.delete('/:id', async (req: Request, res: Response) => {
 // PATCH /api/payment-methods/:id/set-default
 router.patch('/:id/set-default', async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  const { userId } = req.body;
-  if (!userId) return res.status(400).json({ error: 'userId required' });
+  const userId = req.user!.userId;
 
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    await conn.query('UPDATE payment_methods SET is_default=0 WHERE user_id=?', [Number(userId)]);
+    await conn.query('UPDATE payment_methods SET is_default=0 WHERE user_id=?', [userId]);
     const [result] = await conn.query<any>(
       'UPDATE payment_methods SET is_default=1 WHERE id=? AND user_id=?',
-      [id, Number(userId)],
+      [id, userId],
     );
     if (result.affectedRows === 0) {
       await conn.rollback();

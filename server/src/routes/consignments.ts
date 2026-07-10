@@ -3,6 +3,7 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import pool from '../db/mysql';
+import { requireAuth } from '../middleware/auth';
 
 const UPLOAD_DIR = path.join(__dirname, '..', '..', 'public', 'uploads', 'consignments');
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -16,13 +17,14 @@ const upload = multer({
 const router = Router();
 
 // POST /api/consignments — 위탁 신청 제출 (multipart/form-data)
-router.post('/', upload.array('images', 5), async (req: Request, res: Response) => {
+router.post('/', requireAuth, upload.array('images', 5), async (req: Request, res: Response) => {
+  const buyerId = req.user!.userId;
   const {
-    buyerId, consignmentType, category, quantity, expectedPrice,
+    consignmentType, category, quantity, expectedPrice,
     description, minPriceType, commissionRate, commissionNegotiable,
   } = req.body;
 
-  if (!buyerId || !consignmentType || !category || !quantity || !expectedPrice || !description || !commissionRate) {
+  if (!consignmentType || !category || !quantity || !expectedPrice || !description || !commissionRate) {
     return res.status(400).json({ error: 'required fields missing' });
   }
 
@@ -34,7 +36,7 @@ router.post('/', upload.array('images', 5), async (req: Request, res: Response) 
          (buyer_id, consignment_type, category, quantity, expected_price, description, min_price_type, commission_rate, commission_negotiable)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        Number(buyerId), consignmentType, category,
+        buyerId, consignmentType, category,
         Number(quantity), Number(expectedPrice),
         description, minPriceType || 'none',
         Number(commissionRate), commissionNegotiable === 'true' || commissionNegotiable === true ? 1 : 0,
@@ -157,12 +159,11 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/consignments/:id/match — 매칭 신청 (판매자)
+// POST /api/consignments/:id/match — 매칭 신청 (판매자 본인)
 // 신청 후 buyer↔seller 간 DM 채팅방 생성
-router.post('/:id/match', async (req: Request, res: Response) => {
+router.post('/:id/match', requireAuth, async (req: Request, res: Response) => {
   const consignmentId = Number(req.params.id);
-  const { sellerId } = req.body;
-  if (!sellerId) return res.status(400).json({ error: 'sellerId required' });
+  const sellerId = req.user!.userId;
 
   try {
     const [rows] = await pool.query<any[]>(

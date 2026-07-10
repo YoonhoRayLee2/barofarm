@@ -58,8 +58,7 @@ export default async function load(params) {
   // live 상태 사전 확인 — ended이면 입장 거부
   let liveInfo = null;
   try {
-    const liveRes = await fetch(`/api/lives/${encodeURIComponent(liveId)}`);
-    if (liveRes.ok) liveInfo = await liveRes.json();
+    liveInfo = await api.request(`/api/lives/${encodeURIComponent(liveId)}`);
   } catch (_) {}
 
   if (!liveInfo || liveInfo.status === 'ended') {
@@ -903,8 +902,7 @@ export default async function load(params) {
     followBtn.textContent = '팔로우';
     metaEl.appendChild(followBtn);
 
-    fetch(`/api/users/${encodeURIComponent(sellerId)}/is-following?userId=${encodeURIComponent(user.id)}`)
-      .then(r => r.ok ? r.json() : { isFollowing: false })
+    api.request(`/api/users/${encodeURIComponent(sellerId)}/is-following?userId=${encodeURIComponent(user.id)}`)
       .then(({ isFollowing: f }) => {
         isFollowing = !!f;
         followBtn.textContent = isFollowing ? '팔로잉' : '팔로우';
@@ -916,12 +914,10 @@ export default async function load(params) {
       const method = isFollowing ? 'DELETE' : 'POST';
       followBtn.disabled = true;
       try {
-        const res = await fetch(`/api/users/${encodeURIComponent(sellerId)}/follow`, {
+        await api.request(`/api/users/${encodeURIComponent(sellerId)}/follow`, {
           method,
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ followerId: user.id }),
         });
-        if (!res.ok) throw new Error('follow request failed');
         isFollowing = !isFollowing;
         followBtn.textContent = isFollowing ? '팔로잉' : '팔로우';
         followBtn.classList.toggle('is-following', isFollowing);

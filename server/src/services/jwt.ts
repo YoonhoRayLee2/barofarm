@@ -9,7 +9,7 @@ const ACCESS_EXPIRES = '14d';
 const REFRESH_EXPIRES = '30d';
 
 function getSecret(): string {
-  return process.env.JWT_SECRET ?? 'barofarm-insecure-dev-secret';
+  return process.env.JWT_SECRET!;
 }
 
 /**

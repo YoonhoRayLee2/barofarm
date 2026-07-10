@@ -7,6 +7,7 @@
  */
 
 import { getSecureItem } from '/app/scripts/native-bridge.js';
+import { request } from '/app/scripts/api.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
 import { escapeHtml } from '/app/scripts/dom.js';
@@ -127,15 +128,11 @@ export default async function load(params) {
 }
 
 async function fetchLives(userId) {
-  const res = await fetch(`/api/users/${encodeURIComponent(userId)}/lives`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+  return request(`/api/users/${encodeURIComponent(userId)}/lives`);
 }
 
 async function fetchBids(userId) {
-  const res = await fetch(`/api/users/${encodeURIComponent(userId)}/bids`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+  return request(`/api/users/${encodeURIComponent(userId)}/bids`);
 }
 
 function renderLives(container, list) {

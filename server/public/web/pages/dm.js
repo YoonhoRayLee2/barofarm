@@ -2,6 +2,7 @@
  * DM List Page — 상품 문의 채팅 목록
  * Route: /app/dm
  */
+import { request } from '/app/scripts/api.js';
 import { getSecureItem } from '/app/scripts/native-bridge.js';
 import { navigate, replace } from '/app/scripts/router.js';
 import { showToast } from '/app/components/toast.js';
@@ -40,9 +41,7 @@ export default async function load() {
     const el = page.querySelector('#dm-content');
     el.innerHTML = '<div class="dm-loading"><div class="dm-loading__dot"></div><span>불러오는 중...</span></div>';
     try {
-      const res = await fetch(`/api/chat-rooms/mine?userId=${encodeURIComponent(user.id)}&type=dm`);
-      if (!res.ok) throw new Error('failed');
-      const list = await res.json();
+      const list = await request(`/api/chat-rooms/mine?userId=${encodeURIComponent(user.id)}&type=dm`);
       renderList(el, list);
     } catch {
       el.innerHTML = `<div class="dm-empty"><span class="dm-empty__icon">⚠️</span><span>불러오지 못했습니다</span><button id="dm-retry">다시 시도</button></div>`;
