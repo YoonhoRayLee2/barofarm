@@ -97,6 +97,25 @@ export const featureFlags = {
   MOCK_PG_ENABLED: envBool('PAY_FF_MOCK_PG_ENABLED', true),
 };
 
+/**
+ * 어드민 테스트포인트/테스트머니 지급·회수 정책 (§10).
+ * TEST_POINT_ENABLED가 true여도, 운영 환경에서는 이 정책이 2차 안전장치로 추가 차단한다
+ * (플래그 오설정만으로 운영에 테스트 자산이 지급되는 사고를 막기 위한 방어적 장치).
+ */
+export const testPointPolicy = {
+  /** 운영 환경에서 테스트포인트/테스트머니 지급을 하드 차단 — 기본값은 NODE_ENV=production이면 true */
+  PRODUCTION_DISABLED: envBool('PAY_TEST_POINT_PRODUCTION_DISABLED', process.env.NODE_ENV === 'production'),
+  /** PRODUCTION_DISABLED가 true여도 예외적으로 테스트 자산 지급을 허용할 사용자ID(QA 계정 등) */
+  allowedUserIds: new Set(
+    (process.env.PAY_TEST_POINT_ALLOWED_USER_IDS ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map(Number)
+      .filter((n) => Number.isFinite(n)),
+  ),
+};
+
 export const paymentPolicy = {
   authSession: authSessionPolicy,
   lockout: lockoutPolicy,
@@ -105,6 +124,7 @@ export const paymentPolicy = {
   earnRate: earnRatePolicy,
   pointUsePriority,
   featureFlags,
+  testPoint: testPointPolicy,
 };
 
 export default paymentPolicy;
