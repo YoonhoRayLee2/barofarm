@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response } from 'express';
 import path from 'path';
 import express from 'express';
 import jwt from 'jsonwebtoken';
@@ -8,43 +8,24 @@ import { verifyPassword, hashPassword } from '../services/auth';
 import { lives, auctions, endAuctionState, endLive } from '../store/memory';
 import { endAuction } from '../services/livekit-service';
 import { createNotification } from '../services/notifications';
+import { requireAdmin } from '../middleware/admin-auth';
+import createAdminPaymentsRouter from './admin-payments';
+import createAdminAuthManagementRouter from './admin-auth-management';
+import createAdminRestAuctionsRouter from './admin-rest-auctions';
 
 function getSecret(): string {
   return process.env.JWT_SECRET!;
 }
 
-async function requireAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
-  const auth = req.headers.authorization;
-  if (!auth?.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'unauthorized' });
-    return;
-  }
-  try {
-    const payload = jwt.verify(auth.slice(7), getSecret()) as { userId: number; isAdmin?: boolean };
-    if (!payload.isAdmin) {
-      res.status(403).json({ error: 'forbidden' });
-      return;
-    }
-    // JWT의 isAdmin 클레임은 발급 시점 값일 뿐이므로, DB의 실제 is_admin을 재확인한다.
-    const [rows] = await pool.query<any[]>(
-      'SELECT is_admin FROM users WHERE id = ? LIMIT 1',
-      [payload.userId],
-    );
-    const user = rows[0];
-    if (!user || !user.is_admin) {
-      res.status(403).json({ error: 'forbidden' });
-      return;
-    }
-    (req as any).adminUserId = payload.userId;
-    next();
-  } catch {
-    res.status(401).json({ error: 'invalid token' });
-  }
-}
-
 export default function createAdminRouter(io: Server) {
   const router = Router();
   const adminPublicPath = path.join(__dirname, '..', '..', 'public', 'admin');
+
+  // Phase 7(§19) 신규 어드민 API — 결제/인증/REST경매 관리. 기존 라우트와 경로가 겹치지 않는다
+  // (결제관리는 /api/payments/*, 인증관리는 /api/users/:id/payment-auth 등, REST경매관리는 /api/rest-auctions/*).
+  router.use('/api/payments', createAdminPaymentsRouter());
+  router.use('/api', createAdminAuthManagementRouter());
+  router.use('/api/rest-auctions', createAdminRestAuctionsRouter());
 
   // POST /admin/api/login
   router.post('/api/login', async (req: Request, res: Response) => {
@@ -728,6 +709,12 @@ export default function createAdminRouter(io: Server) {
   router.get('/users', (_req, res) => res.sendFile(path.join(adminPublicPath, 'users.html')));
   router.get('/auctions', (_req, res) => res.sendFile(path.join(adminPublicPath, 'auctions.html')));
   router.get('/products', (_req, res) => res.sendFile(path.join(adminPublicPath, 'products.html')));
+
+  // Phase 7(§19) 신규 어드민 화면
+  router.get('/payments', (_req, res) => res.sendFile(path.join(adminPublicPath, 'payments.html')));
+  router.get('/wallet', (_req, res) => res.sendFile(path.join(adminPublicPath, 'wallet.html')));
+  router.get('/payment-auth', (_req, res) => res.sendFile(path.join(adminPublicPath, 'payment-auth.html')));
+  router.get('/rest-auctions', (_req, res) => res.sendFile(path.join(adminPublicPath, 'rest-auctions.html')));
 
   // 정적 파일 서빙
   router.get('/', (_req, res) => res.sendFile(path.join(adminPublicPath, 'index.html')));

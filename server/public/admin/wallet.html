@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=1280" />
+  <title>지갑 관리 · NH 바로팜 어드민</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <link rel="stylesheet" href="/admin/admin.css" />
+</head>
+<body data-page="wallet">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar__brand">NH <span class="accent">바로팜</span></div>
+      <nav class="sidebar__nav">
+        <a class="sidebar__link" href="/admin">대시보드</a>
+        <a class="sidebar__link" href="/admin/users">사용자</a>
+        <a class="sidebar__link" href="/admin/auctions">경매·라이브</a>
+        <a class="sidebar__link" href="/admin/products">상품·거래</a>
+        <a class="sidebar__link" href="/admin/settlements">정산</a>
+        <a class="sidebar__link" href="/admin/payments">결제 관리</a>
+        <a class="sidebar__link sidebar__link--active" href="/admin/wallet">지갑 관리</a>
+        <a class="sidebar__link" href="/admin/payment-auth">인증 관리</a>
+        <a class="sidebar__link" href="/admin/rest-auctions">경매 관리(REST)</a>
+      </nav>
+      <a id="logout-btn" class="sidebar__logout" href="#">로그아웃</a>
+    </aside>
+
+    <main class="main">
+      <div class="page-pad">
+        <div class="page-header">
+          <h1>지갑 관리</h1>
+        </div>
+        <div class="search-bar">
+          <input type="text" id="wallet-user-search" placeholder="아이디 / 닉네임으로 사용자 검색">
+          <button id="wallet-user-search-btn">검색</button>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>ID</th><th>아이디</th><th>닉네임</th><th>역할</th></tr></thead>
+          <tbody id="wallet-user-tbody"><tr class="empty-row"><td colspan="4">사용자를 검색하세요.</td></tr></tbody>
+        </table>
+
+        <div id="wallet-detail" hidden style="margin-top:var(--space-6)">
+          <h2 style="padding:0" id="wallet-detail-title">지갑 상세</h2>
+          <div class="stats-row">
+            <div class="stat-card"><span class="stat-label">머니</span><span class="stat-value" id="wallet-money">-</span></div>
+            <div class="stat-card"><span class="stat-label">적립포인트</span><span class="stat-value" id="wallet-earned">-</span></div>
+            <div class="stat-card"><span class="stat-label">이벤트포인트</span><span class="stat-value" id="wallet-event">-</span></div>
+            <div class="stat-card"><span class="stat-label">테스트포인트</span><span class="stat-value" id="wallet-test">-</span></div>
+            <div class="stat-card"><span class="stat-label">보상포인트</span><span class="stat-value" id="wallet-comp">-</span></div>
+          </div>
+
+          <div class="form-row" style="flex-wrap:wrap;gap:var(--space-5);align-items:flex-start">
+            <div style="min-width:320px">
+              <div class="modal-section-title">테스트 자산 지급/회수 (Feature Flag 필요)</div>
+              <div class="modal-field--row">
+                <select id="wallet-test-asset"><option value="TEST_POINT">테스트포인트</option><option value="MONEY">테스트머니</option></select>
+                <input type="number" id="wallet-test-amount" placeholder="금액" style="max-width:120px" />
+              </div>
+              <div class="modal-field"><input type="text" id="wallet-test-reason" placeholder="사유 (필수)" /></div>
+              <div class="modal-field--row">
+                <button class="btn-small" id="wallet-test-grant-btn">지급</button>
+                <button class="btn-small btn-danger" id="wallet-test-revoke-btn">회수(잔액 전체)</button>
+              </div>
+              <p class="text-muted" style="font-size:var(--fs-sm)">테스트포인트/머니는 TEST_POINT_ENABLED Feature Flag가 켜져 있고, 운영 환경에서는 차단될 수 있습니다.</p>
+            </div>
+
+            <div style="min-width:320px">
+              <div class="modal-section-title">일반 조정 (BALANCE_CORRECTION 등)</div>
+              <div class="modal-field--row">
+                <select id="wallet-adj-asset">
+                  <option value="MONEY">MONEY</option>
+                  <option value="EARNED_POINT">EARNED_POINT</option>
+                  <option value="EVENT_POINT">EVENT_POINT</option>
+                  <option value="COMPENSATION_POINT">COMPENSATION_POINT</option>
+                </select>
+                <select id="wallet-adj-type">
+                  <option value="BALANCE_CORRECTION">BALANCE_CORRECTION(+/-)</option>
+                  <option value="ADMIN_POINT_GRANT">ADMIN_POINT_GRANT</option>
+                  <option value="ADMIN_POINT_REVOKE">ADMIN_POINT_REVOKE</option>
+                  <option value="ADMIN_MONEY_GRANT">ADMIN_MONEY_GRANT</option>
+                  <option value="ADMIN_MONEY_REVOKE">ADMIN_MONEY_REVOKE</option>
+                </select>
+              </div>
+              <div class="modal-field--row">
+                <input type="number" id="wallet-adj-amount" placeholder="금액(BALANCE_CORRECTION은 부호 포함)" style="max-width:220px" />
+              </div>
+              <div class="modal-field"><input type="text" id="wallet-adj-reason" placeholder="사유 (필수)" /></div>
+              <button class="btn-small" id="wallet-adj-submit-btn">조정 실행</button>
+            </div>
+          </div>
+          <p id="wallet-action-msg" class="generate-msg"></p>
+
+          <h2 style="padding:0;margin-top:var(--space-5)">원장(거래 내역)</h2>
+          <table class="data-table">
+            <thead><tr><th>유형</th><th>자산</th><th>금액</th><th>참조</th><th>설명</th><th>일시</th></tr></thead>
+            <tbody id="wallet-tx-tbody"></tbody>
+          </table>
+
+          <h2 style="padding:0;margin-top:var(--space-5)">관리자 조정 내역</h2>
+          <table class="data-table">
+            <thead><tr><th>관리자</th><th>유형</th><th>자산</th><th>금액</th><th>사유</th><th>일시</th></tr></thead>
+            <tbody id="wallet-adjustments-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/admin/admin.js"></script>
+</body>
+</html>

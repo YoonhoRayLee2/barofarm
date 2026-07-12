@@ -147,6 +147,22 @@ export async function revokeAccessSession(userId: number, auction: AuctionAccess
   );
 }
 
+/** 어드민 강제 종료(Phase 7, §19 인증 관리) — 세션ID 단건 폐기. payment-auth-session.ts의 revokeSessionById와 동일 패턴. */
+export async function revokeAccessSessionById(sessionId: number, reason: string): Promise<void> {
+  await pool.query(
+    "UPDATE auction_access_sessions SET status='REVOKED', revoked_at=NOW(), revoke_reason=? WHERE id=? AND status='ACTIVE'",
+    [reason, sessionId],
+  );
+}
+
+/** 어드민 강제 종료(Phase 7, §19) — 결제비밀번호 초기화 등으로 해당 사용자의 모든 ACTIVE 입장세션을 스코프 무관하게 폐기한다. */
+export async function revokeAllAccessSessionsForUser(userId: number, reason: string): Promise<void> {
+  await pool.query(
+    "UPDATE auction_access_sessions SET status='REVOKED', revoked_at=NOW(), revoke_reason=? WHERE user_id=? AND status='ACTIVE'",
+    [reason, userId],
+  );
+}
+
 /** 경매 입장 시 필요한 인증 요구사항(§4.4 모드 매핑) */
 export function getEntryAuthRequirement(auction: AuctionAccessInfo) {
   return resolveAuthRequirements(auction.authenticationMode);

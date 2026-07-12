@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=1280" />
+  <title>결제 관리 · NH 바로팜 어드민</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <link rel="stylesheet" href="/admin/admin.css" />
+</head>
+<body data-page="payments">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar__brand">NH <span class="accent">바로팜</span></div>
+      <nav class="sidebar__nav">
+        <a class="sidebar__link" href="/admin">대시보드</a>
+        <a class="sidebar__link" href="/admin/users">사용자</a>
+        <a class="sidebar__link" href="/admin/auctions">경매·라이브</a>
+        <a class="sidebar__link" href="/admin/products">상품·거래</a>
+        <a class="sidebar__link" href="/admin/settlements">정산</a>
+        <a class="sidebar__link sidebar__link--active" href="/admin/payments">결제 관리</a>
+        <a class="sidebar__link" href="/admin/wallet">지갑 관리</a>
+        <a class="sidebar__link" href="/admin/payment-auth">인증 관리</a>
+        <a class="sidebar__link" href="/admin/rest-auctions">경매 관리(REST)</a>
+      </nav>
+      <a id="logout-btn" class="sidebar__logout" href="#">로그아웃</a>
+    </aside>
+
+    <main class="main">
+      <div class="page-pad">
+        <div class="page-header">
+          <h1>결제 관리</h1>
+        </div>
+        <div class="search-bar">
+          <input type="text" id="payment-search" placeholder="주문번호 / 아이디 / 닉네임 검색">
+          <select id="payment-status-filter">
+            <option value="">전체 상태</option>
+            <option value="READY">READY</option>
+            <option value="AUTHENTICATING">AUTHENTICATING</option>
+            <option value="PAID">PAID</option>
+            <option value="FAILED">FAILED</option>
+            <option value="CANCELED">CANCELED</option>
+            <option value="PARTIALLY_CANCELED">PARTIALLY_CANCELED</option>
+            <option value="REFUNDED">REFUNDED</option>
+            <option value="EXPIRED">EXPIRED</option>
+          </select>
+          <select id="payment-method-filter">
+            <option value="">전체 수단</option>
+            <option value="MONEY">MONEY</option>
+            <option value="CARD">CARD</option>
+            <option value="ACCOUNT">ACCOUNT</option>
+            <option value="MOBILE">MOBILE</option>
+            <option value="VIRTUAL_ACCOUNT">VIRTUAL_ACCOUNT</option>
+          </select>
+          <button id="payment-search-btn">검색</button>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr><th>ID</th><th>주문번호</th><th>사용자</th><th>수단</th><th>요청금액</th><th>승인금액</th><th>취소금액</th><th>상태</th><th>일시</th></tr>
+          </thead>
+          <tbody id="payments-tbody"></tbody>
+        </table>
+        <div class="pagination" id="payments-pagination"></div>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="payment-modal" hidden>
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="payment-modal-title">결제 상세</h3>
+        <button class="modal-close" id="payment-modal-close">✕</button>
+      </div>
+      <div class="modal-meta" id="payment-modal-meta"></div>
+      <div class="modal-body" style="padding-top:0">
+        <div class="modal-section-title">결제 이벤트 로그</div>
+        <table class="data-table" style="width:100%;margin:0 0 var(--space-4)">
+          <thead><tr><th>유형</th><th>금액</th><th>상태</th><th>PG거래ID</th><th>일시</th></tr></thead>
+          <tbody id="payment-events-tbody"></tbody>
+        </table>
+
+        <div class="modal-section-title">취소 처리</div>
+        <div class="modal-field">
+          <label>취소 사유 (필수)</label>
+          <input type="text" id="payment-cancel-reason" placeholder="예: 고객 요청, 오배송, 관리자 확인 등" />
+        </div>
+        <div class="modal-field--row">
+          <input type="number" id="payment-partial-cancel-amount" placeholder="부분취소 금액" style="max-width:180px" />
+          <button class="btn-small" id="payment-partial-cancel-btn">부분취소</button>
+          <button class="btn-small btn-danger" id="payment-cancel-btn">전체취소</button>
+        </div>
+        <p id="payment-cancel-msg" class="generate-msg"></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/admin/admin.js"></script>
+</body>
+</html>
