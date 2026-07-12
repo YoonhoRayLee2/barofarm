@@ -507,11 +507,13 @@ export async function approvePayment(userId: number, paymentId: number, input: A
         }
       }
 
-      const earnMethod: PaymentMethodType = remaining > 0 ? payment.method : 'MONEY';
+      // 적립 기준액: order.payment_amount(=external_payment_amount, 외부 PG 잔여액)만 쓰면 자체페이(포인트+머니)
+      // 전액 결제 시 적립이 0이 되어버리므로(§9.5 위반), 자체페이분(pointUsedAmount+moneyUsedAmount)과
+      // 외부결제분(remaining)을 각각의 요율로 안분해 계산한다.
       const earnResult = await earnPoints(conn, {
         userId,
-        paymentAmount: Number(order.payment_amount),
-        method: earnMethod,
+        selfPayAmount: pointUsedAmount + moneyUsedAmount,
+        externalAmount: remaining,
         referenceType: 'ORDER',
         referenceId: String(order.id),
         idempotencyKey: `${input.idempotencyKey}:earn`,

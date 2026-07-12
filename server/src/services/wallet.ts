@@ -434,11 +434,16 @@ export async function selectPointUsage(userId: number, amount: number): Promise<
 
 // ─── 적립 ───────────────────────────────────────────────────────────────────
 
-/** 결제수단별 적립률 적용 + 원 단위 절사/반올림 정책(config) 반영. 실제 지급은 하지 않는 순수 계산 함수. */
-export function calcEarnPoints(paymentAmount: number, method: PaymentMethodType): number {
-  if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) return 0;
-  const rate = method === 'MONEY' ? paymentPolicy.earnRate.barofarmPayRate : paymentPolicy.earnRate.externalPaymentRate;
-  const raw = paymentAmount * rate;
+/**
+ * 결제수단별 적립률을 안분 적용 + 원 단위 절사/반올림 정책(config) 반영. 실제 지급은 하지 않는 순수 계산 함수.
+ * order.payment_amount(=external_payment_amount, 외부 PG 잔여액)만으로 계산하면 자체페이(포인트+머니) 전액
+ * 결제 시 적립이 0이 되어버리므로(§9.5 위반), 자체페이분·외부결제분을 각각의 요율로 계산한 뒤 합산한다.
+ */
+export function calcEarnPoints(selfPayAmount: number, externalAmount: number): number {
+  const selfPay = Number.isFinite(selfPayAmount) && selfPayAmount > 0 ? selfPayAmount : 0;
+  const external = Number.isFinite(externalAmount) && externalAmount > 0 ? externalAmount : 0;
+  const raw = selfPay * paymentPolicy.earnRate.barofarmPayRate + external * paymentPolicy.earnRate.externalPaymentRate;
+  if (raw <= 0) return 0;
   switch (paymentPolicy.earnRate.rounding) {
     case 'CEIL':
       return Math.ceil(raw);
@@ -452,8 +457,10 @@ export function calcEarnPoints(paymentAmount: number, method: PaymentMethodType)
 
 export interface EarnPointsParams {
   userId: number;
-  paymentAmount: number;
-  method: PaymentMethodType;
+  /** 자체페이(포인트+머니) 결제분 — barofarmPayRate 적용 */
+  selfPayAmount: number;
+  /** 외부(PG) 결제분 — externalPaymentRate 적용 */
+  externalAmount: number;
   referenceType?: string | null;
   referenceId?: string | null;
   idempotencyKey: string;
@@ -465,7 +472,7 @@ export interface EarnPointsParams {
  * 결제 흐름에서의 실제 호출은 Phase 4에서 연결한다.
  */
 export async function earnPoints(conn: Conn, params: EarnPointsParams): Promise<WalletTxResult | null> {
-  const amount = calcEarnPoints(params.paymentAmount, params.method);
+  const amount = calcEarnPoints(params.selfPayAmount, params.externalAmount);
   if (amount <= 0) return null;
   return applyWalletTx(conn, {
     userId: params.userId,
@@ -474,7 +481,7 @@ export async function earnPoints(conn: Conn, params: EarnPointsParams): Promise<
     amount,
     referenceType: params.referenceType ?? null,
     referenceId: params.referenceId ?? null,
-    description: `적립금 지급 (${params.method}, ${(params.method === 'MONEY' ? paymentPolicy.earnRate.barofarmPayRate : paymentPolicy.earnRate.externalPaymentRate) * 100}%)`,
+    description: `적립금 지급 (자체페이 ${params.selfPayAmount}원×${paymentPolicy.earnRate.barofarmPayRate * 100}% + 외부결제 ${params.externalAmount}원×${paymentPolicy.earnRate.externalPaymentRate * 100}%)`,
     createdBy: 'SYSTEM',
     idempotencyKey: params.idempotencyKey,
   });
