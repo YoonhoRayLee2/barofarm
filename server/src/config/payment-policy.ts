@@ -116,6 +116,11 @@ export const testPointPolicy = {
   ),
 };
 
+/** REST 인증형 입찰(§22) 정책 — 경매별 auctions.minimum_bid_increment가 없을 때의 기본 최소 입찰단위 */
+export const bidPolicy = {
+  defaultMinimumIncrement: envInt('PAY_BID_DEFAULT_MIN_INCREMENT', 1_000),
+};
+
 export const paymentPolicy = {
   authSession: authSessionPolicy,
   lockout: lockoutPolicy,
@@ -125,6 +130,7 @@ export const paymentPolicy = {
   pointUsePriority,
   featureFlags,
   testPoint: testPointPolicy,
+  bid: bidPolicy,
 };
 
 export default paymentPolicy;

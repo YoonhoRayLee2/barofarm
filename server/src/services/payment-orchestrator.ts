@@ -126,6 +126,10 @@ export enum PaymentOrchestratorErrorCode {
   CANCEL_AMOUNT_EXCEEDED = 'CANCEL_AMOUNT_EXCEEDED',
   DUPLICATE_PAYMENT_REQUEST = 'DUPLICATE_PAYMENT_REQUEST',
   FORBIDDEN = 'FORBIDDEN',
+  /** 결제기한(payment_due_at) 초과 — Phase 5(경매 낙찰결제, §12.3) 가드. 일반 주문에도 동일하게 적용된다. */
+  ORDER_PAYMENT_EXPIRED = 'ORDER_PAYMENT_EXPIRED',
+  /** 낙찰자 본인 확인 실패 — 경매 낙찰주문(auctions.bidding_channel='REST')에 한해 검사(§12.3). */
+  NOT_AUCTION_WINNER = 'NOT_AUCTION_WINNER',
 }
 
 export class PaymentOrchestratorError extends Error {
@@ -212,6 +216,45 @@ async function assertOwnership(order: OrderRow, userId: number): Promise<void> {
   }
 }
 
+/**
+ * 결제기한(payment_due_at) 초과 검사(§12.3, Phase 5) — 채널 구분 없이 모든 주문에 적용한다.
+ * createOrder는 항상 payment_due_at을 채우지만(services/order.ts 주석 참고) 이를 소비하는 코드가
+ * 없었다 — 이 함수가 그 소비 지점이다. 만료 배치(services/auction-settlement.ts
+ * expireOverdueAuctionOrders, REST 경매 대상)가 아직 order.status를 PAYMENT_EXPIRED로 바꾸지 못한
+ * 짧은 경합 구간(폴링 주기 이내)을 여기서 한 번 더 방어한다.
+ */
+function assertPaymentNotOverdue(order: OrderRow): void {
+  if (order.payment_due_at && new Date(order.payment_due_at).getTime() <= Date.now()) {
+    throw new PaymentOrchestratorError(
+      PaymentOrchestratorErrorCode.ORDER_PAYMENT_EXPIRED,
+      409,
+      '결제 기한이 지난 주문입니다',
+    );
+  }
+}
+
+/**
+ * 낙찰자 본인 확인(§12.3, Phase 5) — auctions.bidding_channel='REST'인 경매 낙찰주문에 한해 결제
+ * 시점에도 order.user_id가 해당 경매의 top_bidder_id와 여전히 일치하는지 재확인한다(정상 흐름에서는
+ * 경매 종료 후 top_bidder_id가 바뀌지 않으므로 항상 통과해야 하는 방어적 가드).
+ * 기존 소켓 경매(bidding_channel='SOCKET')의 주문에는 영향을 주지 않는다(해당 없으면 조용히 통과).
+ */
+async function assertAuctionWinnerStillValid(order: OrderRow): Promise<void> {
+  const [rows] = await pool.query<any[]>(
+    `SELECT top_bidder_id FROM auctions WHERE id = ? AND bidding_channel = 'REST'`,
+    [order.auction_id],
+  );
+  const auction = rows[0];
+  if (!auction) return; // REST 채널 경매 낙찰주문이 아니면(기존 소켓 경매/FCFS 등) 이 가드 대상이 아님
+  if (auction.top_bidder_id == null || Number(auction.top_bidder_id) !== order.user_id) {
+    throw new PaymentOrchestratorError(
+      PaymentOrchestratorErrorCode.NOT_AUCTION_WINNER,
+      403,
+      '낙찰자 본인만 결제할 수 있습니다',
+    );
+  }
+}
+
 /** approve 라우트의 requirePaymentAuth amountResolver가 사용 — paymentId로 해당 주문의 결제금액을 조회 */
 export async function resolvePaymentAmountForApprove(paymentId: number): Promise<number> {
   const [rows] = await pool.query<any[]>(
@@ -251,6 +294,8 @@ export async function readyPayment(userId: number, input: ReadyPaymentInput): Pr
       `결제 대기 상태가 아닌 주문입니다(status=${order.status})`,
     );
   }
+  assertPaymentNotOverdue(order);
+  await assertAuctionWinnerStillValid(order);
 
   // idempotencyKey 재사용 검사 — 동일 키가 이미 다른 payments row에 쓰였으면 거절, 같은 주문이면 그대로 반환.
   const [dupRows] = await pool.query<any[]>('SELECT * FROM payments WHERE idempotency_key = ?', [input.idempotencyKey]);
@@ -373,6 +418,8 @@ export async function approvePayment(userId: number, paymentId: number, input: A
       `결제 대기 상태가 아닌 주문입니다(status=${order.status})`,
     );
   }
+  assertPaymentNotOverdue(order);
+  await assertAuctionWinnerStillValid(order);
   if (typeof input.amount === 'number' && input.amount !== Number(order.payment_amount)) {
     throw new PaymentOrchestratorError(
       PaymentOrchestratorErrorCode.PAYMENT_AMOUNT_MISMATCH,
