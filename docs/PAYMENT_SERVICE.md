@@ -3,7 +3,7 @@
 > 경매 플랫폼 barofarm의 자체 결제 서비스. 한국 커머스·간편결제 스타일의 결제 흐름과
 > 경매 특화 인증(경매장 입장·입찰·낙찰결제)을 제공한다.
 > **현재는 개발/목업 단계로 실제 카드사·은행·PG와 연동하지 않으며, 모든 결제는 내부 Mock으로 동작한다.**
-> 브랜치: `pay2` · 상세 실행/보안 안내: [`server/README-payment.md`](server/README-payment.md) · 다이어그램: [`server/docs/payment-diagrams.md`](server/docs/payment-diagrams.md)
+> 브랜치: `pay2` · 상세 실행/보안 안내: [`server/README-payment.md`](../server/README-payment.md) · 다이어그램: [`server/docs/payment-diagrams.md`](../server/docs/payment-diagrams.md)
 
 ---
 
