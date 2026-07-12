@@ -263,6 +263,9 @@ register('/app/product-register', async ()    => import('/app/pages/product-regi
 register('/app/my-products',         async ()  => import('/app/pages/my-products.js').then(m => m.default()));
 register('/app/product-detail/:id',  async (p) => import('/app/pages/product-detail.js').then(m => m.default(p)));
 register('/app/auction-detail/:id', async (p) => import('/app/pages/auction-detail.js').then(m => m.default(p)));
+register('/app/auctions/:id',       async (p) => import('/app/pages/rest-auction-detail.js').then(m => m.default(p)));
+register('/app/pay-wallet',         async ()  => import('/app/pages/pay-wallet.js').then(m => m.default()));
+register('/app/checkout/:auctionId', async (p) => import('/app/pages/checkout.js').then(m => m.default(p)));
 register('/app/live-seller/:liveId', async (p) => import('/app/pages/live-seller.js').then(m => m.default(p)));
 register('/app/live-buyer/:liveId',  async (p) => import('/app/pages/live-buyer.js').then(m => m.default(p)));
 register('/app/profile/history',     async ()  => import('/app/pages/profile-history.js').then(m => m.default()));

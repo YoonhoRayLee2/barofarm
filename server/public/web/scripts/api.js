@@ -147,7 +147,12 @@ export async function request(path, opts = {}, _isRetry = false) {
   const text = await res.text();
   if (text) { try { body = JSON.parse(text); } catch { body = text; } }
 
-  if (res.status === 401 && !_isRetry) {
+  // 결제 인증세션 401(PAYMENT_AUTH_*)은 로그인 토큰 만료가 아니라 "결제 인증 필요"를 뜻하므로
+  // 토큰 갱신/로그아웃 흐름을 타지 않고 호출부로 그대로 전달한다(e.code로 분기).
+  const isPaymentAuth401 = body && typeof body === 'object'
+    && typeof body.error === 'string' && body.error.startsWith('PAYMENT_AUTH');
+
+  if (res.status === 401 && !_isRetry && !isPaymentAuth401) {
     // Attempt token refresh once
     try {
       await _refreshOrLogout();
@@ -160,6 +165,11 @@ export async function request(path, opts = {}, _isRetry = false) {
   if (!res.ok) {
     const e = new Error((body && body.error) || (typeof body === 'string' ? body : `HTTP ${res.status}`));
     e.status = res.status;
+    // Expose the parsed error body so callers can branch on server error codes
+    // (e.g. PAYMENT_PASSWORD_LOCKED) and show the server message. Additive — does
+    // not change existing e.message/e.status behaviour.
+    e.code = (body && typeof body === 'object' && body.error) || null;
+    e.body = (body && typeof body === 'object') ? body : null;
     throw e;
   }
 
