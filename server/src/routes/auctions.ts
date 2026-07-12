@@ -3,6 +3,17 @@ import pool from '../db/mysql';
 import { getRecommendations } from '../utils/productRecommender';
 import { createNotification } from '../services/notifications';
 import { requireAuth, optionalAuth } from '../middleware/auth';
+import {
+  getAuctionAccessInfo,
+  assertCanParticipate,
+  getEntryAuthRequirement,
+  findActiveAccessSession,
+  issueAccessSession,
+  revokeAccessSession,
+  AuctionAccessError,
+} from '../services/auction-access';
+import { hasPaymentPassword, verifyCredential, PaymentCredentialError } from '../services/payment-credential';
+import { issueSession as issuePaymentAuthSession } from '../services/payment-auth-session';
 
 const router = Router();
 
@@ -347,6 +358,144 @@ router.patch('/:id/delivery-status', requireAuth, async (req: Request, res: Resp
   } catch (err) {
     console.error('[auctions] PATCH /:id/delivery-status error:', err);
     res.status(500).json({ error: 'database error' });
+  }
+});
+
+// ─── 경매 입장 인증 (§5) ──────────────────────────────────────────────────────
+
+function getDeviceId(req: Request): string | null {
+  const header = req.headers['x-device-id'];
+  if (typeof header === 'string' && header.trim()) return header.trim();
+  const body = (req.body as { deviceId?: string })?.deviceId;
+  return body ? String(body).trim() : null;
+}
+
+// POST /api/auctions/:id/enter — 입장인증 세션 발급(흐름: 참여가능 확인 → 비번설정 확인 → 기존세션 확인 → 없으면 비번검증 → 발급)
+router.post('/:id/enter', requireAuth, async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const id = String(req.params.id);
+
+  try {
+    const auction = await getAuctionAccessInfo(id);
+    if (!auction) {
+      res.status(404).json({ error: 'auction not found' });
+      return;
+    }
+
+    await assertCanParticipate(userId, auction);
+
+    const requirement = getEntryAuthRequirement(auction);
+    if (!requirement.requireEntryAuth) {
+      res.json({ ok: true, requiresEntryAuth: false });
+      return;
+    }
+
+    if (!(await hasPaymentPassword(userId))) {
+      res.status(400).json({ error: 'PAYMENT_PASSWORD_NOT_SET', message: '결제비밀번호를 먼저 설정해주세요' });
+      return;
+    }
+
+    // ALWAYS 모드가 아니면 기존 유효 입장세션 재사용
+    if (!requirement.forceReauthEveryTime) {
+      const existing = await findActiveAccessSession(userId, auction);
+      if (existing) {
+        res.json({ ok: true, requiresEntryAuth: true, existing: true, expiresAt: existing.expiresAt.toISOString() });
+        return;
+      }
+    }
+
+    const { password } = req.body as { password?: string };
+    if (!password) {
+      res.status(400).json({ error: 'INVALID_REQUEST', message: '경매 입장을 위해 결제비밀번호 확인이 필요합니다' });
+      return;
+    }
+
+    await verifyCredential(userId, password);
+
+    const deviceId = getDeviceId(req);
+    const paymentAuthSession = await issuePaymentAuthSession({
+      userId,
+      purpose: 'AUCTION_ENTRY',
+      deviceId,
+      scopeType: auction.auctionGroupId ? 'GROUP' : 'AUCTION',
+      scopeId: auction.auctionGroupId ?? auction.id,
+    });
+
+    const accessSession = await issueAccessSession({
+      userId,
+      auction,
+      paymentAuthSessionId: paymentAuthSession.sessionId,
+    });
+
+    res.status(201).json({
+      ok: true,
+      requiresEntryAuth: true,
+      existing: false,
+      scopeType: accessSession.scopeType,
+      expiresAt: accessSession.expiresAt.toISOString(),
+    });
+  } catch (err) {
+    if (err instanceof AuctionAccessError) {
+      res.status(403).json({ error: err.code, message: err.message });
+      return;
+    }
+    if (err instanceof PaymentCredentialError) {
+      res.status(400).json({ error: err.code, message: err.message });
+      return;
+    }
+    console.error('[auctions] POST /:id/enter error:', err);
+    res.status(500).json({ error: 'internal_error' });
+  }
+});
+
+// GET /api/auctions/:id/access-status — 입장 인증 필요 여부 + 현재 세션 유효성 확인
+router.get('/:id/access-status', requireAuth, async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const id = String(req.params.id);
+
+  try {
+    const auction = await getAuctionAccessInfo(id);
+    if (!auction) {
+      res.status(404).json({ error: 'auction not found' });
+      return;
+    }
+
+    const requirement = getEntryAuthRequirement(auction);
+    if (!requirement.requireEntryAuth) {
+      res.json({ requiresEntryAuth: false, hasAccess: true });
+      return;
+    }
+
+    const session = await findActiveAccessSession(userId, auction);
+    res.json({
+      requiresEntryAuth: true,
+      hasAccess: session != null,
+      scopeType: session?.scopeType ?? null,
+      expiresAt: session?.expiresAt.toISOString() ?? null,
+      highValueReauthAmount: auction.highValueReauthAmount,
+    });
+  } catch (err) {
+    console.error('[auctions] GET /:id/access-status error:', err);
+    res.status(500).json({ error: 'internal_error' });
+  }
+});
+
+// DELETE /api/auctions/:id/access-session — 사용자 직접 입장세션 해제
+router.delete('/:id/access-session', requireAuth, async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const id = String(req.params.id);
+
+  try {
+    const auction = await getAuctionAccessInfo(id);
+    if (!auction) {
+      res.status(404).json({ error: 'auction not found' });
+      return;
+    }
+    await revokeAccessSession(userId, auction, 'USER_REVOKED');
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[auctions] DELETE /:id/access-session error:', err);
+    res.status(500).json({ error: 'internal_error' });
   }
 });
 
