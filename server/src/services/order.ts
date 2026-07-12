@@ -214,13 +214,15 @@ export async function createOrder(userId: number, params: CreateOrderParams): Pr
     throw new OrderError(OrderErrorCode.NOT_AUCTION_WINNER, 403, '낙찰자 본인만 주문을 생성할 수 있습니다');
   }
 
+  // 낙찰 시점에 services/auction-settlement.ts settleAuction()이 포인트/머니 없이(외부결제 전액) 주문을
+  // 미리 만들어두므로, 여기서 곧바로 409를 던지면 구매자가 영영 포인트/머니를 적용할 방법이 없어진다.
+  // 아직 결제가 시작되지 않은(PAYMENT_PENDING) 기존 주문이면 새로 만들지 않고 그 구성을 멱등 갱신한다
+  // (updateExistingOrderComposition). 이미 결제가 진행/완료된 주문이면 기존대로 DUPLICATE_ORDER.
   const [existing] = await pool.query<any[]>(
     `SELECT id FROM orders WHERE auction_id = ? AND status NOT IN ('CANCELED','PAYMENT_EXPIRED') LIMIT 1`,
     [auctionId],
   );
-  if (existing[0]) {
-    throw new OrderError(OrderErrorCode.DUPLICATE_ORDER, 409, '이미 진행 중인 주문이 있습니다');
-  }
+  const existingOrderId: number | undefined = existing[0]?.id;
 
   const originalAmount = Number(auction.current_price);
   const auctionFeeAmount = Number(auction.seller_fee_amt);
@@ -254,6 +256,15 @@ export async function createOrder(userId: number, params: CreateOrderParams): Pr
   // money/point는 결제 승인 시점에 지갑에서 직접 차감되고 PG를 거치지 않으므로 값이 같다).
   const externalPaymentAmount = paymentAmount;
 
+  if (existingOrderId) {
+    return updateExistingOrderComposition(existingOrderId, userId, {
+      pointUsedAmount: usePointAmount,
+      moneyUsedAmount: useMoneyAmount,
+      paymentAmount,
+      externalPaymentAmount,
+    });
+  }
+
   const orderNumber = generateOrderNumber();
   let insertId: number | null = null;
   for (let attempt = 0; attempt < 5 && insertId === null; attempt++) {
@@ -285,4 +296,67 @@ export async function createOrder(userId: number, params: CreateOrderParams): Pr
   const row = await getOrderRaw(insertId);
   if (!row) throw new Error('[order] order not found immediately after creation');
   return toOrderRecord(row);
+}
+
+/**
+ * 낙찰 시 미리 생성된(포인트/머니 없이 전액 외부결제로 세팅된) PAYMENT_PENDING 주문의 포인트/머니 구성을
+ * 멱등 갱신한다(체크아웃에서 포인트/머니를 적용해 재요청하는 경로). createOrder()가 gross/지갑 소프트검증까지
+ * 마친 뒤 이 함수를 호출하므로, 여기서는 소유자·상태·결제진행여부만 FOR UPDATE 락 안에서 재확인하고
+ * 컬럼을 덮어쓴다 — original_amount/auction_fee_amount/discount_amount/shipping_amount(gross 구성요소)는
+ * 경매 종료 시점에 이미 고정된 값이라 변경하지 않는다.
+ */
+async function updateExistingOrderComposition(
+  orderId: number,
+  userId: number,
+  amounts: {
+    pointUsedAmount: number;
+    moneyUsedAmount: number;
+    paymentAmount: number;
+    externalPaymentAmount: number;
+  },
+): Promise<OrderRecord> {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [rows] = await conn.query<any[]>('SELECT * FROM orders WHERE id = ? FOR UPDATE', [orderId]);
+    const order: OrderRow | undefined = rows[0];
+    if (!order) {
+      throw new OrderError(OrderErrorCode.ORDER_NOT_FOUND, 404, 'order not found');
+    }
+    if (order.user_id !== userId) {
+      throw new OrderError(OrderErrorCode.FORBIDDEN, 403, '본인 주문만 수정할 수 있습니다');
+    }
+    if (order.status !== 'PAYMENT_PENDING') {
+      // 이미 결제완료/배송중 등으로 넘어간 주문 — 기존과 동일하게 중복 생성으로 취급해 차단한다.
+      throw new OrderError(OrderErrorCode.DUPLICATE_ORDER, 409, '이미 진행 중인 주문이 있습니다');
+    }
+    // 결제(ready)가 이미 시작됐다면(READY 이상, 실패/취소/만료 제외) 구성 변경을 금지한다 — 이미 발급된
+    // payment_key/승인요청과 orders 금액이 어긋나는 것을 방지(중복결제/금액불일치 방지).
+    const [paymentRows] = await conn.query<any[]>(
+      `SELECT id FROM payments WHERE order_id = ? AND status NOT IN ('FAILED','CANCELED','EXPIRED') LIMIT 1`,
+      [orderId],
+    );
+    if (paymentRows[0]) {
+      throw new OrderError(OrderErrorCode.DUPLICATE_ORDER, 409, '이미 결제가 진행 중인 주문입니다');
+    }
+
+    await conn.query(
+      `UPDATE orders
+         SET point_used_amount = ?, money_used_amount = ?, payment_amount = ?, external_payment_amount = ?
+       WHERE id = ?`,
+      [amounts.pointUsedAmount, amounts.moneyUsedAmount, amounts.paymentAmount, amounts.externalPaymentAmount, orderId],
+    );
+
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback().catch(() => {});
+    throw err;
+  } finally {
+    conn.release();
+  }
+
+  const updated = await getOrderRaw(orderId);
+  if (!updated) throw new Error('[order] order not found immediately after composition update');
+  return toOrderRecord(updated);
 }
