@@ -7,9 +7,9 @@
 // (실제 운영 자금인 MONEY를 별도 표시 없이 지급하는 것을 방지하기 위한 설계 — /adjustments의
 // 일반 MONEY 조정과는 별개 경로).
 
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response } from 'express';
 import pool from '../db/mysql';
-import { requireAuth } from '../middleware/auth';
+import { requireAdmin, requireAdminOrDeveloper } from '../middleware/admin-auth';
 import { paymentPolicy } from '../config/payment-policy';
 import {
   getWallet,
@@ -22,50 +22,7 @@ import {
   WalletSummary,
 } from '../services/wallet';
 
-declare global {
-  namespace Express {
-    interface Request {
-      isAdmin?: boolean;
-      isDeveloper?: boolean;
-    }
-  }
-}
-
 const router = Router();
-router.use(requireAuth);
-
-async function loadRoles(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const [rows] = await pool.query<any[]>(
-      'SELECT is_admin, is_developer FROM users WHERE id = ? LIMIT 1',
-      [req.user!.userId],
-    );
-    const user = rows[0];
-    req.isAdmin = Boolean(user?.is_admin);
-    req.isDeveloper = Boolean(user?.is_developer);
-    next();
-  } catch (err) {
-    console.error('[admin-wallet] loadRoles', err);
-    res.status(500).json({ error: 'internal_error' });
-  }
-}
-router.use(loadRoles);
-
-function requireAdmin(req: Request, res: Response, next: NextFunction): void {
-  if (!req.isAdmin) {
-    res.status(403).json({ error: 'ADMIN_ADJUSTMENT_NOT_ALLOWED', message: '관리자 권한이 필요합니다' });
-    return;
-  }
-  next();
-}
-
-function requireAdminOrDeveloper(req: Request, res: Response, next: NextFunction): void {
-  if (!req.isAdmin && !req.isDeveloper) {
-    res.status(403).json({ error: 'ADMIN_ADJUSTMENT_NOT_ALLOWED', message: 'ADMIN 또는 DEVELOPER 권한이 필요합니다' });
-    return;
-  }
-  next();
-}
 
 class AdminWalletRouteError extends Error {
   code: string;
@@ -107,8 +64,11 @@ function balanceFromSummary(wallet: WalletSummary, assetType: AssetType): number
   }
 }
 
-/** TEST_POINT_ENABLED / 운영 하드 차단 / ADMIN·DEVELOPER 권한을 순서대로 검사한다. */
-function assertTestAssetAllowed(req: Request, targetUserId: number): void {
+/**
+ * TEST_POINT_ENABLED / 운영 하드 차단을 검사한다. ADMIN·DEVELOPER 권한 자체는 라우트에 부착된
+ * requireAdmin/requireAdminOrDeveloper(middleware/admin-auth.ts)가 이미 검증하므로 여기서 다시 검사하지 않는다.
+ */
+function assertTestAssetAllowed(targetUserId: number): void {
   if (!paymentPolicy.featureFlags.TEST_POINT_ENABLED) {
     throw new AdminWalletRouteError('TEST_POINT_NOT_AVAILABLE', 'TEST_POINT 기능이 비활성화되어 있습니다', 403);
   }
@@ -119,9 +79,6 @@ function assertTestAssetAllowed(req: Request, targetUserId: number): void {
       '운영 환경에서는 테스트 자산 지급/회수가 차단됩니다',
       403,
     );
-  }
-  if (!req.isAdmin && !req.isDeveloper) {
-    throw new AdminWalletRouteError('ADMIN_ADJUSTMENT_NOT_ALLOWED', 'ADMIN 또는 DEVELOPER 권한이 필요합니다', 403);
   }
 }
 
@@ -456,9 +413,9 @@ router.post('/users/:userId/wallet/test-points/grant', requireAdminOrDeveloper, 
   if (!body) return;
 
   try {
-    assertTestAssetAllowed(req, userId);
+    assertTestAssetAllowed(userId);
     const result = await performAdjustment({
-      administratorId: req.user!.userId,
+      administratorId: req.adminUserId!,
       targetUserId: userId,
       adjustmentType: 'ADMIN_POINT_GRANT',
       assetType: 'TEST_POINT',
@@ -488,13 +445,13 @@ router.post('/users/:userId/wallet/test-points/revoke', requireAdminOrDeveloper,
   };
 
   try {
-    assertTestAssetAllowed(req, userId);
+    assertTestAssetAllowed(userId);
     if (!reason) throw new AdminWalletRouteError('INVALID_REQUEST', 'reason은 필수입니다');
     if (!idempotencyKey) throw new AdminWalletRouteError('INVALID_REQUEST', 'idempotencyKey는 필수입니다');
 
     const revokeAmount = await resolveRevokeAmount(userId, 'TEST_POINT', revokeBody);
     const result = await performAdjustment({
-      administratorId: req.user!.userId,
+      administratorId: req.adminUserId!,
       targetUserId: userId,
       adjustmentType: 'ADMIN_POINT_REVOKE',
       assetType: 'TEST_POINT',
@@ -522,9 +479,9 @@ router.post('/users/:userId/wallet/test-money/grant', requireAdminOrDeveloper, a
   if (!body) return;
 
   try {
-    assertTestAssetAllowed(req, userId);
+    assertTestAssetAllowed(userId);
     const result = await performAdjustment({
-      administratorId: req.user!.userId,
+      administratorId: req.adminUserId!,
       targetUserId: userId,
       adjustmentType: 'ADMIN_MONEY_GRANT',
       assetType: 'MONEY',
@@ -553,13 +510,13 @@ router.post('/users/:userId/wallet/test-money/revoke', requireAdminOrDeveloper, 
   };
 
   try {
-    assertTestAssetAllowed(req, userId);
+    assertTestAssetAllowed(userId);
     if (!reason) throw new AdminWalletRouteError('INVALID_REQUEST', 'reason은 필수입니다');
     if (!idempotencyKey) throw new AdminWalletRouteError('INVALID_REQUEST', 'idempotencyKey는 필수입니다');
 
     const revokeAmount = await resolveRevokeAmount(userId, 'MONEY', revokeBody);
     const result = await performAdjustment({
-      administratorId: req.user!.userId,
+      administratorId: req.adminUserId!,
       targetUserId: userId,
       adjustmentType: 'ADMIN_MONEY_REVOKE',
       assetType: 'MONEY',
@@ -637,7 +594,7 @@ router.post('/users/:userId/wallet/adjustments', requireAdmin, async (req: Reque
       throw new AdminWalletRouteError('INVALID_REQUEST', 'ADMIN_MONEY_* 조정은 MONEY에만 사용할 수 있습니다');
     }
     if (assetType === 'TEST_POINT') {
-      assertTestAssetAllowed(req, userId);
+      assertTestAssetAllowed(userId);
     }
 
     let signedAmount: number;
@@ -661,7 +618,7 @@ router.post('/users/:userId/wallet/adjustments', requireAdmin, async (req: Reque
     }
 
     const result = await performAdjustment({
-      administratorId: req.user!.userId,
+      administratorId: req.adminUserId!,
       targetUserId: userId,
       adjustmentType,
       assetType,
