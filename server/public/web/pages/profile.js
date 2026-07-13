@@ -1269,6 +1269,16 @@ export default async function load() {
   `;
   scrollEl.appendChild(statsCard);
 
+  // 머니 칸 클릭 → 바로팜페이 화면
+  const moneyStat = statsCard.querySelector('#ps-money')?.closest('.profile-stat');
+  if (moneyStat) {
+    moneyStat.style.cursor = 'pointer';
+    moneyStat.setAttribute('role', 'button');
+    moneyStat.setAttribute('tabindex', '0');
+    moneyStat.addEventListener('click', () => navigate('/app/pay-wallet'));
+    moneyStat.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/app/pay-wallet'); } });
+  }
+
   // 비동기 조회 (실패 시 — 유지)
   ;(async () => {
     try {
