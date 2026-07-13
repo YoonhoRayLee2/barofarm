@@ -844,7 +844,6 @@ function buildCollectorPanel(profileUser, scrollEl, isMe) {
     btn.innerHTML = `
       <span class="profile-menu-item__icon">${icon}</span>
       <span class="profile-menu-item__label">${esc(label)}</span>
-      ${path === '/app/pay-wallet' ? '<span class="profile-menu-item__money" id="pm-money"></span>' : ''}
     `;
     btn.addEventListener('click', () => {
       if (path === '__interests__') {
@@ -1254,7 +1253,7 @@ export default async function load() {
     avatarWrap: hero.avatarWrap,
   }));
 
-  /* 2-b. Stats card (낙찰/경매중/찜/포인트) */
+  /* 2-b. Stats card (낙찰/경매중/찜/포인트/머니) */
   const statsCard = document.createElement('div');
   statsCard.className = 'profile-stats-card';
   statsCard.innerHTML = `
@@ -1262,6 +1261,7 @@ export default async function load() {
     <div class="profile-stat profile-stat--divider"><div class="profile-stat__num" id="ps-bidding">—</div><div class="profile-stat__label">경매중</div></div>
     <div class="profile-stat profile-stat--divider"><div class="profile-stat__num" id="ps-fav">—</div><div class="profile-stat__label">찜</div></div>
     <div class="profile-stat profile-stat--divider"><div class="profile-stat__num" id="ps-pts">0P</div><div class="profile-stat__label">포인트</div></div>
+    <div class="profile-stat profile-stat--divider"><div class="profile-stat__num" id="ps-money">—</div><div class="profile-stat__label">머니</div></div>
   `;
   scrollEl.appendChild(statsCard);
 
@@ -1293,8 +1293,8 @@ export default async function load() {
         const ptsEl = statsCard.querySelector('#ps-pts');
         if (ptsEl) ptsEl.textContent = `${pts.toLocaleString()}P`;
 
-        // 보유머니(바로팜페이 머니 잔액) — 동일 응답 재사용, 바로팜페이 메뉴 우측에 병기
-        const moneyEl = document.getElementById('pm-money');
+        // 보유머니(바로팜페이 머니 잔액) — 동일 응답 재사용, 통계 카드 머니 칸에 표시
+        const moneyEl = statsCard.querySelector('#ps-money');
         if (moneyEl && w?.moneyBalance != null) {
           moneyEl.textContent = `${(Number(w.moneyBalance) || 0).toLocaleString()}원`;
         }
