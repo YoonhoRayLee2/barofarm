@@ -1257,11 +1257,15 @@ export default async function load() {
   const statsCard = document.createElement('div');
   statsCard.className = 'profile-stats-card';
   statsCard.innerHTML = `
-    <div class="profile-stat"><div class="profile-stat__num" id="ps-won">—</div><div class="profile-stat__label">낙찰</div></div>
-    <div class="profile-stat profile-stat--divider"><div class="profile-stat__num" id="ps-bidding">—</div><div class="profile-stat__label">경매중</div></div>
-    <div class="profile-stat profile-stat--divider"><div class="profile-stat__num" id="ps-fav">—</div><div class="profile-stat__label">찜</div></div>
-    <div class="profile-stat profile-stat--divider"><div class="profile-stat__num" id="ps-pts">0P</div><div class="profile-stat__label">포인트</div></div>
-    <div class="profile-stat profile-stat--divider"><div class="profile-stat__num" id="ps-money">—</div><div class="profile-stat__label">머니</div></div>
+    <div class="profile-stats-row profile-stats-row--pay">
+      <div class="profile-stat"><div class="profile-stat__num" id="ps-pts">0P</div><div class="profile-stat__label">포인트</div></div>
+      <div class="profile-stat profile-stat--divider"><div class="profile-stat__num" id="ps-money">—</div><div class="profile-stat__label">머니</div></div>
+    </div>
+    <div class="profile-stats-row profile-stats-row--activity">
+      <div class="profile-stat"><div class="profile-stat__num" id="ps-won">—</div><div class="profile-stat__label">낙찰</div></div>
+      <div class="profile-stat profile-stat--divider"><div class="profile-stat__num" id="ps-bidding">—</div><div class="profile-stat__label">경매중</div></div>
+      <div class="profile-stat profile-stat--divider"><div class="profile-stat__num" id="ps-fav">—</div><div class="profile-stat__label">찜</div></div>
+    </div>
   `;
   scrollEl.appendChild(statsCard);
 
