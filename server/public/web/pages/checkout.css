@@ -117,6 +117,25 @@
 }
 
 /* Methods */
+.co-card__head-row { display: flex; align-items: center; justify-content: space-between; }
+.co-pm-manage {
+  background: none; border: none;
+  color: var(--color-accent);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  cursor: pointer;
+  padding: 0;
+}
+.co-method__lines { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.co-method__sub { font-style: normal; font-size: var(--fs-xs); color: var(--color-ink-soft); }
+.co-pm-guide {
+  display: flex; flex-direction: column; gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-bg);
+  border: 1px dashed var(--color-line);
+  border-radius: var(--radius-md);
+}
+.co-pm-guide__text { margin: 0; font-size: var(--fs-sm); color: var(--color-ink-soft); line-height: var(--lh-normal); }
 .co-methods { display: flex; flex-direction: column; gap: var(--space-2); }
 .co-method {
   display: flex;

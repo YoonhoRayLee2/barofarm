@@ -269,9 +269,42 @@ export async function resolvePaymentAmountForApprove(paymentId: number): Promise
 export interface ReadyPaymentInput {
   orderId: number;
   method: PaymentMethodType;
+  /** 등록된 결제수단(payment_methods) id — CARD/ACCOUNT일 때 이 값이 있으면 소유검증 후 마스킹정보를
+   * 서버에서 직접 해석해 cardInfo/accountInfo로 사용한다(클라가 카드/계좌번호를 인라인으로 보낼 필요 없음).
+   * 없으면 기존처럼 cardInfo/accountInfo 인라인 입력을 그대로 사용한다(호환 유지). */
+  paymentMethodId?: number;
   cardInfo?: CardInfo;
   accountInfo?: AccountInfo;
   idempotencyKey: string;
+}
+
+/** payment_methods에서 등록된 결제수단을 조회해 소유권·타입을 검증하고 마스킹정보를 반환한다. */
+async function resolveRegisteredPaymentMethod(
+  userId: number,
+  method: PaymentMethodType,
+  paymentMethodId: number,
+): Promise<{ cardInfo?: CardInfo; accountInfo?: AccountInfo }> {
+  const [rows] = await pool.query<any[]>(
+    'SELECT * FROM payment_methods WHERE id = ? AND user_id = ?',
+    [paymentMethodId, userId],
+  );
+  const row = rows[0];
+  if (!row) {
+    throw new PaymentOrchestratorError(PaymentOrchestratorErrorCode.INVALID_REQUEST, 400, '등록된 결제수단을 찾을 수 없습니다');
+  }
+  if (method === 'CARD') {
+    if (row.type !== 'card') {
+      throw new PaymentOrchestratorError(PaymentOrchestratorErrorCode.INVALID_REQUEST, 400, '결제수단 타입이 일치하지 않습니다(카드 아님)');
+    }
+    return { cardInfo: { last4: row.card_last4, brand: row.card_brand ?? undefined } };
+  }
+  if (method === 'ACCOUNT') {
+    if (row.type !== 'account') {
+      throw new PaymentOrchestratorError(PaymentOrchestratorErrorCode.INVALID_REQUEST, 400, '결제수단 타입이 일치하지 않습니다(계좌 아님)');
+    }
+    return { accountInfo: { last4: row.account_last4, bankCode: row.bank_name ?? undefined } };
+  }
+  return {};
 }
 
 export async function readyPayment(userId: number, input: ReadyPaymentInput): Promise<PaymentRecord> {
@@ -324,6 +357,16 @@ export async function readyPayment(userId: number, input: ReadyPaymentInput): Pr
     // FAILED/CANCELED/EXPIRED/REFUNDED/PARTIALLY_CANCELED — 새 결제 시도 허용
   }
 
+  // 등록된 결제수단(paymentMethodId)이 오면 소유검증 후 마스킹정보로 해석해 우선 사용한다.
+  // 없으면 기존 인라인 cardInfo/accountInfo 입력을 그대로 쓴다(호환 유지).
+  let cardInfo = input.cardInfo;
+  let accountInfo = input.accountInfo;
+  if (input.paymentMethodId != null && (input.method === 'CARD' || input.method === 'ACCOUNT')) {
+    const resolved = await resolveRegisteredPaymentMethod(userId, input.method, input.paymentMethodId);
+    cardInfo = resolved.cardInfo;
+    accountInfo = resolved.accountInfo;
+  }
+
   const provider = paymentService.resolveProviderForMethod(input.method);
   const requestedAmount = Number(order.payment_amount);
   const paymentKey = `PK_${order.order_number}_${Date.now().toString(36)}`;
@@ -335,8 +378,8 @@ export async function readyPayment(userId: number, input: ReadyPaymentInput): Pr
     method: input.method,
     amount: requestedAmount,
     idempotencyKey: input.idempotencyKey,
-    cardInfo: input.cardInfo,
-    accountInfo: input.accountInfo,
+    cardInfo,
+    accountInfo,
   };
   const result = await paymentService.readyPayment(ctx);
 

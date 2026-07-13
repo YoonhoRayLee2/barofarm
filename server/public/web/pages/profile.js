@@ -836,7 +836,7 @@ function buildCollectorPanel(profileUser, scrollEl, isMe) {
     { icon: '🛍️', label: '주문 목록',       path: '/app/profile/orders' },
     { icon: '🛒', label: '공동구매 참여 현황', path: '/app/group-deals?mine=true' },
     { icon: '🏠', label: '배송지 관리',      path: '/app/delivery-addresses' },
-    { icon: '💳', label: '결제수단 관리',    path: '/app/payment-methods' },
+    { icon: '💳', label: '바로팜페이',    path: '/app/pay-wallet' },
     { icon: '🚪', label: '로그아웃',        path: '__logout__' },
   ].forEach(({ icon, label, path }) => {
     const btn = document.createElement('button');

@@ -9,11 +9,12 @@
  * API:
  *   GET  /api/auctions/:id
  *   GET  /api/pay/wallet
+ *   GET  /api/payment-methods                 (등록 카드/계좌)
  *   GET  /api/payment-auth/sessions/current
  *   POST /api/payment-auth/sessions          { password, purpose }
  *   POST /api/orders                         { auctionId, useMoneyAmount, usePointAmount }
- *   POST /api/payments/ready                 { orderId, method, cardInfo?, accountInfo?, idempotencyKey }
- *   POST /api/payments/:id/approve           { idempotencyKey, cardInfo?, accountInfo?, mockResult? }
+ *   POST /api/payments/ready                 { orderId, method, paymentMethodId?, idempotencyKey }
+ *   POST /api/payments/:id/approve           { idempotencyKey }
  *
  * @module pages/checkout
  */
@@ -40,16 +41,12 @@ const uuid = () =>
     ? self.crypto.randomUUID()
     : `k-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-const CARD_BRANDS = ['신한', '국민', '삼성', '현대', '롯데', 'BC', '하나', '농협'];
-const BANKS = ['농협', '국민', '신한', '우리', '하나', '카카오뱅크', '토스뱅크', 'IBK기업'];
-const INSTALLMENTS = [0, 2, 3, 6, 12];
-
-const METHODS = [
-  { key: 'CARD', label: '신용·체크카드', icon: '💳' },
-  { key: 'ACCOUNT', label: '계좌이체', icon: '🏦' },
-  { key: 'MOBILE', label: '휴대폰 결제', icon: '📱' },
-  { key: 'VIRTUAL_ACCOUNT', label: '가상계좌', icon: '🧾' },
-];
+/** 계좌번호 마스킹 — 끝 4자리만 노출 */
+const maskAccount = (num) => {
+  const digits = String(num || '').replace(/\D/g, '');
+  if (digits.length <= 4) return digits;
+  return '••••' + digits.slice(-4);
+};
 
 export default async function load(params) {
   const stored = await getSecureItem('user');
@@ -89,6 +86,13 @@ export default async function load(params) {
     return page;
   }
 
+  // 등록 결제수단(카드/계좌) — 실패해도 지갑 결제는 가능하므로 [] 폴백
+  let methods = [];
+  try {
+    const list = await request('/api/payment-methods', { method: 'GET' });
+    methods = (Array.isArray(list) ? list : []).filter((m) => m.type === 'card' || m.type === 'account');
+  } catch { methods = []; }
+
   /* ── 금액 계산 (서버 createOrder와 동일 공식) ─────────────── */
   const finalPrice = Number(auction.finalPrice) || 0;   // 낙찰금액 (current_price)
   const feeAmount = Number(auction.sellerFeeAmt) || 0;   // 수수료 (seller_fee_amt)
@@ -105,12 +109,10 @@ export default async function load(params) {
 
   let usePoint = 0;
   let useMoney = 0;
-  let selectedMethod = 'CARD';
-  let cardBrand = CARD_BRANDS[0];
-  let cardLast4 = '0000';
-  let installment = 0;
-  let bank = BANKS[0];
-  let mockResult = '';
+  // 남은 금액에 사용할 등록 결제수단 id (기본값: 기본 결제수단 → 첫 카드/계좌)
+  let selectedPmId = methods.length
+    ? (methods.find((m) => m.isDefault) || methods[0]).id
+    : null;
   let termsChecked = false;
 
   scroll.innerHTML = `
@@ -125,7 +127,7 @@ export default async function load(params) {
     </section>
 
     <section class="co-card">
-      <h2 class="co-card__title">자체페이 (머니·포인트)</h2>
+      <h2 class="co-card__title">바로팜페이 (머니·포인트)</h2>
       <div class="co-pay-field">
         <div class="co-pay-field__head">
           <span>포인트 사용</span>
@@ -152,20 +154,11 @@ export default async function load(params) {
     </section>
 
     <section class="co-card">
-      <h2 class="co-card__title">그 외 결제수단</h2>
-      <div class="co-methods" id="co-methods">
-        ${METHODS.map((m) => `
-          <label class="co-method">
-            <input type="radio" name="method" value="${m.key}" ${m.key === selectedMethod ? 'checked' : ''} />
-            <span class="co-method__body"><span class="co-method__icon">${m.icon}</span><span>${m.label}</span></span>
-          </label>
-        `).join('')}
-        <label class="co-method co-method--disabled">
-          <input type="radio" name="method" disabled />
-          <span class="co-method__body"><span class="co-method__icon">🎫</span><span>상품권 / 제휴포인트 <em>(준비 중)</em></span></span>
-        </label>
+      <div class="co-card__head-row">
+        <h2 class="co-card__title">등록 결제수단 (카드·계좌)</h2>
+        <button class="co-pm-manage" type="button" id="co-pm-manage">관리 ›</button>
       </div>
-      <div class="co-method-detail" id="method-detail"></div>
+      <div class="co-methods" id="co-methods"></div>
     </section>
 
     <section class="co-card">
@@ -189,64 +182,56 @@ export default async function load(params) {
   const usePointEl = scroll.querySelector('#use-point');
   const useMoneyEl = scroll.querySelector('#use-money');
   const walletAfterEl = scroll.querySelector('#wallet-after');
-  const methodDetailEl = scroll.querySelector('#method-detail');
+  const methodsEl = scroll.querySelector('#co-methods');
   const sumEl = scroll.querySelector('#co-sum');
   const termsEl = scroll.querySelector('#co-terms');
   const payBtn = footer.querySelector('#co-pay');
+  scroll.querySelector('#co-pm-manage').addEventListener('click', () => navigate('/app/pay-wallet'));
 
   const parseNum = (v) => Number(String(v).replace(/[^\d]/g, '')) || 0;
 
-  /* ── 렌더: 결제수단 상세 ─────────────────────────────── */
-  function renderMethodDetail() {
+  /* ── 렌더: 등록 결제수단 선택 ────────────────────────── */
+  function renderMethods() {
+    // 지갑(머니·포인트)로 전액 결제되면 외부 결제수단 불필요
     if (finalAmount() === 0) {
-      methodDetailEl.innerHTML = `<p class="co-method-note">자체페이(머니·포인트)로 전액 결제됩니다. 추가 결제수단이 필요하지 않습니다.</p>`;
+      methodsEl.innerHTML = `<p class="co-method-note">머니·포인트로 전액 결제됩니다. 등록 결제수단이 필요하지 않습니다.</p>`;
       return;
     }
-    if (selectedMethod === 'CARD') {
-      methodDetailEl.innerHTML = `
-        <div class="co-detail-row">
-          <label class="co-select"><span>카드사</span>
-            <select id="card-brand">${CARD_BRANDS.map((b) => `<option ${b === cardBrand ? 'selected' : ''}>${b}</option>`).join('')}</select>
-          </label>
-          <label class="co-select"><span>할부</span>
-            <select id="installment">${INSTALLMENTS.map((n) => `<option value="${n}" ${n === installment ? 'selected' : ''}>${n === 0 ? '일시불' : n + '개월'}</option>`).join('')}</select>
-          </label>
-        </div>
-        <label class="co-select co-select--full"><span>카드 끝 4자리 (Mock)</span>
-          <input type="tel" inputmode="numeric" maxlength="4" id="card-last4" value="${cardLast4}" />
-        </label>
-        <p class="co-method-note">Mock: 0000 승인성공 · 1111 승인실패 · 2222 한도초과</p>
-      `;
-      methodDetailEl.querySelector('#card-brand').addEventListener('change', (e) => { cardBrand = e.target.value; });
-      methodDetailEl.querySelector('#installment').addEventListener('change', (e) => { installment = Number(e.target.value); });
-      methodDetailEl.querySelector('#card-last4').addEventListener('input', (e) => { cardLast4 = e.target.value.replace(/\D/g, '').slice(0, 4); e.target.value = cardLast4; });
-    } else if (selectedMethod === 'ACCOUNT') {
-      methodDetailEl.innerHTML = `
-        <label class="co-select co-select--full"><span>은행</span>
-          <select id="bank">${BANKS.map((b) => `<option ${b === bank ? 'selected' : ''}>${b}</option>`).join('')}</select>
-        </label>
-        ${mockSelectHtml()}
-      `;
-      methodDetailEl.querySelector('#bank').addEventListener('change', (e) => { bank = e.target.value; });
-      bindMock();
-    } else {
-      methodDetailEl.innerHTML = mockSelectHtml();
-      bindMock();
+    if (!methods.length) {
+      methodsEl.innerHTML = `
+        <div class="co-pm-guide">
+          <p class="co-pm-guide__text">남은 결제금액을 낼 카드·계좌가 없습니다.<br>바로팜페이에 카드/계좌를 등록하거나 머니를 충전해주세요.</p>
+          <button class="co-charge-link" type="button" id="co-pm-add">바로팜페이로 이동 ›</button>
+        </div>`;
+      methodsEl.querySelector('#co-pm-add').addEventListener('click', () => navigate('/app/pay-wallet'));
+      return;
     }
-  }
-  function mockSelectHtml() {
-    return `
-      <label class="co-select co-select--full"><span>Mock 결제 결과</span>
-        <select id="mock-result">
-          <option value="" ${mockResult === '' ? 'selected' : ''}>정상 결제</option>
-          <option value="timeout" ${mockResult === 'timeout' ? 'selected' : ''}>타임아웃</option>
-          <option value="response_lost" ${mockResult === 'response_lost' ? 'selected' : ''}>응답 유실</option>
-        </select>
-      </label>`;
-  }
-  function bindMock() {
-    const el = methodDetailEl.querySelector('#mock-result');
-    if (el) el.addEventListener('change', (e) => { mockResult = e.target.value; });
+    methodsEl.innerHTML = methods.map((pm) => {
+      const checked = String(pm.id) === String(selectedPmId) ? 'checked' : '';
+      let icon, title, sub;
+      if (pm.type === 'account') {
+        icon = '🏦';
+        title = `${escapeHtml(pm.bankName || '계좌')} ${maskAccount(pm.accountNumber)}`;
+        sub = escapeHtml(pm.accountHolder || '');
+      } else {
+        icon = '💳';
+        title = `${escapeHtml(pm.cardBrand || '카드')} ••••${escapeHtml(pm.cardLast4 || '')}`;
+        sub = [pm.cardHolder, pm.cardExpiry].filter(Boolean).map(escapeHtml).join(' · ');
+      }
+      return `
+        <label class="co-method">
+          <input type="radio" name="pm" value="${escapeHtml(String(pm.id))}" ${checked} />
+          <span class="co-method__body">
+            <span class="co-method__icon">${icon}</span>
+            <span class="co-method__lines"><span>${title}</span>${sub ? `<em class="co-method__sub">${sub}</em>` : ''}</span>
+          </span>
+        </label>`;
+    }).join('');
+    methodsEl.querySelectorAll('input[name="pm"]').forEach((r) => r.addEventListener('change', (e) => {
+      if (!e.target.checked) return;
+      selectedPmId = e.target.value;
+      renderSummary();
+    }));
   }
 
   /* ── 계산 ────────────────────────────────────────────── */
@@ -273,7 +258,9 @@ export default async function load(params) {
       <div class="co-sum__earn">적립 예정 ${formatPriceRaw(earnEstimate())}P</div>
     `;
     payBtn.textContent = `${formatPrice(fa)} 결제하기`;
-    payBtn.disabled = !termsChecked;
+    // 남은 금액이 있으면 등록 결제수단 선택 필수
+    const needsExternal = fa > 0;
+    payBtn.disabled = !termsChecked || (needsExternal && !buildMethodPayload());
 
     // 자체페이 예상 잔액 / 부족 안내
     const shortMoney = useMoney > moneyBalance;
@@ -296,11 +283,11 @@ export default async function load(params) {
   }
   usePointEl.addEventListener('input', () => {
     usePoint = clampAndFormat(usePointEl, Math.min(pointBalance, gross - useMoney));
-    renderSummary(); renderMethodDetail();
+    renderMethods(); renderSummary();
   });
   useMoneyEl.addEventListener('input', () => {
     useMoney = clampAndFormat(useMoneyEl, Math.min(moneyBalance, gross - usePoint));
-    renderSummary(); renderMethodDetail();
+    renderMethods(); renderSummary();
   });
   scroll.querySelectorAll('.co-amount-max').forEach((btn) => btn.addEventListener('click', () => {
     if (btn.dataset.target === 'point') {
@@ -310,12 +297,7 @@ export default async function load(params) {
       useMoney = Math.min(moneyBalance, gross - usePoint);
       useMoneyEl.value = useMoney ? useMoney.toLocaleString('ko-KR') : '';
     }
-    renderSummary(); renderMethodDetail();
-  }));
-  scroll.querySelectorAll('input[name="method"]').forEach((r) => r.addEventListener('change', (e) => {
-    if (!e.target.value) return;
-    selectedMethod = e.target.value;
-    renderMethodDetail();
+    renderMethods(); renderSummary();
   }));
   termsEl.addEventListener('change', () => { termsChecked = termsEl.checked; renderSummary(); });
 
@@ -326,13 +308,9 @@ export default async function load(params) {
 
   function buildMethodPayload() {
     if (finalAmount() === 0) return { method: 'MONEY' };
-    switch (selectedMethod) {
-      case 'CARD': return { method: 'CARD', cardInfo: { brand: cardBrand, last4: cardLast4 || '0000', installment } };
-      case 'ACCOUNT': return { method: 'ACCOUNT', accountInfo: { bank, last4: '0000' } };
-      case 'MOBILE': return { method: 'MOBILE' };
-      case 'VIRTUAL_ACCOUNT': return { method: 'VIRTUAL_ACCOUNT' };
-      default: return { method: 'CARD', cardInfo: { brand: cardBrand, last4: cardLast4 || '0000', installment } };
-    }
+    const pm = methods.find((m) => String(m.id) === String(selectedPmId));
+    if (!pm) return null;
+    return { method: pm.type === 'account' ? 'ACCOUNT' : 'CARD', paymentMethodId: pm.id };
   }
 
   async function ensurePaymentSession(purpose) {
@@ -357,10 +335,9 @@ export default async function load(params) {
 
   async function approveFlow(reauthed) {
     try {
-      const md = buildMethodPayload();
       await request(`/api/payments/${pendingPayment.id}/approve`, {
         method: 'POST',
-        body: JSON.stringify({ idempotencyKey: approveKey, cardInfo: md.cardInfo, accountInfo: md.accountInfo, mockResult: mockResult || undefined }),
+        body: JSON.stringify({ idempotencyKey: approveKey }),
       });
       showSuccess();
     } catch (err) {
@@ -391,6 +368,10 @@ export default async function load(params) {
 
   async function doCheckout() {
     if (!termsChecked) { showToast('결제에 동의해주세요', { variant: 'error' }); return; }
+    if (finalAmount() > 0 && !buildMethodPayload()) {
+      showToast('남은 금액을 결제할 카드·계좌를 선택해주세요', { variant: 'error' });
+      return;
+    }
     payBtn.disabled = true;
     payBtn.textContent = '결제 중...';
     try {
@@ -407,7 +388,7 @@ export default async function load(params) {
         const md = buildMethodPayload();
         pendingPayment = await request('/api/payments/ready', {
           method: 'POST',
-          body: JSON.stringify({ orderId: pendingOrder.id, method: md.method, cardInfo: md.cardInfo, accountInfo: md.accountInfo, idempotencyKey: uuid() }),
+          body: JSON.stringify({ orderId: pendingOrder.id, method: md.method, paymentMethodId: md.paymentMethodId, idempotencyKey: uuid() }),
         });
         approveKey = uuid();
       }
@@ -454,7 +435,7 @@ export default async function load(params) {
 
   payBtn.addEventListener('click', doCheckout);
 
-  renderMethodDetail();
+  renderMethods();
   renderSummary();
   return page;
 }

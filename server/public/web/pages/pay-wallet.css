@@ -263,3 +263,161 @@
 .wallet-tx-empty { padding: var(--space-6) var(--space-4); text-align: center; color: var(--color-ink-soft); font-size: var(--fs-sm); }
 
 .wallet-tx-more { padding: var(--space-3) var(--space-4) var(--space-4); }
+
+/* ── 등록 결제수단 ───────────────────────────────────── */
+.wallet-pm-add {
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  padding: 6px 14px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--color-accent);
+  cursor: pointer;
+}
+.wallet-pm-add:active { background: var(--color-surface-alt); transform: scale(0.97); }
+
+.wallet-pm-list { display: flex; flex-direction: column; gap: var(--space-2); }
+.wallet-pm-empty {
+  padding: var(--space-5) var(--space-3);
+  text-align: center;
+  color: var(--color-ink-soft);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+}
+.wallet-pm {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 12px var(--space-3);
+}
+.wallet-pm.is-default { border-color: var(--color-accent); background: var(--color-accent-tint); }
+.wallet-pm__icon { font-size: var(--fs-2xl); flex-shrink: 0; }
+.wallet-pm__info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.wallet-pm__title {
+  font-size: var(--fs-base);
+  font-weight: var(--fw-bold);
+  color: var(--color-ink);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.wallet-pm__badge {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+}
+.wallet-pm__sub { font-size: var(--fs-xs); color: var(--color-ink-soft); }
+.wallet-pm__actions { display: flex; gap: 6px; flex-shrink: 0; }
+.wallet-pm__act {
+  background: none;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  padding: 5px 9px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--color-ink-soft);
+  cursor: pointer;
+}
+.wallet-pm__act--danger { color: var(--color-cta); }
+.wallet-pm__act:active { background: var(--color-surface-alt); }
+
+.wallet-pm-note { font-size: var(--fs-xs); color: var(--color-ink-mute); margin: 0; line-height: var(--lh-normal); }
+
+/* ── 바텀시트 (결제수단 추가/폼) ─────────────────────── */
+.wallet-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: var(--color-overlay-dim);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.wallet-sheet-overlay.is-open { opacity: 1; pointer-events: auto; }
+.wallet-sheet {
+  width: 100%;
+  max-width: 480px;
+  background: var(--color-surface);
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+  padding-bottom: max(var(--space-4), env(safe-area-inset-bottom));
+  transform: translateY(100%);
+  transition: transform var(--dur-base) var(--ease-out);
+  max-height: 88dvh;
+  display: flex;
+  flex-direction: column;
+}
+.wallet-sheet-overlay.is-open .wallet-sheet { transform: translateY(0); }
+.wallet-sheet__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-line);
+  flex-shrink: 0;
+}
+.wallet-sheet__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-extrabold);
+  color: var(--color-ink);
+  margin: 0;
+}
+.wallet-sheet__close {
+  background: none;
+  border: none;
+  font-size: var(--fs-lg);
+  color: var(--color-ink-soft);
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+}
+.wallet-sheet__body {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow-y: auto;
+}
+.wallet-sheet__footer { padding: 0 var(--space-4) var(--space-2); flex-shrink: 0; }
+
+.wallet-pm-input {
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  padding: 12px;
+  outline: none;
+  width: 100%;
+}
+.wallet-pm-input:focus { border-color: var(--color-accent); }
+
+.wallet-pm-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  background: var(--color-bg);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  cursor: pointer;
+  text-align: left;
+}
+.wallet-pm-option:active { background: var(--color-surface-alt); }
+.wallet-pm-option__icon { font-size: var(--fs-2xl); }
+.wallet-pm-option__text { display: flex; flex-direction: column; gap: 2px; }
+.wallet-pm-option__name { font-size: var(--fs-base); font-weight: var(--fw-bold); color: var(--color-ink); }
+.wallet-pm-option__desc { font-size: var(--fs-xs); color: var(--color-ink-soft); }

@@ -32,10 +32,12 @@ function handleError(err: unknown, res: Response): void {
   res.status(500).json({ error: 'internal_error' });
 }
 
-// POST /api/payments/ready — body: { orderId, method, cardInfo?, accountInfo?, idempotencyKey }
+// POST /api/payments/ready — body: { orderId, method, paymentMethodId?, cardInfo?, accountInfo?, idempotencyKey }
+// paymentMethodId: 등록된 결제수단(카드/계좌) id. CARD/ACCOUNT 결제 시 이 값을 우선 사용하며,
+// 서버가 소유검증 후 마스킹정보를 직접 해석한다(호환을 위해 인라인 cardInfo/accountInfo도 계속 지원).
 router.post('/ready', async (req: Request, res: Response) => {
   const userId = req.user!.userId;
-  const { orderId, method, cardInfo, accountInfo, idempotencyKey } = req.body ?? {};
+  const { orderId, method, paymentMethodId, cardInfo, accountInfo, idempotencyKey } = req.body ?? {};
 
   if (!Number.isInteger(orderId)) {
     res.status(400).json({ error: 'INVALID_REQUEST', message: 'orderId is required' });
@@ -43,7 +45,7 @@ router.post('/ready', async (req: Request, res: Response) => {
   }
 
   try {
-    const payment = await readyPayment(userId, { orderId, method, cardInfo, accountInfo, idempotencyKey });
+    const payment = await readyPayment(userId, { orderId, method, paymentMethodId, cardInfo, accountInfo, idempotencyKey });
     res.status(201).json(payment);
   } catch (err) {
     handleError(err, res);
