@@ -1279,6 +1279,20 @@ export default async function load() {
       const favEl = statsCard.querySelector('#ps-fav');
       if (favEl && profileUser.favoritesCount != null) favEl.textContent = String(profileUser.favoritesCount);
     } catch { /* — 유지 */ }
+
+    // 포인트: 바로팜페이 지갑 포인트 버킷 합산 (본인 프로필일 때만 — /api/pay/wallet은 인증 사용자 지갑을 반환)
+    if (String(profileUser.id) === String(user.id)) {
+      try {
+        const w = await request('/api/pay/wallet', { method: 'GET' });
+        const pts =
+          (Number(w?.earnedPointBalance) || 0) +
+          (Number(w?.eventPointBalance) || 0) +
+          (Number(w?.compensationPointBalance) || 0) +
+          (Number(w?.testPointBalance) || 0);
+        const ptsEl = statsCard.querySelector('#ps-pts');
+        if (ptsEl) ptsEl.textContent = `${pts.toLocaleString()}P`;
+      } catch (e) { console.warn('[profile] wallet points fetch failed', e); /* 0P 유지 */ }
+    }
   })();
 
   /* 3. PROF-3 Interest pills */
