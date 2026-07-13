@@ -24,7 +24,6 @@ export default function createAdminRouter(io: Server) {
   // Phase 7(§19) 신규 어드민 API — 결제/인증/REST경매 관리. 기존 라우트와 경로가 겹치지 않는다
   // (결제관리는 /api/payments/*, 인증관리는 /api/users/:id/payment-auth 등, REST경매관리는 /api/rest-auctions/*).
   router.use('/api/payments', createAdminPaymentsRouter());
-  router.use('/api', createAdminAuthManagementRouter());
   router.use('/api/rest-auctions', createAdminRestAuctionsRouter());
 
   // POST /admin/api/login
@@ -64,6 +63,9 @@ export default function createAdminRouter(io: Server) {
       res.status(500).json({ error: 'server error' });
     }
   });
+
+  // 인증관리 라우터는 /api 전역에 걸리므로 인증 없는 /api/login 등록 이후에 마운트한다(로그인 교착 방지)
+  router.use('/api', createAdminAuthManagementRouter());
 
   // GET /admin/api/dashboard
   router.get('/api/dashboard', requireAdmin, async (_req: Request, res: Response) => {
