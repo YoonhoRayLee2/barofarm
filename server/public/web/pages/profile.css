@@ -977,6 +977,14 @@
   flex: 1;
 }
 
+.profile-menu-item__money {
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  color: var(--color-ink-soft);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 /* ── Dealer revenue header (PROF-7) ───────────────────────── */
 .profile-revenue {
   display: flex;

@@ -844,6 +844,7 @@ function buildCollectorPanel(profileUser, scrollEl, isMe) {
     btn.innerHTML = `
       <span class="profile-menu-item__icon">${icon}</span>
       <span class="profile-menu-item__label">${esc(label)}</span>
+      ${path === '/app/pay-wallet' ? '<span class="profile-menu-item__money" id="pm-money"></span>' : ''}
     `;
     btn.addEventListener('click', () => {
       if (path === '__interests__') {
@@ -1291,6 +1292,12 @@ export default async function load() {
           (Number(w?.testPointBalance) || 0);
         const ptsEl = statsCard.querySelector('#ps-pts');
         if (ptsEl) ptsEl.textContent = `${pts.toLocaleString()}P`;
+
+        // 보유머니(바로팜페이 머니 잔액) — 동일 응답 재사용, 바로팜페이 메뉴 우측에 병기
+        const moneyEl = document.getElementById('pm-money');
+        if (moneyEl && w?.moneyBalance != null) {
+          moneyEl.textContent = `${(Number(w.moneyBalance) || 0).toLocaleString()}원`;
+        }
       } catch (e) { console.warn('[profile] wallet points fetch failed', e); /* 0P 유지 */ }
     }
   })();
