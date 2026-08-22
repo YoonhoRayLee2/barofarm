@@ -909,4 +909,254 @@ a.link:hover { text-decoration: underline; }
 .admin-toast--success::before { content: '\2713'; background: var(--ff-success); }
 .admin-toast--error::before { content: '\2715'; background: var(--ff-danger); }
 .admin-toast--info::before { content: '\24D8'; background: var(--ff-accent); }
+
+/* ===== Charts & analytics (Phase 4 / Phase 6) ===== */
+/* Category hues — fixed order; also referenced by JS via getComputedStyle */
+:root {
+  --chart-grid: color-mix(in srgb, var(--ff-line) 70%, transparent);
+}
+
+/* Section wrapper for chart panels (two-up on desktop, stack on mobile) */
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  padding: 0 var(--space-5) var(--space-5);
+  align-items: stretch;
+}
+.chart-panel {
+  background: var(--ff-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elev-1);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.chart-panel__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.chart-panel__title {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--ff-ink);
+  margin: 0;
+}
+.chart-panel__sub {
+  font-size: var(--fs-sm);
+  color: var(--ff-ink-mute);
+}
+/* SVG scales to container width, keeps aspect ratio via viewBox */
+.chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  color: var(--ff-ink-mute);
+  font-size: var(--fs-sm);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+}
+
+/* Donut + legend layout */
+.donut-wrap {
+  display: flex;
+  gap: var(--space-5);
+  align-items: center;
+  flex-wrap: wrap;
+}
+.donut-wrap .chart-svg { flex: 0 0 160px; width: 160px; }
+.chart-legend {
+  flex: 1;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.chart-legend__item {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--ff-ink);
+}
+.chart-legend__swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.chart-legend__label { color: var(--ff-ink-soft); }
+.chart-legend__val {
+  color: var(--ff-ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.chart-legend__pct { color: var(--ff-ink-mute); font-weight: 600; }
+
+/* ===== Settlement summary (Phase 6) ===== */
+.settle-summary {
+  padding: var(--space-5) var(--space-5) 0;
+}
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+.summary-card {
+  position: relative;
+  background: var(--ff-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  box-shadow: var(--elev-1);
+  overflow: hidden;
+}
+.summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 4px; height: 100%;
+}
+.summary-card--pending::before { background: var(--ff-warn); }
+.summary-card--paid::before { background: var(--ff-success); }
+.summary-card--cancelled::before { background: var(--ff-ink-mute); }
+.summary-card__label {
+  font-size: var(--fs-sm);
+  color: var(--ff-ink-mute);
+  display: block;
+  margin-bottom: var(--space-1);
+}
+.summary-card__amount {
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  color: var(--ff-ink);
+  letter-spacing: -0.02em;
+}
+.summary-card__count {
+  font-size: var(--fs-sm);
+  color: var(--ff-ink-soft);
+  display: block;
+  margin-top: var(--space-1);
+}
+
+/* Overdue-pending highlight list */
+.overdue-list {
+  background: var(--ff-surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--ff-danger);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elev-1);
+  margin-bottom: var(--space-5);
+  overflow: hidden;
+}
+.overdue-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-2) var(--space-4);
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+.overdue-item:last-child { border-bottom: none; }
+.overdue-item__seller { font-weight: 700; color: var(--ff-ink); }
+.overdue-item__period { font-size: var(--fs-sm); color: var(--ff-ink-mute); }
+.overdue-item__amount {
+  font-weight: 800;
+  color: var(--ff-ink);
+  font-variant-numeric: tabular-nums;
+}
+.overdue-item__age {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--ff-danger);
+}
+.overdue-item__age--warn { color: var(--ff-warn); }
+.overdue-empty {
+  padding: var(--space-4);
+  color: var(--ff-ink-mute);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+
+/* Seller bar list (horizontal bars) */
+.seller-bars { display: flex; flex-direction: column; gap: var(--space-3); }
+.seller-bar__row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: var(--space-3);
+  align-items: center;
+}
+.seller-bar__name {
+  font-size: var(--fs-sm);
+  color: var(--ff-ink-soft);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.seller-bar__track {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.seller-bar__meter {
+  position: relative;
+  height: 18px;
+  background: var(--ff-surface-alt);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.seller-bar__fill {
+  position: absolute;
+  top: 0; left: 0; height: 100%;
+  border-radius: var(--radius-sm);
+  min-width: 2px;
+}
+.seller-bar__fill--pending { background: var(--ff-warn); }
+.seller-bar__fill--paid { background: var(--ff-success); }
+.seller-bar__val {
+  font-size: var(--fs-xs);
+  color: var(--ff-ink-mute);
+  font-variant-numeric: tabular-nums;
+}
+.seller-bar__legend {
+  display: flex;
+  gap: var(--space-4);
+  font-size: var(--fs-sm);
+  color: var(--ff-ink-mute);
+  margin-bottom: var(--space-3);
+}
+.seller-bar__legend span { display: inline-flex; align-items: center; gap: var(--space-1); }
+.seller-bar__legend i {
+  width: 12px; height: 12px; border-radius: 3px; display: inline-block;
+}
+
+/* cancelled badge (Phase 6 — new status) */
+.badge--cancelled {
+  background: color-mix(in srgb, var(--ff-ink-mute) 18%, transparent);
+  color: var(--ff-ink-mute);
+}
+
+@media (max-width: 768px) {
+  .charts-row { grid-template-columns: 1fr; }
+  .summary-cards { grid-template-columns: 1fr; }
+  .donut-wrap { justify-content: center; }
+  .seller-bar__row { grid-template-columns: 96px 1fr; }
+  .overdue-item { grid-template-columns: 1fr; }
+}
 .admin-toast__msg { flex: 1; }

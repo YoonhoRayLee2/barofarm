@@ -23,6 +23,32 @@
     </aside>
 
     <main class="main">
+      <section class="settle-summary">
+        <div class="summary-cards" id="summary-cards"></div>
+
+        <h2 style="padding:0;margin:0 0 var(--space-3)">미지급 지연</h2>
+        <div class="overdue-list" id="overdue-list">
+          <div class="overdue-empty">불러오는 중...</div>
+        </div>
+
+        <div class="charts-row">
+          <div class="chart-panel">
+            <div class="chart-panel__head">
+              <h2 class="chart-panel__title">매출 추이</h2>
+              <span class="chart-panel__sub">최근 30일 · 낙찰 기준</span>
+            </div>
+            <div id="chart-settle-trend"></div>
+          </div>
+          <div class="chart-panel">
+            <div class="chart-panel__head">
+              <h2 class="chart-panel__title">판매자별 정산 현황</h2>
+              <span class="chart-panel__sub">미지급 / 지급</span>
+            </div>
+            <div id="seller-status"></div>
+          </div>
+        </div>
+      </section>
+
       <section class="generate-section">
         <h2>정산 데이터 생성</h2>
         <div class="form-row">
@@ -55,6 +81,7 @@
           <option value="">전체</option>
           <option value="pending">대기</option>
           <option value="paid">완료</option>
+          <option value="cancelled">취소</option>
         </select>
         <button id="refresh-btn" class="btn-secondary">새로고침</button>
       </div>

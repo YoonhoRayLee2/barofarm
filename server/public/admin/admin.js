@@ -77,7 +77,8 @@ function shippingStatusLabel(s) {
 function statusBadge(status) {
   if (status === 'pending') return '<span class="badge badge--pending">대기</span>';
   if (status === 'paid') return '<span class="badge badge--paid">완료</span>';
-  return `<span class="badge badge--info">${status || '-'}</span>`;
+  if (status === 'cancelled') return '<span class="badge badge--cancelled">취소</span>';
+  return `<span class="badge badge--info">${escapeHtml(status || '-')}</span>`;
 }
 
 function escapeHtml(s) {
@@ -320,6 +321,214 @@ function adminToast(message, { type = 'info', duration = 2600 } = {}) {
   toast.addEventListener('click', () => { clearTimeout(timer); dismiss(); }, { once: true });
 }
 
+/* -------------------- SVG chart helpers (dependency-free, dark-aware) -------------------- */
+
+// Category colors read from CSS custom properties (single source of truth).
+// Fixed order per spec: 과일 채소 곡물 축산 수산 기타
+const CATEGORY_ORDER = ['과일', '채소', '곡물', '축산', '수산', '기타'];
+const CATEGORY_VARS = {
+  '과일': '--cat-fruit',
+  '채소': '--cat-veg',
+  '곡물': '--cat-grain',
+  '축산': '--cat-meat',
+  '수산': '--cat-fish',
+  '기타': '--cat-etc',
+};
+
+function categoryColor(name) {
+  const varName = CATEGORY_VARS[name] || '--cat-etc';
+  const val = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  return val || '#607D8B';
+}
+
+function _svgEl(tag, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  return el;
+}
+
+function _renderEmpty(el, label) {
+  el.innerHTML = `<div class="chart-empty">${escapeHtml(label || '데이터 없음')}</div>`;
+}
+
+function _shortNum(n) {
+  n = Number(n || 0);
+  if (n >= 100000000) return `${(n / 100000000).toFixed(1).replace(/\.0$/, '')}억`;
+  if (n >= 10000) return `${(n / 10000).toFixed(0)}만`;
+  if (n >= 1000) return `${(n / 1000).toFixed(0)}천`;
+  return n.toLocaleString('ko-KR');
+}
+
+/**
+ * Vertical bar chart for a time series.
+ * series: [{date:'YYYY-MM-DD', value:number}]
+ * opts: { valueLabel, formatValue }
+ */
+function renderLineChart(el, series, opts = {}) {
+  if (!el) return;
+  const data = Array.isArray(series) ? series : [];
+  if (data.length === 0) { _renderEmpty(el, opts.emptyLabel || '데이터 없음'); return; }
+
+  const fmtVal = opts.formatValue || _shortNum;
+  const W = 640, H = 260;
+  const padL = 56, padR = 16, padT = 16, padB = 36;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+  const maxVal = Math.max(1, ...data.map((d) => Number(d.value || 0)));
+
+  // "nice" max rounded up to a clean gridline value
+  const niceMax = _niceCeil(maxVal);
+  const ticks = 4;
+
+  const barGap = data.length > 1 ? Math.min(6, plotW / data.length * 0.25) : 4;
+  const barW = Math.max(1, plotW / data.length - barGap);
+
+  const svg = _svgEl('svg', {
+    class: 'chart-svg', viewBox: `0 0 ${W} ${H}`,
+    role: 'img', 'aria-label': opts.ariaLabel || '시계열 막대 차트',
+    preserveAspectRatio: 'xMidYMid meet',
+  });
+
+  // Y gridlines + labels
+  for (let i = 0; i <= ticks; i++) {
+    const v = (niceMax / ticks) * i;
+    const y = padT + plotH - (v / niceMax) * plotH;
+    svg.appendChild(_svgEl('line', {
+      x1: padL, y1: y, x2: W - padR, y2: y,
+      stroke: 'var(--chart-grid)', 'stroke-width': 1,
+    }));
+    const t = _svgEl('text', {
+      x: padL - 8, y: y + 4, 'text-anchor': 'end',
+      'font-size': 11, fill: 'var(--ff-ink-mute)',
+    });
+    t.textContent = fmtVal(v);
+    svg.appendChild(t);
+  }
+
+  // Bars
+  data.forEach((d, i) => {
+    const val = Number(d.value || 0);
+    const h = (val / niceMax) * plotH;
+    const x = padL + i * (plotW / data.length) + barGap / 2;
+    const y = padT + plotH - h;
+    const rect = _svgEl('rect', {
+      x, y: h > 0 ? y : padT + plotH - 1, width: barW, height: Math.max(h, val > 0 ? 2 : 0),
+      rx: Math.min(4, barW / 2), fill: 'var(--ff-accent)',
+    });
+    const title = _svgEl('title', {});
+    title.textContent = `${d.date}: ${fmtVal(val)}`;
+    rect.appendChild(title);
+    svg.appendChild(rect);
+  });
+
+  // X labels: first, middle, last (avoid crowding)
+  const xIdx = data.length <= 3
+    ? data.map((_, i) => i)
+    : [0, Math.floor((data.length - 1) / 2), data.length - 1];
+  xIdx.forEach((i) => {
+    const x = padL + i * (plotW / data.length) + (plotW / data.length) / 2;
+    const t = _svgEl('text', {
+      x, y: H - 12, 'text-anchor': 'middle',
+      'font-size': 11, fill: 'var(--ff-ink-mute)',
+    });
+    t.textContent = _mmdd(data[i].date);
+    svg.appendChild(t);
+  });
+
+  el.innerHTML = '';
+  el.appendChild(svg);
+}
+
+function _niceCeil(v) {
+  if (v <= 0) return 1;
+  const exp = Math.floor(Math.log10(v));
+  const base = Math.pow(10, exp);
+  const frac = v / base;
+  let nice;
+  if (frac <= 1) nice = 1;
+  else if (frac <= 2) nice = 2;
+  else if (frac <= 5) nice = 5;
+  else nice = 10;
+  return nice * base;
+}
+
+function _mmdd(dateStr) {
+  if (!dateStr) return '';
+  const parts = String(dateStr).split('-');
+  if (parts.length >= 3) return `${Number(parts[1])}/${Number(parts[2])}`;
+  return String(dateStr);
+}
+
+/**
+ * Donut chart with legend.
+ * segments: [{label, value, color}]  (color optional; falls back to categoryColor)
+ * opts: { formatValue }
+ * Renders SVG donut + an accessible legend (label + value + percent) so identity
+ * is never color-alone (required — category palette fails CVD separation).
+ */
+function renderDonutChart(el, segments, opts = {}) {
+  if (!el) return;
+  const data = (Array.isArray(segments) ? segments : []).filter((s) => Number(s.value || 0) > 0);
+  if (data.length === 0) { _renderEmpty(el, opts.emptyLabel || '데이터 없음'); return; }
+
+  const fmtVal = opts.formatValue || _shortNum;
+  const total = data.reduce((sum, s) => sum + Number(s.value || 0), 0);
+  const size = 160, cx = size / 2, cy = size / 2, r = 62, stroke = 26;
+  const circ = 2 * Math.PI * r;
+
+  const svg = _svgEl('svg', {
+    class: 'chart-svg', viewBox: `0 0 ${size} ${size}`,
+    role: 'img', 'aria-label': opts.ariaLabel || '카테고리 분포 도넛 차트',
+    preserveAspectRatio: 'xMidYMid meet',
+  });
+
+  let offset = 0;
+  data.forEach((s) => {
+    const frac = Number(s.value || 0) / total;
+    const color = s.color || categoryColor(s.label);
+    const arc = _svgEl('circle', {
+      cx, cy, r, fill: 'none',
+      stroke: color, 'stroke-width': stroke,
+      'stroke-dasharray': `${frac * circ} ${circ}`,
+      'stroke-dashoffset': -offset,
+      transform: `rotate(-90 ${cx} ${cy})`,
+    });
+    const title = _svgEl('title', {});
+    title.textContent = `${s.label}: ${fmtVal(s.value)} (${Math.round(frac * 100)}%)`;
+    arc.appendChild(title);
+    svg.appendChild(arc);
+    offset += frac * circ;
+  });
+
+  // Center total label
+  const t1 = _svgEl('text', { x: cx, y: cy - 2, 'text-anchor': 'middle', 'font-size': 15, 'font-weight': 800, fill: 'var(--ff-ink)' });
+  t1.textContent = fmtVal(total);
+  const t2 = _svgEl('text', { x: cx, y: cy + 15, 'text-anchor': 'middle', 'font-size': 10, fill: 'var(--ff-ink-mute)' });
+  t2.textContent = opts.centerLabel || '합계';
+  svg.appendChild(t1);
+  svg.appendChild(t2);
+
+  const legend = document.createElement('div');
+  legend.className = 'chart-legend';
+  legend.innerHTML = data.map((s) => {
+    const frac = Number(s.value || 0) / total;
+    const color = s.color || categoryColor(s.label);
+    return `<div class="chart-legend__item">
+      <span class="chart-legend__swatch" style="background:${escapeHtml(color)}"></span>
+      <span class="chart-legend__label">${escapeHtml(s.label)}${s.sub ? ` <span class="chart-legend__pct">(${escapeHtml(s.sub)})</span>` : ''}</span>
+      <span class="chart-legend__val">${fmtVal(s.value)} <span class="chart-legend__pct">${Math.round(frac * 100)}%</span></span>
+    </div>`;
+  }).join('');
+
+  const wrap = document.createElement('div');
+  wrap.className = 'donut-wrap';
+  wrap.appendChild(svg);
+  wrap.appendChild(legend);
+
+  el.innerHTML = '';
+  el.appendChild(wrap);
+}
+
 /* -------------------- Dashboard page (/admin) -------------------- */
 
 function showLoginScreen() {
@@ -385,6 +594,61 @@ async function loadDashboard() {
     console.error('[admin] dashboard load failed:', err);
     if (tbody) {
       tbody.innerHTML = `<tr class="empty-row"><td colspan="7">불러오기 실패: ${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+  loadDashboardCharts();
+}
+
+async function loadDashboardCharts() {
+  const trendEl = document.getElementById('chart-gross-trend');
+  const catEl = document.getElementById('chart-category');
+
+  if (trendEl) {
+    trendEl.innerHTML = '<div class="chart-empty"><span class="spinner"></span></div>';
+    try {
+      const data = await apiFetch('/admin/api/stats/timeseries?metric=gross&days=30');
+      const series = Array.isArray(data && data.series) ? data.series : [];
+      renderLineChart(trendEl, series, {
+        formatValue: (v) => `${_shortNum(v)}원`,
+        ariaLabel: '최근 30일 매출 추이',
+        emptyLabel: '매출 데이터가 없습니다.',
+      });
+    } catch (err) {
+      console.error('[admin] timeseries load failed:', err);
+      _renderEmpty(trendEl, `불러오기 실패: ${err.message}`);
+    }
+  }
+
+  if (catEl) {
+    catEl.innerHTML = '<div class="chart-empty"><span class="spinner"></span></div>';
+    try {
+      const data = await apiFetch('/admin/api/stats/category');
+      const cats = Array.isArray(data && data.categories) ? data.categories : [];
+      // Preserve canonical category order for stable colors.
+      const byName = {};
+      cats.forEach((c) => { byName[c.category] = c; });
+      const segments = CATEGORY_ORDER
+        .map((name) => byName[name])
+        .filter(Boolean)
+        .map((c) => ({
+          label: c.category,
+          value: Number(c.gross || 0),
+          color: categoryColor(c.category),
+          sub: `${Number(c.productCount || 0).toLocaleString('ko-KR')}개`,
+        }));
+      // Append any unexpected categories not in canonical order.
+      cats.filter((c) => CATEGORY_ORDER.indexOf(c.category) === -1).forEach((c) => {
+        segments.push({ label: c.category, value: Number(c.gross || 0), color: categoryColor(c.category), sub: `${Number(c.productCount || 0).toLocaleString('ko-KR')}개` });
+      });
+      renderDonutChart(catEl, segments, {
+        formatValue: (v) => `${_shortNum(v)}원`,
+        ariaLabel: '카테고리별 매출 분포',
+        centerLabel: '매출',
+        emptyLabel: '카테고리 데이터가 없습니다.',
+      });
+    } catch (err) {
+      console.error('[admin] category stats load failed:', err);
+      _renderEmpty(catEl, `불러오기 실패: ${err.message}`);
     }
   }
 }
@@ -522,6 +786,7 @@ async function handleGenerate() {
     msgEl.className = 'generate-msg success';
     msgEl.textContent = `${Number(data.generated || 0).toLocaleString('ko-KR')}건의 정산이 생성되었습니다.`;
     await loadSettlements();
+    loadSettlementSummary();
   } catch (err) {
     msgEl.className = 'generate-msg error';
     msgEl.textContent = `생성 실패: ${err.message}`;
@@ -581,6 +846,7 @@ async function handlePay(id, button) {
       method: 'PATCH',
     });
     await loadSettlements();
+    loadSettlementSummary();
   } catch (err) {
     adminToast(`처리 실패: ${err.message}`, { type: 'error' });
     button.disabled = false;
@@ -596,6 +862,7 @@ async function handleCancelSettlement(id, button) {
       method: 'POST',
     });
     await loadSettlements();
+    loadSettlementSummary();
   } catch (err) {
     adminToast(`처리 실패: ${err.message}`, { type: 'error' });
     button.disabled = false;
@@ -638,6 +905,122 @@ async function handleExportCsv() {
   }
 }
 
+async function loadSettlementSummary() {
+  const cardsEl = document.getElementById('summary-cards');
+  const overdueEl = document.getElementById('overdue-list');
+  const sellerEl = document.getElementById('seller-status');
+  const trendEl = document.getElementById('chart-settle-trend');
+
+  // Summary cards + seller bars + overdue (single summary endpoint)
+  if (cardsEl || overdueEl || sellerEl) {
+    if (overdueEl) overdueEl.innerHTML = '<div class="overdue-empty">불러오는 중...</div>';
+    try {
+      const data = await apiFetch('/admin/api/settlements/summary');
+      renderSummaryCards(cardsEl, data.byStatus || {});
+      renderOverdue(overdueEl, Array.isArray(data.oldestPending) ? data.oldestPending : []);
+      renderSellerBars(sellerEl, Array.isArray(data.bySeller) ? data.bySeller : []);
+    } catch (err) {
+      console.error('[admin] settlement summary load failed:', err);
+      if (cardsEl) cardsEl.innerHTML = `<div class="chart-empty">불러오기 실패: ${escapeHtml(err.message)}</div>`;
+      if (overdueEl) overdueEl.innerHTML = `<div class="overdue-empty">불러오기 실패: ${escapeHtml(err.message)}</div>`;
+      if (sellerEl) _renderEmpty(sellerEl, '불러오기 실패');
+    }
+  }
+
+  // Settlement trend — reuse timeseries helper (metric=gross; backend has no net metric).
+  if (trendEl) {
+    trendEl.innerHTML = '<div class="chart-empty"><span class="spinner"></span></div>';
+    try {
+      const data = await apiFetch('/admin/api/stats/timeseries?metric=gross&days=30');
+      const series = Array.isArray(data && data.series) ? data.series : [];
+      renderLineChart(trendEl, series, {
+        formatValue: (v) => `${_shortNum(v)}원`,
+        ariaLabel: '최근 30일 매출 추이',
+        emptyLabel: '정산 데이터가 없습니다.',
+      });
+    } catch (err) {
+      console.error('[admin] settlement trend load failed:', err);
+      _renderEmpty(trendEl, `불러오기 실패: ${err.message}`);
+    }
+  }
+}
+
+function renderSummaryCards(el, byStatus) {
+  if (!el) return;
+  const cfg = [
+    { key: 'pending', label: '미지급 (대기)', cls: 'summary-card--pending' },
+    { key: 'paid', label: '지급 완료', cls: 'summary-card--paid' },
+    { key: 'cancelled', label: '취소', cls: 'summary-card--cancelled' },
+  ];
+  el.innerHTML = cfg.map((c) => {
+    const s = byStatus[c.key] || {};
+    return `<div class="summary-card ${c.cls}">
+      <span class="summary-card__label">${c.label}</span>
+      <span class="summary-card__amount">${formatKRW(s.amount)}</span>
+      <span class="summary-card__count">${Number(s.count || 0).toLocaleString('ko-KR')}건</span>
+    </div>`;
+  }).join('');
+}
+
+function renderOverdue(el, rows) {
+  if (!el) return;
+  if (!rows.length) {
+    el.innerHTML = '<div class="overdue-empty">지연된 미지급 정산이 없습니다.</div>';
+    return;
+  }
+  const now = Date.now();
+  el.innerHTML = rows.map((r) => {
+    const created = r.created_at ? new Date(r.created_at).getTime() : now;
+    const days = Math.max(0, Math.floor((now - created) / 86400000));
+    const ageCls = days >= 7 ? '' : 'overdue-item__age--warn';
+    const name = escapeHtml(r.sellerName ?? r.seller_name ?? '-');
+    return `<div class="overdue-item">
+      <div>
+        <div class="overdue-item__seller">${name}</div>
+        <div class="overdue-item__period">${formatDateOnly(r.period_start)} ~ ${formatDateOnly(r.period_end)}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="overdue-item__amount">${formatKRW(r.gross_amount)}</div>
+        <div class="overdue-item__age ${ageCls}">${days}일 경과</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderSellerBars(el, rows) {
+  if (!el) return;
+  if (!rows.length) { _renderEmpty(el, '판매자 데이터가 없습니다.'); return; }
+  // Top sellers by pending amount, cap to 8.
+  const sorted = rows.slice().sort((a, b) =>
+    Number(b.pendingAmount || 0) - Number(a.pendingAmount || 0)).slice(0, 8);
+  const maxAmt = Math.max(1, ...sorted.flatMap((r) =>
+    [Number(r.pendingAmount || 0), Number(r.paidAmount || 0)]));
+
+  const legend = `<div class="seller-bar__legend">
+    <span><i style="background:var(--ff-warn)"></i>미지급</span>
+    <span><i style="background:var(--ff-success)"></i>지급</span>
+  </div>`;
+
+  const bars = sorted.map((r) => {
+    const name = escapeHtml(r.sellerName ?? r.seller_name ?? String(r.sellerId ?? '-'));
+    const pAmt = Number(r.pendingAmount || 0);
+    const dAmt = Number(r.paidAmount || 0);
+    const pW = (pAmt / maxAmt) * 100;
+    const dW = (dAmt / maxAmt) * 100;
+    return `<div class="seller-bar__row">
+      <span class="seller-bar__name" title="${name}">${name}</span>
+      <div class="seller-bar__track">
+        <div class="seller-bar__meter"><div class="seller-bar__fill seller-bar__fill--pending" style="width:${pW}%"></div></div>
+        <span class="seller-bar__val">미지급 ${formatKRW(pAmt)} (${Number(r.pendingCount || 0)}건)</span>
+        <div class="seller-bar__meter"><div class="seller-bar__fill seller-bar__fill--paid" style="width:${dW}%"></div></div>
+        <span class="seller-bar__val">지급 ${formatKRW(dAmt)} (${Number(r.paidCount || 0)}건)</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `${legend}<div class="seller-bars">${bars}</div>`;
+}
+
 function initSettlementsPage() {
   if (!getToken()) {
     window.location.href = '/admin';
@@ -668,7 +1051,7 @@ function initSettlementsPage() {
   if (exportBtn) exportBtn.addEventListener('click', handleExportCsv);
 
   const refreshBtn = document.getElementById('refresh-btn');
-  if (refreshBtn) refreshBtn.addEventListener('click', loadSettlements);
+  if (refreshBtn) refreshBtn.addEventListener('click', () => { loadSettlements(); loadSettlementSummary(); });
 
   const filter = document.getElementById('status-filter');
   if (filter) {
@@ -708,6 +1091,7 @@ function initSettlementsPage() {
   }
 
   loadSettlements();
+  loadSettlementSummary();
 }
 
 /* -------------------- Users page (/admin/users) -------------------- */

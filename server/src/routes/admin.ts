@@ -159,6 +159,123 @@ export default function createAdminRouter(io: Server) {
     }
   });
 
+  // ─── 대시보드 차트용 집계 ────────────────────────────────────────────────────
+
+  // GET /admin/api/stats/timeseries?metric=gross|count&days=30
+  router.get('/api/stats/timeseries', requireAdmin, async (req: Request, res: Response) => {
+    const metric = req.query.metric === 'count' ? 'count' : 'gross';
+    let days = parseInt(req.query.days as string, 10);
+    if (!Number.isFinite(days) || days <= 0) days = 30;
+    days = Math.min(days, 365);
+    try {
+      const [rows] = await pool.query<any[]>(
+        `SELECT DATE(created_at) AS d,
+                COALESCE(SUM(current_price),0) AS gross,
+                COUNT(*) AS cnt
+         FROM auctions
+         WHERE status='ended' AND created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+         GROUP BY DATE(created_at)`,
+        [days - 1],
+      );
+      const byDate = new Map<string, number>();
+      for (const row of rows) {
+        const dateStr = row.d instanceof Date
+          ? row.d.toISOString().slice(0, 10)
+          : String(row.d).slice(0, 10);
+        byDate.set(dateStr, metric === 'count' ? Number(row.cnt) : Number(row.gross));
+      }
+      const series: { date: string; value: number }[] = [];
+      const today = new Date();
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().slice(0, 10);
+        series.push({ date: dateStr, value: byDate.get(dateStr) ?? 0 });
+      }
+      res.json({ metric, days, series });
+    } catch (err) {
+      console.error('[admin/stats/timeseries]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // GET /admin/api/stats/category
+  router.get('/api/stats/category', requireAdmin, async (_req: Request, res: Response) => {
+    try {
+      const [rows] = await pool.query<any[]>(
+        `SELECT p.category AS category,
+                COUNT(DISTINCT p.id) AS productCount,
+                COALESCE(SUM(a.current_price),0) AS gross
+         FROM products p
+         LEFT JOIN auctions a
+           ON a.seller_id = p.seller_id AND a.product_name = p.name AND a.status='ended'
+         GROUP BY p.category`,
+      );
+      const categories = rows.map((r) => ({
+        category: r.category,
+        productCount: Number(r.productCount),
+        gross: Number(r.gross),
+      }));
+      res.json({ categories });
+    } catch (err) {
+      console.error('[admin/stats/category]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // ─── 정산 요약 ──────────────────────────────────────────────────────────────
+
+  // GET /admin/api/settlements/summary
+  router.get('/api/settlements/summary', requireAdmin, async (_req: Request, res: Response) => {
+    try {
+      const [byStatusRows, bySellerRows, oldestPendingRows] = await Promise.all([
+        pool.query<any[]>(
+          `SELECT status, COUNT(*) AS cnt, COALESCE(SUM(net_amount),0) AS amt
+           FROM settlements GROUP BY status`,
+        ),
+        pool.query<any[]>(
+          `SELECT seller_id, seller_name,
+                  SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pendingCount,
+                  COALESCE(SUM(CASE WHEN status='pending' THEN net_amount ELSE 0 END),0) AS pendingAmount,
+                  SUM(CASE WHEN status='paid' THEN 1 ELSE 0 END) AS paidCount,
+                  COALESCE(SUM(CASE WHEN status='paid' THEN net_amount ELSE 0 END),0) AS paidAmount
+           FROM settlements
+           GROUP BY seller_id, seller_name
+           ORDER BY pendingAmount DESC
+           LIMIT 20`,
+        ),
+        pool.query<any[]>(
+          `SELECT id, seller_name, gross_amount, period_start, period_end, created_at
+           FROM settlements
+           WHERE status='pending'
+           ORDER BY created_at ASC
+           LIMIT 10`,
+        ),
+      ]);
+
+      const byStatus = { pending: { count: 0, amount: 0 }, paid: { count: 0, amount: 0 }, cancelled: { count: 0, amount: 0 } };
+      for (const row of byStatusRows[0]) {
+        if (row.status in byStatus) {
+          (byStatus as any)[row.status] = { count: Number(row.cnt), amount: Number(row.amt) };
+        }
+      }
+
+      const bySeller = bySellerRows[0].map((r) => ({
+        sellerId: r.seller_id,
+        sellerName: r.seller_name,
+        pendingCount: Number(r.pendingCount),
+        pendingAmount: Number(r.pendingAmount),
+        paidCount: Number(r.paidCount),
+        paidAmount: Number(r.paidAmount),
+      }));
+
+      res.json({ byStatus, bySeller, oldestPending: oldestPendingRows[0] });
+    } catch (err) {
+      console.error('[admin/settlements/summary]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
   // POST /admin/api/settlements/generate
   router.post('/api/settlements/generate', requireAdmin, async (req: Request, res: Response) => {
     const { periodStart, periodEnd } = req.body as { periodStart?: string; periodEnd?: string };
