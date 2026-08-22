@@ -1247,20 +1247,26 @@ function initAuctionsPage() {
       const data = await apiFetch('/admin/api/live/active');
       if (!data.length) { el.innerHTML = '<p class="text-muted">진행 중인 라이브 없음</p>'; return; }
       el.innerHTML = data.map(l => `
-        <div class="live-card">
+        <div class="live-card" data-liveid="${escapeHtml(l.liveId)}">
           <div class="live-card__title">${escapeHtml(l.title)}</div>
           <div class="live-card__meta">판매자: ${escapeHtml(l.sellerName || l.sellerId)} | 시청자: ${l.viewerCount}</div>
           ${l.auction ? `<div class="live-card__auction">경매: ${escapeHtml(l.auction.productName||'')} / ${formatKRW(l.auction.currentPrice)} / 잔여 ${l.auction.timeLeft}초</div>` : '<div class="live-card__auction text-muted">경매 없음</div>'}
-          <button class="btn-small btn-danger" data-liveid="${escapeHtml(l.liveId)}">강제 종료</button>
+          <div class="live-card__actions">
+            <button class="btn-small" data-monitor="${escapeHtml(l.liveId)}">관제</button>
+            <button class="btn-small btn-danger" data-forceend="${escapeHtml(l.liveId)}">강제 종료</button>
+          </div>
         </div>`).join('');
-      el.querySelectorAll('button[data-liveid]').forEach(btn => {
+      el.querySelectorAll('button[data-forceend]').forEach(btn => {
         btn.addEventListener('click', async () => {
           if (!(await adminConfirm({ title: '라이브 강제 종료', message: '이 라이브를 강제 종료하시겠습니까?', danger: true }))) return;
           try {
-            await apiFetch(`/admin/api/live/${btn.dataset.liveid}/force-end`, { method: 'POST' });
-            loadLiveCards();
+            await apiFetch(`/admin/api/live/${btn.dataset.forceend}/force-end`, { method: 'POST' });
+            refreshLiveAndSubscribe();
           } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
         });
+      });
+      el.querySelectorAll('button[data-monitor]').forEach(btn => {
+        btn.addEventListener('click', () => openMonitor(btn.dataset.monitor, data.find(x => x.liveId === btn.dataset.monitor)));
       });
     } catch (err) { el.innerHTML = `<p style="color:var(--danger)">오류: ${escapeHtml(err.message)}</p>`; }
   }
@@ -1349,9 +1355,66 @@ function initAuctionsPage() {
     }
   }
 
-  loadLiveCards();
-  _liveInterval = setInterval(loadLiveCards, 10000);
-  window.addEventListener('beforeunload', () => { if (_liveInterval) clearInterval(_liveInterval); });
+  // ── 실시간 소켓 (10초 폴링 대체) ──────────────────────────────────────
+  // admin 토큰을 handshake auth로 실어 서버 io.use가 socket.data.userId를 세팅.
+  // 진행 중 라이브 룸을 admin:live:subscribe로 구독(viewer 카운트 미포함)해
+  // chat:message/auction:update/purchase:made/viewer:count를 실시간 수신한다.
+  let _socket = null;
+  const _subscribed = new Set();   // 현재 구독 중인 liveId
+  let _monitorLiveId = null;       // 관제 모달이 열린 liveId
+
+  function connectSocket() {
+    if (typeof io !== 'function') return null;   // socket.io.js 미로드 시 폴링 폴백
+    const s = io(window.location.origin, {
+      transports: ['websocket', 'polling'],
+      auth: (cb) => cb({ token: getToken() || '' }),
+    });
+    s.on('viewer:count', ({ count }) => {
+      // 관제 모달이 열린 라이브면 시청자수 갱신
+      if (_monitorLiveId != null) {
+        const el = document.getElementById('live-monitor-viewer-count');
+        if (el) el.textContent = `시청자 ${count}명`;
+      }
+    });
+    s.on('auction:update', (auc) => {
+      if (_monitorLiveId && auc && auc.liveId === _monitorLiveId) renderMonitorAuction(auc);
+      // 라이브 카드의 경매 정보도 실시간 반영
+      const card = document.querySelector(`.live-card[data-liveid="${cssEsc(auc && auc.liveId)}"] .live-card__auction`);
+      if (card && auc) card.textContent = `경매: ${auc.productName || ''} / ${formatKRW(auc.currentPrice)} / 잔여 ${auc.timeLeft}초`;
+    });
+    s.on('chat:message', (m) => {
+      if (_monitorLiveId && m) appendMonitorChat(m);
+    });
+    s.on('purchase:made', (p) => {
+      if (_monitorLiveId && p) appendMonitorFeed(`구매: ${p.userName || p.userId} · ${formatKRW(p.price)}`);
+    });
+    s.on('chat:deleted', ({ ts }) => {
+      const row = document.querySelector(`.lm-chat-row[data-ts="${cssEsc(String(ts))}"]`);
+      if (row) row.remove();
+    });
+    return s;
+  }
+
+  function cssEsc(v) { return String(v == null ? '' : v).replace(/["\\]/g, '\\$&'); }
+
+  // 초기 로드 후 진행 중 라이브를 소켓 구독
+  async function refreshLiveAndSubscribe() {
+    await loadLiveCards();
+    if (!_socket) return;
+    document.querySelectorAll('.live-card[data-liveid]').forEach(card => {
+      const id = card.dataset.liveid;
+      if (id && !_subscribed.has(id)) { _socket.emit('admin:live:subscribe', { liveId: id }); _subscribed.add(id); }
+    });
+  }
+
+  _socket = connectSocket();
+  refreshLiveAndSubscribe();
+  // 소켓이 없으면(스크립트 미로드) 기존 폴링으로 폴백
+  if (!_socket) { _liveInterval = setInterval(loadLiveCards, 10000); }
+  window.addEventListener('beforeunload', () => {
+    if (_liveInterval) clearInterval(_liveInterval);
+    if (_socket) { _subscribed.forEach(id => _socket.emit('admin:live:unsubscribe', { liveId: id })); _socket.disconnect(); }
+  });
 
   document.getElementById('auction-search-btn').addEventListener('click', () => loadAuctions(1));
   document.getElementById('auctions-tbody').addEventListener('click', e => {
@@ -1389,6 +1452,142 @@ function initAuctionsPage() {
       closeAuctionModal();
       loadAuctions(_auctionPage);
     } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
+  });
+
+  // ── 라이브 관제 모달 ──────────────────────────────────────────────────
+  function renderMonitorAuction(auc) {
+    const el = document.getElementById('live-monitor-auction');
+    const row = document.getElementById('live-monitor-extend-row');
+    if (!el) return;
+    if (auc && auc.status === 'live') {
+      el.textContent = `경매: ${auc.productName || ''} / ${formatKRW(auc.currentPrice)} / 잔여 ${auc.timeLeft}초`;
+      if (row) row.hidden = false;
+    } else {
+      el.textContent = '진행 중 경매 없음';
+      if (row) row.hidden = true;
+    }
+  }
+  function appendMonitorChat(m) {
+    const box = document.getElementById('live-monitor-chat');
+    if (!box) return;
+    const row = document.createElement('div');
+    row.className = 'lm-chat-row';
+    if (m.ts != null) row.dataset.ts = String(m.ts);
+    const name = document.createElement('strong'); name.textContent = (m.userName || m.userId || '?') + ': ';
+    const msg = document.createElement('span'); msg.textContent = m.message || '';
+    const del = document.createElement('button');
+    del.className = 'btn-small btn-danger lm-chat-del'; del.textContent = '삭제';
+    del.addEventListener('click', () => {
+      if (_socket && _monitorLiveId != null && m.ts != null) _socket.emit('admin:chat:delete', { liveId: _monitorLiveId, ts: m.ts });
+    });
+    row.append(name, msg, del);
+    box.appendChild(row);
+    box.scrollTop = box.scrollHeight;
+  }
+  function appendMonitorFeed(text) {
+    const box = document.getElementById('live-monitor-feed');
+    if (!box) return;
+    const row = document.createElement('div'); row.textContent = text;
+    box.appendChild(row); box.scrollTop = box.scrollHeight;
+  }
+  function openMonitor(liveId, info) {
+    _monitorLiveId = liveId;
+    document.getElementById('live-monitor-modal').hidden = false;
+    document.getElementById('live-monitor-title').textContent = `라이브 관제 — ${info ? (info.title || liveId) : liveId}`;
+    document.getElementById('live-monitor-meta').textContent = info ? `판매자: ${info.sellerName || info.sellerId}` : '';
+    document.getElementById('live-monitor-viewer-count').textContent = `시청자 ${info ? info.viewerCount : 0}명`;
+    document.getElementById('live-monitor-chat').innerHTML = '';
+    document.getElementById('live-monitor-feed').innerHTML = '';
+    renderMonitorAuction(info && info.auction);
+    if (_socket && !_subscribed.has(liveId)) { _socket.emit('admin:live:subscribe', { liveId }); _subscribed.add(liveId); }
+  }
+  function closeMonitor() {
+    document.getElementById('live-monitor-modal').hidden = true;
+    _monitorLiveId = null;
+  }
+  document.getElementById('live-monitor-close').addEventListener('click', closeMonitor);
+  document.getElementById('live-monitor-close2').addEventListener('click', closeMonitor);
+  document.getElementById('live-monitor-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeMonitor(); });
+  document.getElementById('live-monitor-extend-btn').addEventListener('click', async () => {
+    if (_monitorLiveId == null) return;
+    const seconds = Math.max(1, Number(document.getElementById('live-monitor-extend-seconds').value) || 10);
+    // 진행 중 경매 id는 auction:update로 갱신되는 현재 경매 — 서버가 liveId의 현재 경매를 연장하도록 API 호출
+    try {
+      const active = await apiFetch('/admin/api/live/active');
+      const cur = active.find(x => x.liveId === _monitorLiveId);
+      if (!cur || !cur.auction) { adminToast('진행 중 경매가 없습니다.', { type: 'error' }); return; }
+      await apiFetch(`/admin/api/auctions/${cur.auction.id}/extend`, { method: 'POST', body: JSON.stringify({ seconds }) });
+      adminToast(`${seconds}초 연장했습니다.`, { type: 'success' });
+    } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
+  });
+  document.getElementById('live-monitor-auction-force-end-btn').addEventListener('click', async () => {
+    if (_monitorLiveId == null) return;
+    if (!(await adminConfirm({ title: '경매 강제종료', message: '진행 중 경매를 강제 종료하시겠습니까?', danger: true }))) return;
+    try {
+      const active = await apiFetch('/admin/api/live/active');
+      const cur = active.find(x => x.liveId === _monitorLiveId);
+      if (!cur || !cur.auction) { adminToast('진행 중 경매가 없습니다.', { type: 'error' }); return; }
+      await apiFetch(`/admin/api/auctions/${cur.auction.id}/force-end`, { method: 'POST' });
+      adminToast('경매를 강제 종료했습니다.', { type: 'success' });
+    } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
+  });
+  document.getElementById('live-monitor-kick-btn').addEventListener('click', async () => {
+    if (_monitorLiveId == null) return;
+    const userId = document.getElementById('live-monitor-kick-userid').value.trim();
+    if (!userId) return;
+    if (!(await adminConfirm({ title: '사용자 강퇴', message: `userId ${userId}를 이 라이브에서 강퇴하시겠습니까?`, danger: true }))) return;
+    if (_socket) _socket.emit('admin:live:kick', { liveId: _monitorLiveId, userId });
+    adminToast('강퇴 요청을 보냈습니다.', { type: 'success' });
+    document.getElementById('live-monitor-kick-userid').value = '';
+  });
+  document.getElementById('live-monitor-force-end-btn').addEventListener('click', async () => {
+    if (_monitorLiveId == null) return;
+    const reason = await adminPrompt({ title: '라이브 강제 종료', message: '중단 사유(선택)를 입력하세요.', placeholder: '사유' });
+    if (reason === null) return; // 취소
+    try {
+      await apiFetch(`/admin/api/live/${_monitorLiveId}/force-end`, { method: 'POST', body: JSON.stringify({ reason: reason || undefined }) });
+      adminToast('라이브를 강제 종료했습니다.', { type: 'success' });
+      closeMonitor();
+      refreshLiveAndSubscribe();
+    } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
+  });
+
+  // ── 라이브 이력 탭 ────────────────────────────────────────────────────
+  async function loadLiveHistory(page) {
+    const tbody = document.getElementById('live-history-tbody');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="6"><span class="spinner"></span></td></tr>';
+    try {
+      const data = await apiFetch(`/admin/api/live/history?page=${page}`);
+      const rows = data.lives || data.history || [];
+      if (!rows.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="6">없음</td></tr>'; return; }
+      tbody.innerHTML = rows.map(l => `<tr>
+        <td>${escapeHtml(String(l.id))}</td>
+        <td>${escapeHtml(l.title || '-')}</td>
+        <td>${escapeHtml(l.seller_name || String(l.seller_id) || '-')}</td>
+        <td>${escapeHtml(l.category || '-')}</td>
+        <td class="text-muted">${l.created_at ? formatDate(l.created_at) : '-'}</td>
+        <td><button class="btn-small" data-statid="${escapeHtml(String(l.id))}">통계</button></td></tr>`).join('');
+      tbody.querySelectorAll('button[data-statid]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          try {
+            const s = await apiFetch(`/admin/api/live/${btn.dataset.statid}/stats`);
+            adminToast(`낙찰 ${s.soldCount ?? s.orderCount ?? 0}건 · 매출 ${formatKRW(s.gross ?? s.revenue ?? 0)}`, { type: 'success' });
+          } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
+        });
+      });
+      renderPagination('live-history-pagination', page, data.total || rows.length, 20, loadLiveHistory);
+    } catch (err) { tbody.innerHTML = `<tr class="empty-row"><td colspan="6">오류: ${escapeHtml(err.message)}</td></tr>`; }
+  }
+  let _historyLoaded = false;
+  document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-btn--active'));
+      btn.classList.add('tab-btn--active');
+      const tab = btn.dataset.tab;
+      document.getElementById('tab-ended-auctions').hidden = tab !== 'ended-auctions';
+      document.getElementById('tab-live-history').hidden = tab !== 'live-history';
+      if (tab === 'live-history' && !_historyLoaded) { _historyLoaded = true; loadLiveHistory(1); }
+    });
   });
 
   loadAuctions(1);

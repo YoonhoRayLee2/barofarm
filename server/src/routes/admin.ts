@@ -503,7 +503,9 @@ export default function createAdminRouter(io: Server) {
   });
 
   // POST /admin/api/live/:id/force-end
+  // body: { reason?: string } — 강제 중단 사유(선택)를 감사 로그에 기록
   router.post('/api/live/:id/force-end', requireAdmin, async (req, res) => {
+    const { reason } = req.body as { reason?: string };
     const live = lives.get(String(req.params.id));
     if (!live || live.status !== 'live') { res.status(400).json({ error: '진행 중인 라이브 없음' }); return; }
     try {
@@ -519,10 +521,64 @@ export default function createAdminRouter(io: Server) {
         }
       }
       endLive(live.id);
-      await writeAudit(req, 'live.force_end', 'live', req.params.id);
+      await writeAudit(req, 'live.force_end', 'live', req.params.id, reason ? { reason } : undefined);
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/live/force-end]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // GET /admin/api/live/history?page=1 — 종료된 라이브 이력 (lives 테이블, DB 영속)
+  router.get('/api/live/history', requireAdmin, async (req, res) => {
+    const { page = '1' } = req.query as any;
+    const pageNum = Math.max(1, parseInt(page));
+    const offset = (pageNum - 1) * 20;
+    try {
+      const [[{ total }]] = await pool.query<any>(
+        "SELECT COUNT(*) AS total FROM lives WHERE status='ended'",
+      ) as any;
+      const [rows] = await pool.query<any>(
+        `SELECT l.id, l.seller_id, l.seller_name, l.title, l.thumbnail_url, l.category, l.created_at
+         FROM lives l WHERE l.status='ended' ORDER BY l.created_at DESC LIMIT 20 OFFSET ?`,
+        [offset],
+      ) as any;
+      res.json({ lives: rows, total, page: pageNum, pageSize: 20 });
+    } catch (err) {
+      console.error('[admin/live/history]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // GET /admin/api/live/:id/stats — 해당 라이브의 낙찰수·매출 집계 (auctions.live_id 기준)
+  router.get('/api/live/:id/stats', requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+      const [[live]] = await pool.query<any>(
+        'SELECT id, title, seller_name, created_at FROM lives WHERE id=? LIMIT 1',
+        [id],
+      ) as any;
+      if (!live) { res.status(404).json({ error: 'Not found' }); return; }
+      const [[agg]] = await pool.query<any>(
+        `SELECT COUNT(*) AS soldCount, COALESCE(SUM(current_price),0) AS gross, COALESCE(SUM(seller_fee_amt),0) AS fee
+         FROM auctions WHERE live_id=? AND status='ended'`,
+        [id],
+      ) as any;
+      // 시청자 피크: 메모리에 현재값만 존재하고 이력을 남기지 않으므로, 현재 진행 중이면 그 값을, 아니면 null(데이터 없음)로 정직하게 응답.
+      const memLive = lives.get(String(id));
+      const peakViewerCount = memLive ? memLive.viewerCount : null;
+      res.json({
+        liveId: live.id,
+        title: live.title,
+        sellerName: live.seller_name,
+        createdAt: live.created_at,
+        soldCount: Number(agg.soldCount),
+        gross: Number(agg.gross),
+        fee: Number(agg.fee),
+        peakViewerCount,
+      });
+    } catch (err) {
+      console.error('[admin/live/:id/stats]', err);
       res.status(500).json({ error: 'server error' });
     }
   });
@@ -734,6 +790,28 @@ export default function createAdminRouter(io: Server) {
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/auctions/:id/force-end]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // POST /admin/api/auctions/:id/extend — 진행 중인 경매의 잔여시간(timeLeft)을 연장한다.
+  // body: { seconds: number } (1~600 범위)
+  router.post('/api/auctions/:id/extend', requireAdmin, async (req, res) => {
+    const { seconds } = req.body as { seconds?: number };
+    if (!Number.isFinite(seconds) || (seconds as number) <= 0 || (seconds as number) > 600) {
+      res.status(400).json({ error: 'seconds must be a number between 1 and 600' });
+      return;
+    }
+    const auc = auctions.get(String(req.params.id));
+    if (!auc) { res.status(400).json({ error: '메모리에 진행 중인 경매 없음' }); return; }
+    if (auc.status !== 'live') { res.status(400).json({ error: '진행 중(live) 상태 경매만 연장 가능' }); return; }
+    try {
+      auc.timeLeft += Number(seconds);
+      io.to(auc.liveId).emit('auction:update', auc);
+      await writeAudit(req, 'auction.extend', 'auction', req.params.id, { seconds });
+      res.json({ ok: true, timeLeft: auc.timeLeft });
+    } catch (err) {
+      console.error('[admin/auctions/:id/extend]', err);
       res.status(500).json({ error: 'server error' });
     }
   });
