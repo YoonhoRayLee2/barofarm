@@ -7,7 +7,7 @@ import pool from '../db/mysql';
 import { verifyPassword, hashPassword } from '../services/auth';
 import { lives, auctions, endAuctionState, endLive } from '../store/memory';
 import { endAuction } from '../services/livekit-service';
-import { createNotification } from '../services/notifications';
+import { createNotification, createNotificationsBulk } from '../services/notifications';
 
 function getSecret(): string {
   return process.env.JWT_SECRET!;
@@ -988,10 +988,256 @@ export default function createAdminRouter(io: Server) {
     }
   });
 
+  // ─── 리뷰 모더레이션 ──────────────────────────────────────────────────────────
+
+  // GET /admin/api/reviews
+  router.get('/api/reviews', requireAdmin, async (req, res) => {
+    const { page = '1', sellerId, minRating, maxRating } = req.query as any;
+    const pageNum = Math.max(1, parseInt(page));
+    const offset = (pageNum - 1) * 20;
+    let where = 'WHERE 1=1';
+    const params: any[] = [];
+    if (sellerId) { where += ' AND r.seller_id=?'; params.push(sellerId); }
+    if (minRating) { where += ' AND r.rating>=?'; params.push(minRating); }
+    if (maxRating) { where += ' AND r.rating<=?'; params.push(maxRating); }
+    try {
+      const [[{ total }]] = await pool.query<any>(`SELECT COUNT(*) AS total FROM reviews r ${where}`, params) as any;
+      const [reviews] = await pool.query<any>(
+        `SELECT r.id, r.auction_id, r.rating, r.comment, r.seller_reply, r.created_at,
+                reviewer.id AS reviewer_id, reviewer.nickname AS reviewer_nickname,
+                seller.id AS seller_id, seller.nickname AS seller_nickname
+         FROM reviews r
+         JOIN users reviewer ON reviewer.id = r.reviewer_id
+         JOIN users seller ON seller.id = r.seller_id
+         ${where} ORDER BY r.created_at DESC LIMIT 20 OFFSET ?`,
+        [...params, offset],
+      ) as any;
+      res.json({ reviews, total, page: pageNum, pageSize: 20 });
+    } catch (err) {
+      console.error('[admin/reviews]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // DELETE /admin/api/reviews/:id
+  router.delete('/api/reviews/:id', requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+      const [[review]] = await pool.query<any>('SELECT id FROM reviews WHERE id=? LIMIT 1', [id]) as any;
+      if (!review) { res.status(404).json({ error: 'Not found' }); return; }
+      await pool.query('DELETE FROM reviews WHERE id=?', [id]);
+      await writeAudit(req, 'review.delete', 'review', id);
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('[admin/reviews/:id DELETE]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // ─── 공동구매 개입 ────────────────────────────────────────────────────────────
+
+  const VALID_GROUP_DEAL_STATUSES = ['recruiting', 'confirmed', 'shipped', 'completed', 'cancelled'];
+
+  // GET /admin/api/group-deals
+  router.get('/api/group-deals', requireAdmin, async (req, res) => {
+    const { page = '1', status } = req.query as any;
+    const pageNum = Math.max(1, parseInt(page));
+    const offset = (pageNum - 1) * 20;
+    let where = 'WHERE 1=1';
+    const params: any[] = [];
+    if (status) { where += ' AND g.status=?'; params.push(status); }
+    try {
+      const [[{ total }]] = await pool.query<any>(`SELECT COUNT(*) AS total FROM group_deals g ${where}`, params) as any;
+      const [deals] = await pool.query<any>(
+        `SELECT g.id, g.title, g.category, g.price_per_unit, g.unit_label, g.min_participants, g.max_participants,
+                g.current_participants, g.status, g.closes_at, g.created_at,
+                seller.id AS seller_id, seller.nickname AS seller_nickname,
+                (SELECT COUNT(*) FROM group_deal_participants gp WHERE gp.deal_id = g.id) AS participant_count
+         FROM group_deals g
+         JOIN users seller ON seller.id = g.seller_id
+         ${where} ORDER BY g.created_at DESC LIMIT 20 OFFSET ?`,
+        [...params, offset],
+      ) as any;
+      res.json({ deals, total, page: pageNum, pageSize: 20 });
+    } catch (err) {
+      console.error('[admin/group-deals]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // GET /admin/api/group-deals/:id
+  router.get('/api/group-deals/:id', requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+      const [[deal]] = await pool.query<any>(
+        `SELECT g.*, seller.nickname AS seller_nickname
+         FROM group_deals g JOIN users seller ON seller.id = g.seller_id WHERE g.id=? LIMIT 1`,
+        [id],
+      ) as any;
+      if (!deal) { res.status(404).json({ error: 'Not found' }); return; }
+      const [participants] = await pool.query<any>(
+        `SELECT gp.id, gp.buyer_id, gp.quantity, gp.joined_at, u.nickname AS buyer_nickname
+         FROM group_deal_participants gp JOIN users u ON u.id = gp.buyer_id
+         WHERE gp.deal_id=? ORDER BY gp.joined_at ASC`,
+        [id],
+      ) as any;
+      res.json({ ...deal, participants });
+    } catch (err) {
+      console.error('[admin/group-deals/:id]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // PATCH /admin/api/group-deals/:id/status
+  // body: { status } — recruiting/confirmed/shipped/completed/cancelled
+  router.patch('/api/group-deals/:id/status', requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body as { status?: string };
+    if (!status || !VALID_GROUP_DEAL_STATUSES.includes(status)) {
+      res.status(400).json({ error: `status must be one of: ${VALID_GROUP_DEAL_STATUSES.join(', ')}` });
+      return;
+    }
+    try {
+      const [[deal]] = await pool.query<any>('SELECT id FROM group_deals WHERE id=? LIMIT 1', [id]) as any;
+      if (!deal) { res.status(404).json({ error: 'Not found' }); return; }
+      await pool.query('UPDATE group_deals SET status=? WHERE id=?', [status, id]);
+      await writeAudit(req, 'group_deal.status', 'group_deal', id, { status });
+      if (status === 'cancelled') {
+        const [participants] = await pool.query<any>(
+          'SELECT buyer_id FROM group_deal_participants WHERE deal_id=?',
+          [id],
+        ) as any;
+        const buyerIds = participants.map((p: any) => Number(p.buyer_id));
+        if (buyerIds.length) {
+          await createNotificationsBulk(buyerIds, {
+            type: 'group_deal_cancelled',
+            title: '공동구매 취소',
+            body: '참여하신 공동구매가 취소되었습니다.',
+          });
+        }
+      }
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('[admin/group-deals/:id/status PATCH]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // ─── 위탁 관리 ────────────────────────────────────────────────────────────────
+
+  const VALID_CONSIGNMENT_STATUSES = ['pending', 'matched', 'closed'];
+
+  // GET /admin/api/consignments
+  router.get('/api/consignments', requireAdmin, async (req, res) => {
+    const { page = '1', status } = req.query as any;
+    const pageNum = Math.max(1, parseInt(page));
+    const offset = (pageNum - 1) * 20;
+    let where = 'WHERE 1=1';
+    const params: any[] = [];
+    if (status) { where += ' AND c.status=?'; params.push(status); }
+    try {
+      const [[{ total }]] = await pool.query<any>(`SELECT COUNT(*) AS total FROM consignments c ${where}`, params) as any;
+      const [consignments] = await pool.query<any>(
+        `SELECT c.id, c.consignment_type, c.category, c.quantity, c.expected_price, c.status, c.created_at,
+                u.id AS buyer_id, u.nickname AS buyer_nickname
+         FROM consignments c
+         JOIN users u ON u.id = c.buyer_id
+         ${where} ORDER BY c.created_at DESC LIMIT 20 OFFSET ?`,
+        [...params, offset],
+      ) as any;
+      res.json({ consignments, total, page: pageNum, pageSize: 20 });
+    } catch (err) {
+      console.error('[admin/consignments]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // GET /admin/api/consignments/:id
+  router.get('/api/consignments/:id', requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+      const [[consignment]] = await pool.query<any>(
+        `SELECT c.*, u.nickname AS buyer_nickname
+         FROM consignments c JOIN users u ON u.id = c.buyer_id WHERE c.id=? LIMIT 1`,
+        [id],
+      ) as any;
+      if (!consignment) { res.status(404).json({ error: 'Not found' }); return; }
+      const [images] = await pool.query<any>(
+        'SELECT image_url, is_primary, display_order FROM consignment_images WHERE consignment_id=? ORDER BY display_order',
+        [id],
+      ) as any;
+      res.json({ ...consignment, images });
+    } catch (err) {
+      console.error('[admin/consignments/:id]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // PATCH /admin/api/consignments/:id/status
+  // body: { status } — pending/matched/closed
+  router.patch('/api/consignments/:id/status', requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body as { status?: string };
+    if (!status || !VALID_CONSIGNMENT_STATUSES.includes(status)) {
+      res.status(400).json({ error: `status must be one of: ${VALID_CONSIGNMENT_STATUSES.join(', ')}` });
+      return;
+    }
+    try {
+      const [[consignment]] = await pool.query<any>('SELECT id FROM consignments WHERE id=? LIMIT 1', [id]) as any;
+      if (!consignment) { res.status(404).json({ error: 'Not found' }); return; }
+      await pool.query('UPDATE consignments SET status=? WHERE id=?', [status, id]);
+      await writeAudit(req, 'consignment.status', 'consignment', id, { status });
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('[admin/consignments/:id/status PATCH]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // ─── 공지/알림 발송 ───────────────────────────────────────────────────────────
+
+  // POST /admin/api/notifications/broadcast
+  // body: { title, body, target } — target: all/sellers/buyers
+  router.post('/api/notifications/broadcast', requireAdmin, async (req, res) => {
+    const { title, body, target } = req.body as { title?: string; body?: string; target?: string };
+    const VALID_TARGETS = ['all', 'sellers', 'buyers'];
+    if (!title || !target || !VALID_TARGETS.includes(target)) {
+      res.status(400).json({ error: `title required, target must be one of: ${VALID_TARGETS.join(', ')}` });
+      return;
+    }
+    try {
+      let userIds: number[];
+      if (target === 'all') {
+        const [rows] = await pool.query<any>('SELECT id FROM users') as any;
+        userIds = rows.map((r: any) => Number(r.id));
+      } else {
+        const role = target === 'sellers' ? 'seller' : 'buyer';
+        const [rows] = await pool.query<any>('SELECT id FROM users WHERE role=?', [role]) as any;
+        userIds = rows.map((r: any) => Number(r.id));
+      }
+      // createNotificationsBulk는 단일 INSERT로 전체 userIds를 바인딩하므로,
+      // 대량 발송 시 MySQL placeholder 한계 방지를 위해 청크 단위로 분할 호출한다.
+      const CHUNK_SIZE = 500;
+      for (let i = 0; i < userIds.length; i += CHUNK_SIZE) {
+        const chunk = userIds.slice(i, i + CHUNK_SIZE);
+        await createNotificationsBulk(chunk, { type: 'admin_broadcast', title, body: body ?? null });
+      }
+      await writeAudit(req, 'notification.broadcast', null, null, { target, count: userIds.length });
+      res.json({ sent: userIds.length });
+    } catch (err) {
+      console.error('[admin/notifications/broadcast]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
   // 신규 페이지 라우트 (HTML은 인증 없이 서빙, 실제 보호는 페이지 JS의 토큰 기반 API 호출에서 requireAdmin이 담당)
   router.get('/users', (_req, res) => res.sendFile(path.join(adminPublicPath, 'users.html')));
   router.get('/auctions', (_req, res) => res.sendFile(path.join(adminPublicPath, 'auctions.html')));
   router.get('/products', (_req, res) => res.sendFile(path.join(adminPublicPath, 'products.html')));
+  router.get('/reviews', (_req, res) => res.sendFile(path.join(adminPublicPath, 'reviews.html')));
+  router.get('/group-deals', (_req, res) => res.sendFile(path.join(adminPublicPath, 'group-deals.html')));
+  router.get('/consignments', (_req, res) => res.sendFile(path.join(adminPublicPath, 'consignments.html')));
+  router.get('/notice', (_req, res) => res.sendFile(path.join(adminPublicPath, 'notice.html')));
 
   // 정적 파일 서빙
   router.get('/', (_req, res) => res.sendFile(path.join(adminPublicPath, 'index.html')));

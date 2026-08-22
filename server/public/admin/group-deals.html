@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>공동구매 관리 · NH 바로팜 어드민</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <script>try{var t=localStorage.getItem('adminTheme');if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
+  <link rel="stylesheet" href="/admin/admin.css" />
+</head>
+<body data-page="group-deals">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar__brand">NH <span class="accent">바로팜</span></div>
+      <nav class="sidebar__nav">
+        <a class="sidebar__link" href="/admin">대시보드</a>
+        <a class="sidebar__link" href="/admin/users">사용자</a>
+        <a class="sidebar__link" href="/admin/auctions">경매·라이브</a>
+        <a class="sidebar__link" href="/admin/products">상품·거래</a>
+        <a class="sidebar__link" href="/admin/settlements">정산</a>
+        <a class="sidebar__link" href="/admin/reviews">리뷰</a>
+        <a class="sidebar__link sidebar__link--active" href="/admin/group-deals">공동구매</a>
+        <a class="sidebar__link" href="/admin/consignments">위탁</a>
+        <a class="sidebar__link" href="/admin/notice">공지</a>
+      </nav>
+      <a id="logout-btn" class="sidebar__logout" href="#">로그아웃</a>
+    </aside>
+
+    <main class="main">
+      <div class="page-pad">
+        <div class="page-header">
+          <h1>공동구매 관리</h1>
+        </div>
+        <div class="search-bar">
+          <select id="gd-status-filter">
+            <option value="">전체 상태</option>
+            <option value="recruiting">모집중</option>
+            <option value="confirmed">확정</option>
+            <option value="shipped">발송</option>
+            <option value="completed">완료</option>
+            <option value="cancelled">취소</option>
+          </select>
+          <button id="gd-search-btn">검색</button>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>ID</th><th>제목</th><th>판매자</th><th>참여</th><th>상태</th><th>마감</th><th>생성</th></tr></thead>
+          <tbody id="gd-tbody"></tbody>
+        </table>
+        <div class="pagination" id="gd-pagination"></div>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="gd-modal" hidden>
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="gd-modal-title">공동구매 상세</h3>
+        <button class="modal-close" id="gd-modal-close">✕</button>
+      </div>
+      <div class="modal-meta" id="gd-modal-meta"></div>
+      <div class="modal-body">
+        <h4>참여자</h4>
+        <table class="data-table" style="width:100%;margin:0">
+          <thead><tr><th>ID</th><th>닉네임</th><th>수량</th><th>참여일</th></tr></thead>
+          <tbody id="gd-participants-tbody"></tbody>
+        </table>
+        <div class="modal-field" style="margin-top:0.75rem">
+          <label>상태 변경</label>
+          <select id="gd-status-select">
+            <option value="recruiting">모집중</option>
+            <option value="confirmed">확정</option>
+            <option value="shipped">발송</option>
+            <option value="completed">완료</option>
+            <option value="cancelled">취소</option>
+          </select>
+          <button id="gd-status-save-btn" class="btn-small">변경</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="gd-modal-close2" class="btn-small btn-secondary">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/admin/admin.js"></script>
+</body>
+</html>

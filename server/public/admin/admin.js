@@ -1736,6 +1736,210 @@ function initProductsPage() {
   loadRefunds(1);
 }
 
+/* -------------------- Reviews page (/admin/reviews) -------------------- */
+
+function initReviewsPage() {
+  if (!getToken()) { window.location.href = '/admin'; return; }
+  bindLogout();
+  async function load(page) {
+    const rating = document.getElementById('review-rating-filter').value;
+    const tbody = document.getElementById('reviews-tbody');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="8"><span class="spinner"></span></td></tr>';
+    try {
+      const params = new URLSearchParams({ page });
+      if (rating) params.set('maxRating', rating);
+      const data = await apiFetch(`/admin/api/reviews?${params}`);
+      const rows = data.reviews || [];
+      if (!rows.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="8">없음</td></tr>'; return; }
+      tbody.innerHTML = rows.map(r => `<tr>
+        <td>${escapeHtml(String(r.id))}</td>
+        <td>${'★'.repeat(r.rating)}${'☆'.repeat(Math.max(0, 5 - r.rating))}</td>
+        <td>${escapeHtml(r.comment || '-')}</td>
+        <td>${escapeHtml(r.reviewer_nickname || '-')}</td>
+        <td>${escapeHtml(r.seller_nickname || '-')}</td>
+        <td>${escapeHtml(r.seller_reply || '-')}</td>
+        <td class="text-muted">${formatDate(r.created_at)}</td>
+        <td><button class="btn-small btn-danger" data-rid="${escapeHtml(String(r.id))}">삭제</button></td></tr>`).join('');
+      tbody.querySelectorAll('button[data-rid]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!(await adminConfirm({ title: '리뷰 삭제', message: '이 리뷰를 삭제하시겠습니까?', danger: true }))) return;
+          try { await apiFetch(`/admin/api/reviews/${btn.dataset.rid}`, { method: 'DELETE' }); adminToast('삭제되었습니다.', { type: 'success' }); load(page); }
+          catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
+        });
+      });
+      renderPagination('reviews-pagination', page, data.total, 20, load);
+    } catch (err) { tbody.innerHTML = `<tr class="empty-row"><td colspan="8">오류: ${escapeHtml(err.message)}</td></tr>`; }
+  }
+  document.getElementById('review-search-btn').addEventListener('click', () => load(1));
+  load(1);
+}
+
+/* -------------------- Group deals page (/admin/group-deals) -------------------- */
+
+function initGroupDealsPage() {
+  if (!getToken()) { window.location.href = '/admin'; return; }
+  bindLogout();
+  let _page = 1, _current = null;
+  const GD_STATUS = { recruiting: '모집중', confirmed: '확정', shipped: '발송', completed: '완료', cancelled: '취소' };
+  async function load(page) {
+    _page = page;
+    const status = document.getElementById('gd-status-filter').value;
+    const tbody = document.getElementById('gd-tbody');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="7"><span class="spinner"></span></td></tr>';
+    try {
+      const params = new URLSearchParams({ page });
+      if (status) params.set('status', status);
+      const data = await apiFetch(`/admin/api/group-deals?${params}`);
+      const rows = data.deals || [];
+      if (!rows.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="7">없음</td></tr>'; return; }
+      tbody.innerHTML = rows.map(d => `<tr data-id="${escapeHtml(String(d.id))}" style="cursor:pointer">
+        <td>${escapeHtml(String(d.id))}</td>
+        <td>${escapeHtml(d.title || '-')}</td>
+        <td>${escapeHtml(d.seller_nickname || '-')}</td>
+        <td>${d.current_participants ?? d.participant_count ?? 0}/${d.max_participants ?? '-'}</td>
+        <td>${escapeHtml(GD_STATUS[d.status] || d.status)}</td>
+        <td class="text-muted">${d.closes_at ? formatDate(d.closes_at) : '-'}</td>
+        <td class="text-muted">${formatDate(d.created_at)}</td></tr>`).join('');
+      renderPagination('gd-pagination', page, data.total, 20, load);
+    } catch (err) { tbody.innerHTML = `<tr class="empty-row"><td colspan="7">오류: ${escapeHtml(err.message)}</td></tr>`; }
+  }
+  async function openModal(id) {
+    document.getElementById('gd-modal').hidden = false;
+    document.getElementById('gd-modal-meta').innerHTML = '<span class="text-muted"><span class="spinner"></span> 불러오는 중...</span>';
+    document.getElementById('gd-participants-tbody').innerHTML = '';
+    try {
+      const d = await apiFetch(`/admin/api/group-deals/${id}`);
+      _current = d;
+      document.getElementById('gd-modal-title').textContent = `공동구매 #${d.id} — ${d.title || ''}`;
+      document.getElementById('gd-modal-meta').innerHTML = `
+        <span>판매자: <strong>${escapeHtml(d.seller_nickname || '-')}</strong></span>
+        <span>상태: <strong>${escapeHtml(GD_STATUS[d.status] || d.status)}</strong></span>
+        <span>참여: <strong>${d.current_participants ?? 0}/${d.max_participants ?? '-'}</strong></span>`;
+      const parts = d.participants || [];
+      const pt = document.getElementById('gd-participants-tbody');
+      pt.innerHTML = parts.length ? parts.map(p => `<tr><td>${escapeHtml(String(p.user_id ?? p.id))}</td><td>${escapeHtml(p.nickname || '-')}</td><td>${p.quantity ?? '-'}</td><td class="text-muted">${p.created_at ? formatDate(p.created_at) : '-'}</td></tr>`).join('') : '<tr class="empty-row"><td colspan="4">참여자 없음</td></tr>';
+      if (d.status) document.getElementById('gd-status-select').value = d.status;
+    } catch (err) { document.getElementById('gd-modal-meta').innerHTML = `<span style="color:var(--ff-danger)">불러오기 실패: ${escapeHtml(err.message)}</span>`; }
+  }
+  function closeModal() { document.getElementById('gd-modal').hidden = true; _current = null; }
+  document.getElementById('gd-search-btn').addEventListener('click', () => load(1));
+  document.getElementById('gd-tbody').addEventListener('click', e => { const tr = e.target.closest('tr[data-id]'); if (tr) openModal(tr.dataset.id); });
+  document.getElementById('gd-modal-close').addEventListener('click', closeModal);
+  document.getElementById('gd-modal-close2').addEventListener('click', closeModal);
+  document.getElementById('gd-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+  document.getElementById('gd-status-save-btn').addEventListener('click', async () => {
+    if (!_current) return;
+    const status = document.getElementById('gd-status-select').value;
+    const danger = status === 'cancelled';
+    if (!(await adminConfirm({ title: '상태 변경', message: `상태를 "${GD_STATUS[status]}"(으)로 변경하시겠습니까?`, danger }))) return;
+    try { await apiFetch(`/admin/api/group-deals/${_current.id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }); adminToast('상태가 변경되었습니다.', { type: 'success' }); closeModal(); load(_page); }
+    catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
+  });
+  load(1);
+}
+
+/* -------------------- Consignments page (/admin/consignments) -------------------- */
+
+function initConsignmentsPage() {
+  if (!getToken()) { window.location.href = '/admin'; return; }
+  bindLogout();
+  let _page = 1, _current = null;
+  const CS_STATUS = { pending: '대기', matched: '매칭', closed: '종료' };
+  async function load(page) {
+    _page = page;
+    const status = document.getElementById('cs-status-filter').value;
+    const tbody = document.getElementById('cs-tbody');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="8"><span class="spinner"></span></td></tr>';
+    try {
+      const params = new URLSearchParams({ page });
+      if (status) params.set('status', status);
+      const data = await apiFetch(`/admin/api/consignments?${params}`);
+      const rows = data.consignments || [];
+      if (!rows.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="8">없음</td></tr>'; return; }
+      tbody.innerHTML = rows.map(c => `<tr data-id="${escapeHtml(String(c.id))}" style="cursor:pointer">
+        <td>${escapeHtml(String(c.id))}</td>
+        <td>${escapeHtml(c.buyer_nickname || '-')}</td>
+        <td>${escapeHtml(c.consignment_type || '-')}</td>
+        <td>${escapeHtml(c.category || '-')}</td>
+        <td>${escapeHtml(String(c.quantity ?? '-'))}</td>
+        <td>${c.expected_price != null ? formatKRW(c.expected_price) : '-'}</td>
+        <td>${escapeHtml(CS_STATUS[c.status] || c.status)}</td>
+        <td class="text-muted">${formatDate(c.created_at)}</td></tr>`).join('');
+      renderPagination('cs-pagination', page, data.total, 20, load);
+    } catch (err) { tbody.innerHTML = `<tr class="empty-row"><td colspan="8">오류: ${escapeHtml(err.message)}</td></tr>`; }
+  }
+  async function openModal(id) {
+    document.getElementById('cs-modal').hidden = false;
+    document.getElementById('cs-modal-meta').innerHTML = '<span class="text-muted"><span class="spinner"></span> 불러오는 중...</span>';
+    document.getElementById('cs-modal-images').innerHTML = '';
+    try {
+      const c = await apiFetch(`/admin/api/consignments/${id}`);
+      _current = c;
+      document.getElementById('cs-modal-title').textContent = `위탁 #${c.id}`;
+      document.getElementById('cs-modal-meta').innerHTML = `
+        <span>신청자: <strong>${escapeHtml(c.buyer_nickname || '-')}</strong></span>
+        <span>유형: <strong>${escapeHtml(c.consignment_type || '-')}</strong></span>
+        <span>카테고리: <strong>${escapeHtml(c.category || '-')}</strong></span>
+        <span>수량: <strong>${escapeHtml(String(c.quantity ?? '-'))}</strong></span>
+        <span>희망가: <strong>${c.expected_price != null ? formatKRW(c.expected_price) : '-'}</strong></span>
+        <span>상태: <strong>${escapeHtml(CS_STATUS[c.status] || c.status)}</strong></span>`;
+      const imgs = c.images || [];
+      document.getElementById('cs-modal-images').innerHTML = imgs.map(im => `<img src="${escapeHtml(im.image_url)}" alt="위탁 이미지" style="max-width:120px;max-height:120px;border-radius:8px;margin:4px" />`).join('');
+      if (c.status) document.getElementById('cs-status-select').value = c.status;
+    } catch (err) { document.getElementById('cs-modal-meta').innerHTML = `<span style="color:var(--ff-danger)">불러오기 실패: ${escapeHtml(err.message)}</span>`; }
+  }
+  function closeModal() { document.getElementById('cs-modal').hidden = true; _current = null; }
+  document.getElementById('cs-search-btn').addEventListener('click', () => load(1));
+  document.getElementById('cs-tbody').addEventListener('click', e => { const tr = e.target.closest('tr[data-id]'); if (tr) openModal(tr.dataset.id); });
+  document.getElementById('cs-modal-close').addEventListener('click', closeModal);
+  document.getElementById('cs-modal-close2').addEventListener('click', closeModal);
+  document.getElementById('cs-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+  document.getElementById('cs-status-save-btn').addEventListener('click', async () => {
+    if (!_current) return;
+    const status = document.getElementById('cs-status-select').value;
+    if (!(await adminConfirm({ title: '상태 변경', message: `상태를 "${CS_STATUS[status]}"(으)로 변경하시겠습니까?`, danger: status === 'closed' }))) return;
+    try { await apiFetch(`/admin/api/consignments/${_current.id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }); adminToast('상태가 변경되었습니다.', { type: 'success' }); closeModal(); load(_page); }
+    catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
+  });
+  load(1);
+}
+
+/* -------------------- Notice broadcast page (/admin/notice) -------------------- */
+
+function initNoticePage() {
+  if (!getToken()) { window.location.href = '/admin'; return; }
+  bindLogout();
+  const TARGET = { all: '전체', sellers: '판매자', buyers: '구매자' };
+  async function loadHistory() {
+    const tbody = document.getElementById('notice-history-tbody');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="3"><span class="spinner"></span></td></tr>';
+    try {
+      const data = await apiFetch('/admin/api/audit-logs?action=notification.broadcast&page=1');
+      const rows = data.logs || [];
+      if (!rows.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="3">발송 이력 없음</td></tr>'; return; }
+      tbody.innerHTML = rows.map(l => {
+        let detail = ''; try { const d = typeof l.detail === 'string' ? JSON.parse(l.detail) : l.detail; if (d) detail = `${TARGET[d.target] || d.target || ''} · ${d.count ?? d.sent ?? '?'}명`; } catch (e) {}
+        return `<tr><td class="text-muted">${formatDate(l.created_at)}</td><td>${escapeHtml(l.admin_nickname || String(l.admin_user_id))}</td><td>${escapeHtml(detail)}</td></tr>`;
+      }).join('');
+    } catch (err) { tbody.innerHTML = `<tr class="empty-row"><td colspan="3">이력 조회 실패: ${escapeHtml(err.message)}</td></tr>`; }
+  }
+  document.getElementById('notice-send-btn').addEventListener('click', async () => {
+    const target = document.getElementById('notice-target').value;
+    const title = document.getElementById('notice-title').value.trim();
+    const body = document.getElementById('notice-body').value.trim();
+    if (!title || !body) { adminToast('제목과 내용을 입력하세요.', { type: 'error' }); return; }
+    if (!(await adminConfirm({ title: '공지 발송', message: `${TARGET[target]} 대상으로 공지를 발송하시겠습니까?` }))) return;
+    try {
+      const res = await apiFetch('/admin/api/notifications/broadcast', { method: 'POST', body: JSON.stringify({ title, body, target }) });
+      adminToast(`${res.sent ?? 0}명에게 발송했습니다.`, { type: 'success' });
+      document.getElementById('notice-title').value = '';
+      document.getElementById('notice-body').value = '';
+      loadHistory();
+    } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
+  });
+  loadHistory();
+}
+
 /* -------------------- Bootstrap -------------------- */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1745,6 +1949,10 @@ document.addEventListener('DOMContentLoaded', () => {
   else if (page === 'users') initUsersPage();
   else if (page === 'auctions') initAuctionsPage();
   else if (page === 'products') initProductsPage();
+  else if (page === 'reviews') initReviewsPage();
+  else if (page === 'group-deals') initGroupDealsPage();
+  else if (page === 'consignments') initConsignmentsPage();
+  else if (page === 'notice') initNoticePage();
   // Dashboard injects after login (sidebar starts hidden); other pages have a visible sidebar.
   if (page !== 'dashboard') { initResponsiveNav(); initThemeToggle(); }
 });

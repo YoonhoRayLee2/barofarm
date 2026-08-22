@@ -3,22 +3,22 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>사용자 관리 · NH 바로팜 어드민</title>
+  <title>리뷰 관리 · NH 바로팜 어드민</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
   <script>try{var t=localStorage.getItem('adminTheme');if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
   <link rel="stylesheet" href="/admin/admin.css" />
 </head>
-<body data-page="users">
+<body data-page="reviews">
   <div class="app-shell">
     <aside class="sidebar">
       <div class="sidebar__brand">NH <span class="accent">바로팜</span></div>
       <nav class="sidebar__nav">
         <a class="sidebar__link" href="/admin">대시보드</a>
-        <a class="sidebar__link sidebar__link--active" href="/admin/users">사용자</a>
+        <a class="sidebar__link" href="/admin/users">사용자</a>
         <a class="sidebar__link" href="/admin/auctions">경매·라이브</a>
         <a class="sidebar__link" href="/admin/products">상품·거래</a>
         <a class="sidebar__link" href="/admin/settlements">정산</a>
-        <a class="sidebar__link" href="/admin/reviews">리뷰</a>
+        <a class="sidebar__link sidebar__link--active" href="/admin/reviews">리뷰</a>
         <a class="sidebar__link" href="/admin/group-deals">공동구매</a>
         <a class="sidebar__link" href="/admin/consignments">위탁</a>
         <a class="sidebar__link" href="/admin/notice">공지</a>
@@ -29,38 +29,24 @@
     <main class="main">
       <div class="page-pad">
         <div class="page-header">
-          <h1>사용자 관리</h1>
+          <h1>리뷰 관리</h1>
         </div>
         <div class="search-bar">
-          <input type="text" id="user-search" placeholder="아이디 / 닉네임 검색">
-          <select id="user-role-filter">
-            <option value="">전체</option>
-            <option value="buyer">구매자</option>
-            <option value="seller">판매자</option>
+          <select id="review-rating-filter">
+            <option value="">전체 별점</option>
+            <option value="1">1점</option>
+            <option value="2">2점 이하</option>
+            <option value="3">3점 이하</option>
           </select>
-          <button id="user-search-btn">검색</button>
+          <button id="review-search-btn">검색</button>
         </div>
         <table class="data-table">
-          <thead><tr><th>ID</th><th>아이디</th><th>닉네임</th><th>역할</th><th>상태</th><th>관리자</th><th>가입일</th></tr></thead>
-          <tbody id="users-tbody"></tbody>
+          <thead><tr><th>ID</th><th>별점</th><th>내용</th><th>작성자</th><th>판매자</th><th>판매자답글</th><th>일시</th><th>관리</th></tr></thead>
+          <tbody id="reviews-tbody"></tbody>
         </table>
-        <div class="pagination" id="users-pagination"></div>
+        <div class="pagination" id="reviews-pagination"></div>
       </div>
     </main>
-  </div>
-
-  <div class="modal" id="user-modal" hidden>
-    <div class="modal-box">
-      <div class="modal-header">
-        <h2 id="user-modal-title">사용자 상세</h2>
-        <button class="modal-close" id="user-modal-close">✕</button>
-      </div>
-      <div id="user-modal-body" class="modal-body"></div>
-      <div class="modal-footer">
-        <button id="user-toggle-seller-btn" class="btn-small btn-secondary">판매자 전환</button>
-        <button id="user-toggle-admin-btn" class="btn-small btn-secondary"></button>
-      </div>
-    </div>
   </div>
 
   <script src="/admin/admin.js"></script>
