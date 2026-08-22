@@ -42,6 +42,31 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction): Pr
   }
 }
 
+async function writeAudit(
+  req: Request,
+  action: string,
+  targetType?: string | null,
+  targetId?: string | string[] | number | null,
+  detail?: unknown,
+): Promise<void> {
+  try {
+    const adminUserId = (req as any).adminUserId;
+    await pool.query(
+      'INSERT INTO admin_audit_logs (admin_user_id, action, target_type, target_id, detail, ip) VALUES (?, ?, ?, ?, ?, ?)',
+      [
+        adminUserId,
+        action,
+        targetType ?? null,
+        targetId != null ? String(targetId) : null,
+        detail !== undefined ? JSON.stringify(detail) : null,
+        req.ip ?? null,
+      ],
+    );
+  } catch (err) {
+    console.error('[admin/writeAudit]', err);
+  }
+}
+
 export default function createAdminRouter(io: Server) {
   const router = Router();
   const adminPublicPath = path.join(__dirname, '..', '..', 'public', 'admin');
@@ -77,6 +102,8 @@ export default function createAdminRouter(io: Server) {
         getSecret(),
         { algorithm: 'HS256', expiresIn: '14d' },
       );
+      (req as any).adminUserId = user.id;
+      await writeAudit(req, 'admin.login', 'user', user.id);
       res.json({ token });
     } catch (err) {
       console.error('[admin/login]', err);
@@ -167,6 +194,7 @@ export default function createAdminRouter(io: Server) {
         );
         generated++;
       }
+      await writeAudit(req, 'settlement.generate', 'settlement', null, { periodStart, periodEnd, generated });
       res.json({ generated });
     } catch (err) {
       console.error('[admin/settlements/generate]', err);
@@ -240,6 +268,7 @@ export default function createAdminRouter(io: Server) {
         "UPDATE settlements SET status='paid', paid_at=NOW() WHERE id=?",
         [id],
       );
+      await writeAudit(req, 'settlement.pay', 'settlement', id);
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/settlements/:id/pay]', err);
@@ -310,6 +339,7 @@ export default function createAdminRouter(io: Server) {
     if (!fields.length) { res.status(400).json({ error: 'No fields' }); return; }
     try {
       await pool.query(`UPDATE users SET ${fields.join(',')} WHERE id=?`, [...vals, id]);
+      await writeAudit(req, 'user.update', 'user', id, { is_admin, role, status, nickname });
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/users/:id PATCH]', err);
@@ -372,6 +402,7 @@ export default function createAdminRouter(io: Server) {
         }
       }
       endLive(live.id);
+      await writeAudit(req, 'live.force_end', 'live', req.params.id);
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/live/force-end]', err);
@@ -411,6 +442,7 @@ export default function createAdminRouter(io: Server) {
       }
       await pool.query('DELETE FROM product_images WHERE product_id=?', [id]);
       await pool.query('DELETE FROM products WHERE id=?', [id]);
+      await writeAudit(req, 'product.delete', 'product', id);
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/products/:id DELETE]', err);
@@ -446,6 +478,7 @@ export default function createAdminRouter(io: Server) {
       try {
         await createNotification(refund.buyer_id, { type: 'refund_approved', title: '환불 승인', body: '환불 신청이 승인되었습니다.' });
       } catch {}
+      await writeAudit(req, 'refund.approve', 'refund', id);
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/refunds/:id/approve]', err);
@@ -464,6 +497,7 @@ export default function createAdminRouter(io: Server) {
       try {
         await createNotification(refund.buyer_id, { type: 'refund_rejected', title: '환불 거부', body: '환불 신청이 거부되었습니다.' });
       } catch {}
+      await writeAudit(req, 'refund.reject', 'refund', id, { rejectReason: rejectReason || null });
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/refunds/:id/reject]', err);
@@ -478,6 +512,7 @@ export default function createAdminRouter(io: Server) {
       const [[refund]] = await pool.query<any>('SELECT * FROM refunds WHERE id=?', [id]) as any;
       if (!refund || refund.status !== 'approved') { res.status(400).json({ error: '처리 불가' }); return; }
       await pool.query("UPDATE refunds SET status='completed', completed_at=NOW() WHERE id=?", [id]);
+      await writeAudit(req, 'refund.complete', 'refund', id);
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/refunds/:id/complete]', err);
@@ -495,9 +530,9 @@ export default function createAdminRouter(io: Server) {
         const params: any[] = [];
         if (from) { where += ' AND s.period_start>=?'; params.push(from); }
         if (to) { where += ' AND s.period_end<=?'; params.push(to); }
-        const [rows] = await pool.query<any>(`SELECT s.id, u.nickname AS seller, s.period_start, s.period_end, s.auction_count, s.total_sales, s.fee_amount, s.net_amount, s.status FROM settlements s JOIN users u ON u.id=s.seller_id ${where} ORDER BY s.id DESC`, params) as any;
+        const [rows] = await pool.query<any>(`SELECT s.id, u.nickname AS seller, s.period_start, s.period_end, s.auction_count, s.gross_amount, s.fee_amount, s.net_amount, s.status FROM settlements s JOIN users u ON u.id=s.seller_id ${where} ORDER BY s.id DESC`, params) as any;
         const header = 'ID,판매자,기간시작,기간종료,낙찰건수,총낙찰액,수수료,실지급액,상태\n';
-        const csv = BOM + header + rows.map((r: any) => [r.id, r.seller, r.period_start, r.period_end, r.auction_count, r.total_sales, r.fee_amount, r.net_amount, r.status].join(',')).join('\n');
+        const csv = BOM + header + rows.map((r: any) => [r.id, r.seller, r.period_start, r.period_end, r.auction_count, r.gross_amount, r.fee_amount, r.net_amount, r.status].join(',')).join('\n');
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
         res.setHeader('Content-Disposition', 'attachment; filename=settlements.csv');
         return res.send(csv);
@@ -532,6 +567,7 @@ export default function createAdminRouter(io: Server) {
     try {
       const passwordHash = await hashPassword(newPassword);
       await pool.query('UPDATE users SET password_hash=? WHERE id=?', [passwordHash, id]);
+      await writeAudit(req, 'user.reset_password', 'user', id);
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/users/:id/reset-password]', err);
@@ -577,6 +613,7 @@ export default function createAdminRouter(io: Server) {
           resolve();
         });
       });
+      await writeAudit(req, 'auction.force_end', 'auction', req.params.id);
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/auctions/:id/force-end]', err);
@@ -598,6 +635,7 @@ export default function createAdminRouter(io: Server) {
       const [[auction]] = await pool.query<any>('SELECT id FROM auctions WHERE id=? LIMIT 1', [id]) as any;
       if (!auction) { res.status(404).json({ error: 'Not found' }); return; }
       await pool.query('UPDATE auctions SET delivery_status=? WHERE id=?', [deliveryStatus, id]);
+      await writeAudit(req, 'auction.delivery_status', 'auction', id, { deliveryStatus });
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/auctions/:id/delivery-status]', err);
@@ -633,6 +671,7 @@ export default function createAdminRouter(io: Server) {
       // bids 외래키에 CASCADE 없으므로 먼저 삭제
       await pool.query('DELETE FROM bids WHERE auction_id=?', [String(id)]);
       await pool.query('DELETE FROM auctions WHERE id=?', [String(id)]);
+      await writeAudit(req, 'auction.delete', 'auction', id);
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/auctions/:id DELETE]', err);
@@ -643,9 +682,10 @@ export default function createAdminRouter(io: Server) {
   // DELETE /admin/api/auctions/:id/bids/:bidId
   // DB 기록만 삭제, 메모리 경매 진행중이면 영향 없음
   router.delete('/api/auctions/:id/bids/:bidId', requireAdmin, async (req, res) => {
-    const { bidId } = req.params;
+    const { id, bidId } = req.params;
     try {
       await pool.query('DELETE FROM bids WHERE id=?', [bidId]);
+      await writeAudit(req, 'auction.bid_delete', 'auction', id, { bidId });
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/auctions/:id/bids/:bidId DELETE]', err);
@@ -700,6 +740,7 @@ export default function createAdminRouter(io: Server) {
       const [[product]] = await pool.query<any>('SELECT id FROM products WHERE id=? LIMIT 1', [id]) as any;
       if (!product) { res.status(404).json({ error: 'Not found' }); return; }
       await pool.query(`UPDATE products SET ${fields.join(',')} WHERE id=?`, [...vals, id]);
+      await writeAudit(req, 'product.update', 'product', id, { name, description, price, category, status });
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/products/:id PATCH]', err);
@@ -710,16 +751,44 @@ export default function createAdminRouter(io: Server) {
   // ─── 정산 ────────────────────────────────────────────────────────────────────
 
   // POST /admin/api/settlements/:id/cancel
-  // settlements ENUM은 'pending'|'paid' 뿐이므로 'pending'으로 되돌린다 (cancelled 미지원)
   router.post('/api/settlements/:id/cancel', requireAdmin, async (req, res) => {
     const { id } = req.params;
     try {
       const [[settlement]] = await pool.query<any>('SELECT id, status FROM settlements WHERE id=? LIMIT 1', [id]) as any;
       if (!settlement) { res.status(404).json({ error: 'Not found' }); return; }
-      await pool.query("UPDATE settlements SET status='pending', paid_at=NULL WHERE id=?", [id]);
+      await pool.query("UPDATE settlements SET status='cancelled', paid_at=NULL WHERE id=?", [id]);
+      await writeAudit(req, 'settlement.cancel', 'settlement', id);
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/settlements/:id/cancel]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // ─── 감사 로그 ────────────────────────────────────────────────────────────────
+
+  // GET /admin/api/audit-logs
+  router.get('/api/audit-logs', requireAdmin, async (req, res) => {
+    const { adminUserId, action, from, to, page = '1' } = req.query as any;
+    const pageNum = Math.max(1, parseInt(page));
+    const offset = (pageNum - 1) * 20;
+    let where = 'WHERE 1=1';
+    const params: any[] = [];
+    if (adminUserId) { where += ' AND l.admin_user_id=?'; params.push(adminUserId); }
+    if (action) { where += ' AND l.action=?'; params.push(action); }
+    if (from) { where += ' AND l.created_at>=?'; params.push(from); }
+    if (to) { where += ' AND l.created_at<=?'; params.push(to); }
+    try {
+      const [[{ total }]] = await pool.query<any>(`SELECT COUNT(*) AS total FROM admin_audit_logs l ${where}`, params) as any;
+      const [logs] = await pool.query<any>(
+        `SELECT l.*, u.nickname AS admin_nickname FROM admin_audit_logs l
+         JOIN users u ON u.id = l.admin_user_id
+         ${where} ORDER BY l.created_at DESC LIMIT 20 OFFSET ?`,
+        [...params, offset],
+      ) as any;
+      res.json({ logs, total, page: pageNum, pageSize: 20 });
+    } catch (err) {
+      console.error('[admin/audit-logs]', err);
       res.status(500).json({ error: 'server error' });
     }
   });

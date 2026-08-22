@@ -124,6 +124,47 @@ function bindLogout() {
   });
 }
 
+/* Responsive sidebar drawer: hamburger + backdrop (injected once, mobile only) */
+function initResponsiveNav() {
+  const sidebar = document.querySelector('.sidebar');
+  if (!sidebar) return;
+  if (document.querySelector('.admin-hamburger')) return; // already injected
+
+  const hamburger = document.createElement('button');
+  hamburger.type = 'button';
+  hamburger.className = 'admin-hamburger';
+  hamburger.setAttribute('aria-label', '메뉴 열기');
+  hamburger.textContent = '☰'; // ☰
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'admin-backdrop';
+
+  function open() {
+    sidebar.classList.add('sidebar--open');
+    backdrop.classList.add('admin-backdrop--open');
+  }
+  function close() {
+    sidebar.classList.remove('sidebar--open');
+    backdrop.classList.remove('admin-backdrop--open');
+  }
+
+  hamburger.addEventListener('click', () => {
+    if (sidebar.classList.contains('sidebar--open')) close();
+    else open();
+  });
+  backdrop.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') close();
+  });
+  // Close after navigating via a sidebar link
+  sidebar.addEventListener('click', (e) => {
+    if (e.target.closest('.sidebar__link')) close();
+  });
+
+  document.body.appendChild(backdrop);
+  document.body.appendChild(hamburger);
+}
+
 /* -------------------- Dashboard page (/admin) -------------------- */
 
 function showLoginScreen() {
@@ -138,6 +179,7 @@ function showDashboardScreen() {
   const dash = document.getElementById('dashboard-screen');
   if (login) login.hidden = true;
   if (dash) dash.hidden = false;
+  initResponsiveNav(); // sidebar is now visible → enable mobile drawer
 }
 
 async function loadDashboard() {
@@ -962,4 +1004,6 @@ document.addEventListener('DOMContentLoaded', () => {
   else if (page === 'users') initUsersPage();
   else if (page === 'auctions') initAuctionsPage();
   else if (page === 'products') initProductsPage();
+  // Dashboard injects after login (sidebar starts hidden); other pages have a visible sidebar.
+  if (page !== 'dashboard') initResponsiveNav();
 });

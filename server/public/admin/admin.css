@@ -624,3 +624,86 @@ a.link:hover { text-decoration: underline; }
 
 /* page content padding helper */
 .page-pad { padding: var(--space-5); }
+
+/* ===== Responsive: hamburger + backdrop (injected by admin.js) ===== */
+/* Base state: desktop hides mobile chrome, sidebar animates when it moves */
+.admin-hamburger {
+  display: none; /* shown only in mobile media query */
+  position: fixed;
+  top: var(--space-3);
+  left: var(--space-3);
+  z-index: 70; /* above drawer (65) and backdrop (60) */
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  background: var(--ff-surface);
+  color: var(--ff-ink);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--elev-1);
+  font-size: var(--fs-xl);
+  line-height: 1;
+}
+.admin-hamburger:hover {
+  background: var(--ff-surface-alt);
+  opacity: 1;
+}
+
+.admin-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60; /* below drawer (65) and hamburger (70) */
+  background: rgba(28, 18, 8, 0.45);
+  opacity: 0;
+  pointer-events: none; /* CRITICAL: don't intercept clicks while hidden */
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.admin-backdrop--open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+  .admin-hamburger { display: inline-flex; }
+
+  /* Sidebar becomes an off-canvas drawer */
+  .sidebar {
+    z-index: 65; /* above backdrop (60) when open */
+    transform: translateX(-100%);
+    transition: transform var(--dur-fast) var(--ease-out);
+    box-shadow: var(--elev-3);
+  }
+  .sidebar--open { transform: translateX(0); }
+
+  /* Full-width content; leave room for the fixed hamburger */
+  .main { margin-left: 0; }
+  .stats-row,
+  .page-pad,
+  .generate-section { padding-top: calc(var(--space-5) + 44px); }
+  .main > h2:first-child,
+  .main > .stats-row:first-child { margin-top: 0; }
+
+  /* Stat cards: auto-fit grid */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  /* Data tables scroll horizontally instead of squishing */
+  .data-table,
+  .modal-box .data-table {
+    display: block;
+    width: auto;
+    margin-left: var(--space-4);
+    margin-right: var(--space-4);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .data-table th,
+  .data-table td { white-space: nowrap; }
+
+  /* Modal fits small screens */
+  .modal-box { width: 94%; }
+}
