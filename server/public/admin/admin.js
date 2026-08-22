@@ -165,6 +165,161 @@ function initResponsiveNav() {
   document.body.appendChild(hamburger);
 }
 
+/* Dark/light theme toggle: inject a button near the sidebar logout, persist to localStorage */
+function initThemeToggle() {
+  const sidebar = document.querySelector('.sidebar');
+  if (!sidebar) return;
+  if (sidebar.querySelector('.admin-theme-toggle')) return; // already injected
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'admin-theme-toggle';
+
+  function currentTheme() {
+    return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+  }
+  function render() {
+    const dark = currentTheme() === 'dark';
+    btn.textContent = dark ? '☀️ 라이트 모드' : '🌙 다크 모드';
+    btn.setAttribute('aria-label', dark ? '라이트 모드로 전환' : '다크 모드로 전환');
+  }
+  function apply(theme) {
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem('adminTheme', theme); } catch (e) { /* ignore */ }
+    render();
+  }
+
+  btn.addEventListener('click', () => {
+    apply(currentTheme() === 'dark' ? 'light' : 'dark');
+  });
+
+  render();
+  const logout = document.getElementById('logout-btn');
+  if (logout && logout.parentNode) logout.parentNode.insertBefore(btn, logout);
+  else sidebar.appendChild(btn);
+}
+
+/* -------------------- Custom dialogs & toast (native confirm/alert/prompt replacement) -------------------- */
+
+function _adminBuildDialog({ title, message, confirmLabel, cancelLabel, danger, withInput, placeholder }) {
+  return new Promise((resolve) => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'admin-dialog-backdrop';
+
+    const dialog = document.createElement('div');
+    dialog.className = 'admin-dialog';
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+
+    if (title) {
+      const titleEl = document.createElement('p');
+      titleEl.className = 'admin-dialog__title';
+      titleEl.textContent = title;
+      dialog.appendChild(titleEl);
+    }
+    if (message) {
+      const msgEl = document.createElement('p');
+      msgEl.className = 'admin-dialog__message';
+      msgEl.textContent = message;
+      dialog.appendChild(msgEl);
+    }
+
+    let input = null;
+    if (withInput) {
+      input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'admin-dialog__input';
+      if (placeholder) input.placeholder = placeholder;
+      dialog.appendChild(input);
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'admin-dialog__actions';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'admin-dialog__btn admin-dialog__btn--cancel';
+    cancelBtn.textContent = cancelLabel;
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.type = 'button';
+    confirmBtn.className = 'admin-dialog__btn admin-dialog__btn--confirm' + (danger ? ' is-danger' : '');
+    confirmBtn.textContent = confirmLabel;
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(confirmBtn);
+    dialog.appendChild(actions);
+    backdrop.appendChild(dialog);
+    document.body.appendChild(backdrop);
+
+    const previouslyFocused = document.activeElement;
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        backdrop.classList.add('is-visible');
+        if (input) input.focus();
+        else cancelBtn.focus();
+      });
+    });
+
+    function close(result) {
+      backdrop.classList.remove('is-visible');
+      backdrop.addEventListener('transitionend', () => backdrop.remove(), { once: true });
+      setTimeout(() => { if (backdrop.isConnected) backdrop.remove(); }, 300);
+      document.removeEventListener('keydown', onKeyDown);
+      if (previouslyFocused && typeof previouslyFocused.focus === 'function') previouslyFocused.focus();
+      resolve(result);
+    }
+    function onKeyDown(e) {
+      if (e.key === 'Escape') close(withInput ? null : false);
+      else if (e.key === 'Enter' && withInput) close(input.value);
+    }
+
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(withInput ? null : false); });
+    cancelBtn.addEventListener('click', () => close(withInput ? null : false));
+    confirmBtn.addEventListener('click', () => close(withInput ? input.value : true));
+    document.addEventListener('keydown', onKeyDown);
+  });
+}
+
+function adminConfirm({ title = '확인', message = '', confirmLabel = '확인', cancelLabel = '취소', danger = false } = {}) {
+  return _adminBuildDialog({ title, message, confirmLabel, cancelLabel, danger, withInput: false });
+}
+
+function adminPrompt({ title = '입력', message = '', placeholder = '', confirmLabel = '확인', cancelLabel = '취소' } = {}) {
+  return _adminBuildDialog({ title, message, confirmLabel, cancelLabel, danger: false, withInput: true, placeholder });
+}
+
+function adminToast(message, { type = 'info', duration = 2600 } = {}) {
+  let container = document.getElementById('admin-toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'admin-toast-container';
+    container.setAttribute('aria-live', 'polite');
+    document.body.appendChild(container);
+  }
+  while (container.children.length >= 3) container.firstElementChild.remove();
+
+  const toast = document.createElement('div');
+  toast.className = `admin-toast admin-toast--${type}`;
+  toast.setAttribute('role', 'status');
+  const msg = document.createElement('span');
+  msg.className = 'admin-toast__msg';
+  msg.textContent = String(message);
+  toast.appendChild(msg);
+  container.appendChild(toast);
+
+  requestAnimationFrame(() => { requestAnimationFrame(() => toast.classList.add('is-visible')); });
+
+  function dismiss() {
+    toast.classList.remove('is-visible');
+    toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+    setTimeout(() => { if (toast.isConnected) toast.remove(); }, 300);
+  }
+  const timer = setTimeout(dismiss, duration);
+  toast.addEventListener('click', () => { clearTimeout(timer); dismiss(); }, { once: true });
+}
+
 /* -------------------- Dashboard page (/admin) -------------------- */
 
 function showLoginScreen() {
@@ -180,6 +335,7 @@ function showDashboardScreen() {
   if (login) login.hidden = true;
   if (dash) dash.hidden = false;
   initResponsiveNav(); // sidebar is now visible → enable mobile drawer
+  initThemeToggle(); // sidebar is now visible → enable theme toggle
 }
 
 async function loadDashboard() {
@@ -418,7 +574,7 @@ async function openSettlementDetail(id) {
 
 async function handlePay(id, button) {
   if (!id) return;
-  if (!confirm('이 정산을 완료 처리하시겠습니까?')) return;
+  if (!(await adminConfirm({ title: '정산 완료', message: '이 정산을 완료 처리하시겠습니까?' }))) return;
   button.disabled = true;
   try {
     await apiFetch(`/admin/api/settlements/${encodeURIComponent(id)}/pay`, {
@@ -426,14 +582,14 @@ async function handlePay(id, button) {
     });
     await loadSettlements();
   } catch (err) {
-    alert(`처리 실패: ${err.message}`);
+    adminToast(`처리 실패: ${err.message}`, { type: 'error' });
     button.disabled = false;
   }
 }
 
 async function handleCancelSettlement(id, button) {
   if (!id) return;
-  if (!confirm('이 정산을 취소(대기 상태로 되돌리기)하시겠습니까?')) return;
+  if (!(await adminConfirm({ title: '정산 취소', message: '이 정산을 취소(대기 상태로 되돌리기)하시겠습니까?', danger: true }))) return;
   button.disabled = true;
   try {
     await apiFetch(`/admin/api/settlements/${encodeURIComponent(id)}/cancel`, {
@@ -441,7 +597,7 @@ async function handleCancelSettlement(id, button) {
     });
     await loadSettlements();
   } catch (err) {
-    alert(`처리 실패: ${err.message}`);
+    adminToast(`처리 실패: ${err.message}`, { type: 'error' });
     button.disabled = false;
   }
 }
@@ -639,26 +795,28 @@ function initUsersPage() {
 
       document.getElementById('user-nickname-save-btn').addEventListener('click', async () => {
         const nickname = document.getElementById('user-nickname-input').value.trim();
-        if (!nickname) { alert('닉네임을 입력하세요.'); return; }
+        if (!nickname) { adminToast('닉네임을 입력하세요.', { type: 'error' }); return; }
         try { await patchUser({ nickname }); closeUserModal(); loadUsers(_currentPage); }
-        catch (err) { alert(`오류: ${err.message}`); }
+        catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
       });
 
       document.getElementById('user-reset-pw-btn').addEventListener('click', async () => {
         const newPassword = document.getElementById('user-newpw-input').value;
-        if (!newPassword || newPassword.length < 8) { alert('비밀번호는 8자 이상이어야 합니다.'); return; }
+        if (!newPassword || newPassword.length < 8) { adminToast('비밀번호는 8자 이상이어야 합니다.', { type: 'error' }); return; }
         try {
           await apiFetch(`/admin/api/users/${_currentUser.id}/reset-password`, { method: 'POST', body: JSON.stringify({ newPassword }) });
-          alert('비밀번호가 초기화되었습니다.');
+          adminToast('비밀번호가 초기화되었습니다.', { type: 'success' });
           document.getElementById('user-newpw-input').value = '';
-        } catch (err) { alert(`오류: ${err.message}`); }
+        } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
       });
 
       document.getElementById('user-toggle-status-btn').addEventListener('click', async () => {
         const newStatus = _currentUser.status === 'suspended' ? 'active' : 'suspended';
-        if (!confirm(newStatus === 'suspended' ? '이 계정을 정지하시겠습니까?' : '정지를 해제하시겠습니까?')) return;
+        if (!(await adminConfirm(newStatus === 'suspended'
+          ? { title: '계정 정지', message: '이 계정을 정지하시겠습니까?', danger: true }
+          : { title: '정지 해제', message: '정지를 해제하시겠습니까?' }))) return;
         try { await patchUser({ status: newStatus }); closeUserModal(); loadUsers(_currentPage); }
-        catch (err) { alert(`오류: ${err.message}`); }
+        catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
       });
     } catch (err) {
       body.innerHTML = `<p style="color:var(--danger)">오류: ${escapeHtml(err.message)}</p>`;
@@ -679,13 +837,13 @@ function initUsersPage() {
     if (!_currentUser) return;
     const newVal = _currentUser.is_admin ? 0 : 1;
     try { await patchUser({ is_admin: newVal }); closeUserModal(); loadUsers(_currentPage); }
-    catch (err) { alert(`오류: ${err.message}`); }
+    catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
   });
   document.getElementById('user-toggle-seller-btn').addEventListener('click', async () => {
     if (!_currentUser) return;
     const newRole = _currentUser.role === 'seller' ? 'buyer' : 'seller';
     try { await patchUser({ role: newRole }); closeUserModal(); loadUsers(_currentPage); }
-    catch (err) { alert(`오류: ${err.message}`); }
+    catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
   });
 
   loadUsers(1);
@@ -713,11 +871,11 @@ function initAuctionsPage() {
         </div>`).join('');
       el.querySelectorAll('button[data-liveid]').forEach(btn => {
         btn.addEventListener('click', async () => {
-          if (!confirm('이 라이브를 강제 종료하시겠습니까?')) return;
+          if (!(await adminConfirm({ title: '라이브 강제 종료', message: '이 라이브를 강제 종료하시겠습니까?', danger: true }))) return;
           try {
             await apiFetch(`/admin/api/live/${btn.dataset.liveid}/force-end`, { method: 'POST' });
             loadLiveCards();
-          } catch (err) { alert(`오류: ${err.message}`); }
+          } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
         });
       });
     } catch (err) { el.innerHTML = `<p style="color:var(--danger)">오류: ${escapeHtml(err.message)}</p>`; }
@@ -767,11 +925,11 @@ function initAuctionsPage() {
     </tr>`).join('');
     tbody.querySelectorAll('button[data-bidid]').forEach(btn => {
       btn.addEventListener('click', async () => {
-        if (!confirm('이 입찰을 취소(삭제)하시겠습니까?')) return;
+        if (!(await adminConfirm({ title: '입찰 취소', message: '이 입찰을 취소(삭제)하시겠습니까?', danger: true }))) return;
         try {
           await apiFetch(`/admin/api/auctions/${_currentAuction.id}/bids/${btn.dataset.bidid}`, { method: 'DELETE' });
           openAuctionModal(_currentAuction.id);
-        } catch (err) { alert(`오류: ${err.message}`); }
+        } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
       });
     });
   }
@@ -826,27 +984,27 @@ function initAuctionsPage() {
     const deliveryStatus = document.getElementById('auction-delivery-select').value;
     try {
       await apiFetch(`/admin/api/auctions/${_currentAuction.id}/delivery-status`, { method: 'PATCH', body: JSON.stringify({ deliveryStatus }) });
-      alert('배송상태가 변경되었습니다.');
+      adminToast('배송상태가 변경되었습니다.', { type: 'success' });
       loadAuctions(_auctionPage);
-    } catch (err) { alert(`오류: ${err.message}`); }
+    } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
   });
   document.getElementById('auction-force-end-btn').addEventListener('click', async () => {
     if (!_currentAuction) return;
-    if (!confirm('이 경매를 강제 종료하시겠습니까?')) return;
+    if (!(await adminConfirm({ title: '경매 강제 종료', message: '이 경매를 강제 종료하시겠습니까?', danger: true }))) return;
     try {
       await apiFetch(`/admin/api/auctions/${_currentAuction.id}/force-end`, { method: 'POST' });
       closeAuctionModal();
       loadAuctions(_auctionPage);
-    } catch (err) { alert(`오류: ${err.message}`); }
+    } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
   });
   document.getElementById('auction-delete-btn').addEventListener('click', async () => {
     if (!_currentAuction) return;
-    if (!confirm('이 경매 내역을 삭제하시겠습니까? 되돌릴 수 없습니다.')) return;
+    if (!(await adminConfirm({ title: '경매 삭제', message: '이 경매 내역을 삭제하시겠습니까? 되돌릴 수 없습니다.', danger: true }))) return;
     try {
       await apiFetch(`/admin/api/auctions/${_currentAuction.id}`, { method: 'DELETE' });
       closeAuctionModal();
       loadAuctions(_auctionPage);
-    } catch (err) { alert(`오류: ${err.message}`); }
+    } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
   });
 
   loadAuctions(1);
@@ -883,11 +1041,11 @@ function initProductsPage() {
       tbody.querySelectorAll('button[data-productid]').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           e.stopPropagation();
-          if (!confirm('상품을 삭제하시겠습니까?')) return;
+          if (!(await adminConfirm({ title: '상품 삭제', message: '상품을 삭제하시겠습니까?', danger: true }))) return;
           try {
             await apiFetch(`/admin/api/products/${btn.dataset.productid}`, { method: 'DELETE' });
             loadProducts(_productPage);
-          } catch (err) { alert(`오류: ${err.message}`); }
+          } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
         });
       });
       tbody.querySelectorAll('tr[data-id]').forEach(tr => {
@@ -923,15 +1081,15 @@ function initProductsPage() {
           const rid = btn.dataset.rid;
           let body = {};
           if (action === 'reject') {
-            const reason = prompt('거절 사유를 입력하세요 (선택)');
+            const reason = await adminPrompt({ title: '환불 거절', message: '거절 사유를 입력하세요 (선택)', placeholder: '거절 사유' });
             if (reason === null) return;
             body = { rejectReason: reason };
           }
-          if (!confirm(`환불 ${action} 처리하시겠습니까?`)) return;
+          if (!(await adminConfirm({ title: '환불 처리', message: `환불 ${action} 처리하시겠습니까?`, danger: action === 'reject' }))) return;
           try {
             await apiFetch(`/admin/api/refunds/${rid}/${action}`, { method: 'PATCH', body: JSON.stringify(body) });
             loadRefunds(_refundPage);
-          } catch (err) { alert(`오류: ${err.message}`); }
+          } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
         });
       });
     } catch (err) { tbody.innerHTML = `<tr class="empty-row"><td colspan="8">오류: ${escapeHtml(err.message)}</td></tr>`; }
@@ -988,7 +1146,7 @@ function initProductsPage() {
       await apiFetch(`/admin/api/products/${_currentProduct.id}`, { method: 'PATCH', body: JSON.stringify(body) });
       closeProductModal();
       loadProducts(_productPage);
-    } catch (err) { alert(`오류: ${err.message}`); }
+    } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
   });
 
   loadProducts(1);
@@ -1005,5 +1163,5 @@ document.addEventListener('DOMContentLoaded', () => {
   else if (page === 'auctions') initAuctionsPage();
   else if (page === 'products') initProductsPage();
   // Dashboard injects after login (sidebar starts hidden); other pages have a visible sidebar.
-  if (page !== 'dashboard') initResponsiveNav();
+  if (page !== 'dashboard') { initResponsiveNav(); initThemeToggle(); }
 });
