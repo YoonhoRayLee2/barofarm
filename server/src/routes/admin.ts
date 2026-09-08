@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
 import pool from '../db/mysql';
 import { verifyPassword, hashPassword } from '../services/auth';
+import { generateUniqueNickname } from '../services/nickname';
 import { lives, auctions, endAuctionState, endLive } from '../store/memory';
 import { endAuction } from '../services/livekit-service';
 import { createNotification, createNotificationsBulk } from '../services/notifications';
@@ -107,6 +108,53 @@ export default function createAdminRouter(io: Server) {
       res.json({ token });
     } catch (err) {
       console.error('[admin/login]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // POST /admin/api/users — 관리자용 테스트 계정 생성
+  // body: { username, password, role } — role: seller|buyer
+  router.post('/api/users', requireAdmin, async (req: Request, res: Response) => {
+    const { username, password, role } = req.body as { username?: string; password?: string; role?: string };
+    if (!username || !password || !role) {
+      res.status(400).json({ error: 'username, password, role are required' });
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]{4,30}$/.test(username)) {
+      res.status(400).json({ error: 'username must be 4–30 alphanumeric/underscore characters' });
+      return;
+    }
+    if (password.length < 8) {
+      res.status(400).json({ error: 'password must be at least 8 characters' });
+      return;
+    }
+    if (role !== 'seller' && role !== 'buyer') {
+      res.status(400).json({ error: 'role must be seller or buyer' });
+      return;
+    }
+    try {
+      const nickname = await generateUniqueNickname();
+      const passwordHash = await hashPassword(password);
+      // 테스트용 더미 유니크 phone: 010 + 8자리 랜덤(zero-padded). users.phone UNIQUE 제약은
+      // INSERT 시 ER_DUP_ENTRY로 걸러진다(회원가입과 동일 처리 패턴).
+      const dummyPhone = `010-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+
+      const [result] = await pool.query(
+        `INSERT INTO users (username, password_hash, nickname, name, phone, role, status)
+         VALUES (?, ?, ?, ?, ?, ?, 'active')`,
+        [username, passwordHash, nickname, username, dummyPhone, role],
+      ) as [{ insertId: number }, unknown];
+
+      const insertId = result.insertId;
+      await writeAudit(req, 'user.create', 'user', String(insertId), { username, role });
+      res.status(201).json({ id: insertId, username, nickname, role });
+    } catch (err: unknown) {
+      const mysqlErr = err as { code?: string };
+      if (mysqlErr.code === 'ER_DUP_ENTRY') {
+        res.status(409).json({ error: '이미 존재하는 아이디' });
+        return;
+      }
+      console.error('[admin/users POST]', err);
       res.status(500).json({ error: 'server error' });
     }
   });

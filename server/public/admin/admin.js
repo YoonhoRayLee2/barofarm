@@ -1230,6 +1230,42 @@ function initUsersPage() {
     catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
   });
 
+  function openCreateTestUserModal() {
+    document.getElementById('create-test-user-username').value = '';
+    document.getElementById('create-test-user-password').value = '';
+    document.getElementById('create-test-user-role').value = 'buyer';
+    document.getElementById('create-test-user-modal').hidden = false;
+  }
+  function closeCreateTestUserModal() { document.getElementById('create-test-user-modal').hidden = true; }
+
+  document.getElementById('create-test-user-btn').addEventListener('click', openCreateTestUserModal);
+  document.getElementById('create-test-user-close').addEventListener('click', closeCreateTestUserModal);
+  document.getElementById('create-test-user-cancel').addEventListener('click', closeCreateTestUserModal);
+  document.getElementById('create-test-user-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) e.currentTarget.hidden = true;
+  });
+  document.getElementById('create-test-user-submit').addEventListener('click', async () => {
+    const username = document.getElementById('create-test-user-username').value.trim();
+    const password = document.getElementById('create-test-user-password').value;
+    const role = document.getElementById('create-test-user-role').value;
+    if (!/^[A-Za-z0-9_]{4,30}$/.test(username)) {
+      adminToast('아이디는 영문/숫자/언더스코어 4~30자여야 합니다.', { type: 'error' });
+      return;
+    }
+    if (!password || password.length < 8) {
+      adminToast('비밀번호는 8자 이상이어야 합니다.', { type: 'error' });
+      return;
+    }
+    try {
+      const created = await apiFetch('/admin/api/users', { method: 'POST', body: JSON.stringify({ username, password, role }) });
+      adminToast(`테스트 계정이 생성되었습니다: ${created.username}`, { type: 'success' });
+      closeCreateTestUserModal();
+      loadUsers(_currentPage);
+    } catch (err) {
+      adminToast(err.message, { type: 'error' });
+    }
+  });
+
   loadUsers(1);
 }
 
