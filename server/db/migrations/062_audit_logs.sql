@@ -1,11 +1,11 @@
--- 046: 관리자 감사 로그 (admin_audit_logs)
+-- 062: 관리자 감사 로그 (admin_audit_logs)
 --
 -- 배경: 관리자 mutating API 호출(정산/사용자/경매/상품/환불/로그인 등)의 이력을
 -- 추적하기 위한 감사 로그 테이블. 감사 실패가 본 액션을 막아서는 안 되므로
 -- 기록 실패는 애플리케이션 레벨에서 무시된다(try/catch).
 --
 -- 주의:
---   * 서버 시작 시 자동 적용되지 않음. 운영 DB에서 수동 실행:  SOURCE db/migrations/046_audit_logs.sql;
+--   * 서버 시작 시 자동 적용되지 않음. 운영 DB에서 수동 실행:  SOURCE db/migrations/062_audit_logs.sql;
 --   * 로컬 환경에서도 동일하게 수동 실행 필요.
 --   * IF NOT EXISTS 로 멱등 보장.
 
