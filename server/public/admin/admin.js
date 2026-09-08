@@ -1976,6 +1976,586 @@ function initNoticePage() {
   loadHistory();
 }
 
+/* -------------------- Phase 7 shared helpers -------------------- */
+
+function genKey() {
+  if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+  return `k_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+function paymentStatusBadge(status) {
+  if (status === 'PAID') return '<span class="badge badge--success">PAID</span>';
+  if (status === 'FAILED' || status === 'EXPIRED') return `<span class="badge badge--danger">${escapeHtml(status)}</span>`;
+  if (status === 'CANCELED' || status === 'PARTIALLY_CANCELED' || status === 'REFUNDED') return `<span class="badge badge--warn">${escapeHtml(status)}</span>`;
+  return `<span class="badge badge--info">${escapeHtml(status || '-')}</span>`;
+}
+
+function sessionStatusBadge(status) {
+  if (status === 'ACTIVE') return '<span class="badge badge--success">ACTIVE</span>';
+  if (status === 'REVOKED') return '<span class="badge badge--danger">REVOKED</span>';
+  if (status === 'EXPIRED') return '<span class="badge badge--warn">EXPIRED</span>';
+  return `<span class="badge">${escapeHtml(status || '-')}</span>`;
+}
+
+/** 사용자 검색 결과 목록을 공용 users-tbody 스타일 테이블에 렌더링하고, 행 클릭 시 onSelect(id, user)를 호출한다. */
+async function renderUserSearchResults(tbodyId, query, onSelect) {
+  const tbody = document.getElementById(tbodyId);
+  tbody.innerHTML = '<tr class="empty-row"><td colspan="4"><span class="spinner"></span></td></tr>';
+  try {
+    const params = new URLSearchParams({ page: 1 });
+    if (query) params.set('q', query);
+    const data = await apiFetch(`/admin/api/users?${params}`);
+    const rows = data.users || [];
+    if (!rows.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="4">검색 결과가 없습니다.</td></tr>'; return; }
+    tbody.innerHTML = rows.map(u => `
+      <tr data-id="${u.id}" style="cursor:pointer">
+        <td>${escapeHtml(String(u.id))}</td>
+        <td>${escapeHtml(u.username)}</td>
+        <td>${escapeHtml(u.nickname)}</td>
+        <td>${roleBadge(u.role)}</td>
+      </tr>`).join('');
+    tbody.querySelectorAll('tr[data-id]').forEach(tr => {
+      tr.addEventListener('click', () => onSelect(Number(tr.dataset.id), rows.find(u => String(u.id) === tr.dataset.id)));
+    });
+  } catch (err) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="4">오류: ${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+/* -------------------- Payments page (/admin/payments) -------------------- */
+
+function initPaymentsPage() {
+  if (!getToken()) { window.location.href = '/admin'; return; }
+  bindLogout();
+  let _paymentPage = 1;
+  let _currentPayment = null;
+
+  async function loadPayments(page) {
+    _paymentPage = page;
+    const q = document.getElementById('payment-search').value.trim();
+    const status = document.getElementById('payment-status-filter').value;
+    const method = document.getElementById('payment-method-filter').value;
+    const tbody = document.getElementById('payments-tbody');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="9"><span class="spinner"></span></td></tr>';
+    try {
+      const params = new URLSearchParams({ page });
+      if (q) params.set('q', q);
+      if (status) params.set('status', status);
+      if (method) params.set('method', method);
+      const data = await apiFetch(`/admin/api/payments?${params}`);
+      const rows = data.payments || [];
+      if (!rows.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="9">없음</td></tr>'; return; }
+      tbody.innerHTML = rows.map(p => `
+        <tr data-id="${escapeHtml(String(p.id))}" style="cursor:pointer">
+          <td>${escapeHtml(String(p.id))}</td>
+          <td>${escapeHtml(p.order_number)}</td>
+          <td>${escapeHtml(p.username)} (${escapeHtml(p.nickname)})</td>
+          <td>${escapeHtml(p.method)}</td>
+          <td>${formatKRW(p.requested_amount)}</td>
+          <td>${formatKRW(p.approved_amount)}</td>
+          <td>${formatKRW(p.canceled_amount)}</td>
+          <td>${paymentStatusBadge(p.status)}</td>
+          <td class="text-muted">${formatDate(p.approved_at || p.requested_at)}</td>
+        </tr>`).join('');
+      renderPagination('payments-pagination', page, data.total, data.pageSize || 20, loadPayments);
+    } catch (err) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="9">오류: ${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+
+  function closePaymentModal() { document.getElementById('payment-modal').hidden = true; }
+
+  function renderEvents(events) {
+    const tbody = document.getElementById('payment-events-tbody');
+    if (!events || !events.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="5">이벤트 없음</td></tr>';
+      return;
+    }
+    tbody.innerHTML = events.map(e => `
+      <tr>
+        <td>${escapeHtml(e.transaction_type)}</td>
+        <td>${formatKRW(e.amount)}</td>
+        <td>${escapeHtml(e.status)}</td>
+        <td class="text-muted">${escapeHtml(e.provider_transaction_id || '-')}</td>
+        <td class="text-muted">${formatDate(e.created_at)}</td>
+      </tr>`).join('');
+  }
+
+  async function openPaymentModal(id) {
+    const modal = document.getElementById('payment-modal');
+    const meta = document.getElementById('payment-modal-meta');
+    const title = document.getElementById('payment-modal-title');
+    const msgEl = document.getElementById('payment-cancel-msg');
+    msgEl.textContent = ''; msgEl.className = 'generate-msg';
+    document.getElementById('payment-cancel-reason').value = '';
+    document.getElementById('payment-partial-cancel-amount').value = '';
+    modal.hidden = false;
+    meta.innerHTML = '<span class="text-muted"><span class="spinner"></span> 불러오는 중...</span>';
+    document.getElementById('payment-events-tbody').innerHTML = '';
+    try {
+      const p = await apiFetch(`/admin/api/payments/${id}`);
+      _currentPayment = p;
+      title.textContent = `결제 #${p.id} — ${p.order_number}`;
+      meta.innerHTML = `
+        <span>사용자: <strong>${escapeHtml(p.username)} (${escapeHtml(p.nickname)})</strong></span>
+        <span>수단: <strong>${escapeHtml(p.method)}</strong></span>
+        <span>요청금액: <strong>${formatKRW(p.requested_amount)}</strong></span>
+        <span>승인금액: <strong>${formatKRW(p.approved_amount)}</strong></span>
+        <span>취소금액: <strong>${formatKRW(p.canceled_amount)}</strong></span>
+        <span>상태: ${paymentStatusBadge(p.status)}</span>
+        <span>주문상태: ${escapeHtml(p.order_status)}</span>
+        <span>포인트/머니 사용: ${formatKRW(p.point_used_amount)} / ${formatKRW(p.money_used_amount)}</span>`;
+      renderEvents(p.events);
+      const cancelable = ['PAID', 'PARTIALLY_CANCELED'].includes(p.status);
+      document.getElementById('payment-cancel-btn').disabled = !cancelable;
+      document.getElementById('payment-partial-cancel-btn').disabled = !cancelable;
+    } catch (err) {
+      meta.innerHTML = `<span style="color:var(--danger)">불러오기 실패: ${escapeHtml(err.message)}</span>`;
+    }
+  }
+
+  document.getElementById('payment-search-btn').addEventListener('click', () => loadPayments(1));
+  document.getElementById('payment-search').addEventListener('keydown', e => { if (e.key === 'Enter') loadPayments(1); });
+  document.getElementById('payments-tbody').addEventListener('click', e => {
+    const tr = e.target.closest('tr[data-id]');
+    if (tr) openPaymentModal(tr.dataset.id);
+  });
+  document.getElementById('payment-modal-close').addEventListener('click', closePaymentModal);
+  document.getElementById('payment-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) e.currentTarget.hidden = true;
+  });
+
+  document.getElementById('payment-cancel-btn').addEventListener('click', async () => {
+    if (!_currentPayment) return;
+    const reason = document.getElementById('payment-cancel-reason').value.trim();
+    const msgEl = document.getElementById('payment-cancel-msg');
+    if (!reason) { msgEl.className = 'generate-msg error'; msgEl.textContent = '취소 사유를 입력하세요.'; return; }
+    if (!confirm(`결제 #${_currentPayment.id}를 전체취소하시겠습니까?`)) return;
+    try {
+      await apiFetch(`/admin/api/payments/${_currentPayment.id}/cancel`, {
+        method: 'POST',
+        body: JSON.stringify({ reason, idempotencyKey: genKey() }),
+      });
+      msgEl.className = 'generate-msg success';
+      msgEl.textContent = '전체취소가 완료되었습니다.';
+      await openPaymentModal(_currentPayment.id);
+      await loadPayments(_paymentPage);
+    } catch (err) {
+      msgEl.className = 'generate-msg error';
+      msgEl.textContent = `취소 실패: ${err.message}`;
+    }
+  });
+
+  document.getElementById('payment-partial-cancel-btn').addEventListener('click', async () => {
+    if (!_currentPayment) return;
+    const reason = document.getElementById('payment-cancel-reason').value.trim();
+    const cancelAmount = Number(document.getElementById('payment-partial-cancel-amount').value);
+    const msgEl = document.getElementById('payment-cancel-msg');
+    if (!reason) { msgEl.className = 'generate-msg error'; msgEl.textContent = '취소 사유를 입력하세요.'; return; }
+    if (!cancelAmount || cancelAmount <= 0) { msgEl.className = 'generate-msg error'; msgEl.textContent = '부분취소 금액을 입력하세요.'; return; }
+    if (!confirm(`결제 #${_currentPayment.id}를 ${cancelAmount.toLocaleString('ko-KR')}원 부분취소하시겠습니까?`)) return;
+    try {
+      await apiFetch(`/admin/api/payments/${_currentPayment.id}/partial-cancel`, {
+        method: 'POST',
+        body: JSON.stringify({ reason, cancelAmount, idempotencyKey: genKey() }),
+      });
+      msgEl.className = 'generate-msg success';
+      msgEl.textContent = '부분취소가 완료되었습니다.';
+      await openPaymentModal(_currentPayment.id);
+      await loadPayments(_paymentPage);
+    } catch (err) {
+      msgEl.className = 'generate-msg error';
+      msgEl.textContent = `취소 실패: ${err.message}`;
+    }
+  });
+
+  loadPayments(1);
+}
+
+/* -------------------- Wallet page (/admin/wallet) -------------------- */
+
+function initWalletPage() {
+  if (!getToken()) { window.location.href = '/admin'; return; }
+  bindLogout();
+  let _walletUserId = null;
+
+  async function loadWalletDetail(userId, username) {
+    document.getElementById('wallet-detail').hidden = false;
+    document.getElementById('wallet-detail-title').textContent = `지갑 상세 — ${username || userId} (#${userId})`;
+    document.getElementById('wallet-action-msg').textContent = '';
+    try {
+      const w = await apiFetch(`/api/admin/users/${userId}/wallet`);
+      document.getElementById('wallet-money').textContent = formatKRW(w.moneyBalance);
+      document.getElementById('wallet-earned').textContent = formatKRW(w.earnedPointBalance);
+      document.getElementById('wallet-event').textContent = formatKRW(w.eventPointBalance);
+      document.getElementById('wallet-test').textContent = formatKRW(w.testPointBalance);
+      document.getElementById('wallet-comp').textContent = formatKRW(w.compensationPointBalance);
+    } catch (err) {
+      document.getElementById('wallet-action-msg').className = 'generate-msg error';
+      document.getElementById('wallet-action-msg').textContent = `지갑 조회 실패: ${err.message}`;
+    }
+    try {
+      const tx = await apiFetch(`/api/admin/users/${userId}/wallet/transactions?limit=50`);
+      const items = tx.items || tx.transactions || (Array.isArray(tx) ? tx : []);
+      const tbody = document.getElementById('wallet-tx-tbody');
+      if (!items.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="6">거래 내역 없음</td></tr>'; }
+      else {
+        tbody.innerHTML = items.map(t => `
+          <tr>
+            <td>${escapeHtml(t.transactionType || t.transaction_type)}</td>
+            <td>${escapeHtml(t.assetType || t.asset_type)}</td>
+            <td>${formatKRW(t.amount)}</td>
+            <td class="text-muted">${escapeHtml(t.referenceType || t.reference_type || '-')} ${escapeHtml(t.referenceId || t.reference_id || '')}</td>
+            <td class="text-muted">${escapeHtml(t.description || '-')}</td>
+            <td class="text-muted">${formatDate(t.createdAt || t.created_at)}</td>
+          </tr>`).join('');
+      }
+    } catch (err) {
+      document.getElementById('wallet-tx-tbody').innerHTML = `<tr class="empty-row"><td colspan="6">오류: ${escapeHtml(err.message)}</td></tr>`;
+    }
+    try {
+      const adj = await apiFetch(`/api/admin/wallet-adjustments?userId=${userId}&limit=50`);
+      const items = adj.items || [];
+      const tbody = document.getElementById('wallet-adjustments-tbody');
+      if (!items.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="6">조정 내역 없음</td></tr>'; }
+      else {
+        tbody.innerHTML = items.map(a => `
+          <tr>
+            <td>${escapeHtml(a.administratorUsername)}</td>
+            <td>${escapeHtml(a.adjustmentType)}</td>
+            <td>${escapeHtml(a.assetType)}</td>
+            <td>${formatKRW(a.amount)}</td>
+            <td class="text-muted">${escapeHtml(a.reason || '-')}</td>
+            <td class="text-muted">${formatDate(a.createdAt)}</td>
+          </tr>`).join('');
+      }
+    } catch (err) {
+      document.getElementById('wallet-adjustments-tbody').innerHTML = `<tr class="empty-row"><td colspan="6">오류: ${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+
+  function selectWalletUser(userId, user) {
+    _walletUserId = userId;
+    loadWalletDetail(userId, user ? user.username : null);
+  }
+
+  document.getElementById('wallet-user-search-btn').addEventListener('click', () => {
+    renderUserSearchResults('wallet-user-tbody', document.getElementById('wallet-user-search').value.trim(), selectWalletUser);
+  });
+  document.getElementById('wallet-user-search').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('wallet-user-search-btn').click();
+  });
+
+  document.getElementById('wallet-test-grant-btn').addEventListener('click', async () => {
+    if (!_walletUserId) { alert('먼저 사용자를 선택하세요.'); return; }
+    const assetType = document.getElementById('wallet-test-asset').value;
+    const amount = Number(document.getElementById('wallet-test-amount').value);
+    const reason = document.getElementById('wallet-test-reason').value.trim();
+    const msgEl = document.getElementById('wallet-action-msg');
+    if (!amount || amount <= 0) { msgEl.className = 'generate-msg error'; msgEl.textContent = '금액을 입력하세요.'; return; }
+    if (!reason) { msgEl.className = 'generate-msg error'; msgEl.textContent = '사유를 입력하세요.'; return; }
+    if (!confirm(`${assetType} ${amount.toLocaleString('ko-KR')}을(를) 지급하시겠습니까?`)) return;
+    const path = assetType === 'MONEY' ? 'test-money' : 'test-points';
+    try {
+      await apiFetch(`/api/admin/users/${_walletUserId}/wallet/${path}/grant`, {
+        method: 'POST',
+        body: JSON.stringify({ amount, reason, idempotencyKey: genKey() }),
+      });
+      msgEl.className = 'generate-msg success';
+      msgEl.textContent = '지급이 완료되었습니다.';
+      loadWalletDetail(_walletUserId);
+    } catch (err) {
+      msgEl.className = 'generate-msg error';
+      msgEl.textContent = `지급 실패: ${err.message}`;
+    }
+  });
+
+  document.getElementById('wallet-test-revoke-btn').addEventListener('click', async () => {
+    if (!_walletUserId) { alert('먼저 사용자를 선택하세요.'); return; }
+    const assetType = document.getElementById('wallet-test-asset').value;
+    const reason = document.getElementById('wallet-test-reason').value.trim();
+    const msgEl = document.getElementById('wallet-action-msg');
+    if (!reason) { msgEl.className = 'generate-msg error'; msgEl.textContent = '사유를 입력하세요.'; return; }
+    if (!confirm(`${assetType} 잔액 전체를 회수하시겠습니까?`)) return;
+    const path = assetType === 'MONEY' ? 'test-money' : 'test-points';
+    try {
+      await apiFetch(`/api/admin/users/${_walletUserId}/wallet/${path}/revoke`, {
+        method: 'POST',
+        body: JSON.stringify({ revokeAll: true, reason, idempotencyKey: genKey() }),
+      });
+      msgEl.className = 'generate-msg success';
+      msgEl.textContent = '회수가 완료되었습니다.';
+      loadWalletDetail(_walletUserId);
+    } catch (err) {
+      msgEl.className = 'generate-msg error';
+      msgEl.textContent = `회수 실패: ${err.message}`;
+    }
+  });
+
+  document.getElementById('wallet-adj-submit-btn').addEventListener('click', async () => {
+    if (!_walletUserId) { alert('먼저 사용자를 선택하세요.'); return; }
+    const assetType = document.getElementById('wallet-adj-asset').value;
+    const adjustmentType = document.getElementById('wallet-adj-type').value;
+    const amount = Number(document.getElementById('wallet-adj-amount').value);
+    const reason = document.getElementById('wallet-adj-reason').value.trim();
+    const msgEl = document.getElementById('wallet-action-msg');
+    if (!Number.isFinite(amount) || amount === 0) { msgEl.className = 'generate-msg error'; msgEl.textContent = '금액을 입력하세요.'; return; }
+    if (!reason) { msgEl.className = 'generate-msg error'; msgEl.textContent = '사유를 입력하세요.'; return; }
+    if (!confirm(`${assetType} ${adjustmentType} ${amount}를 실행하시겠습니까? (잔액은 조정거래로만 변경되며 원장에 기록됩니다)`)) return;
+    try {
+      await apiFetch(`/api/admin/users/${_walletUserId}/wallet/adjustments`, {
+        method: 'POST',
+        body: JSON.stringify({ assetType, adjustmentType, amount, reason, idempotencyKey: genKey() }),
+      });
+      msgEl.className = 'generate-msg success';
+      msgEl.textContent = '조정이 완료되었습니다.';
+      loadWalletDetail(_walletUserId);
+    } catch (err) {
+      msgEl.className = 'generate-msg error';
+      msgEl.textContent = `조정 실패: ${err.message}`;
+    }
+  });
+}
+
+/* -------------------- Payment auth management page (/admin/payment-auth) -------------------- */
+
+function initPaymentAuthPage() {
+  if (!getToken()) { window.location.href = '/admin'; return; }
+  bindLogout();
+  let _authUserId = null;
+
+  async function loadAuthDetail(userId, username) {
+    document.getElementById('auth-detail').hidden = false;
+    document.getElementById('auth-detail-title').textContent = `결제비밀번호 상태 — ${username || userId} (#${userId})`;
+    document.getElementById('auth-action-msg').textContent = '';
+    try {
+      const data = await apiFetch(`/admin/api/users/${userId}/payment-auth`);
+      document.getElementById('auth-cred-set').textContent = data.credential.isSet ? '설정됨' : '미설정';
+      document.getElementById('auth-cred-version').textContent = data.credential.passwordVersion ?? '-';
+      document.getElementById('auth-cred-locked').textContent = data.credential.isLocked
+        ? `잠김 (~${formatDate(data.credential.lockedUntil)})`
+        : '정상';
+
+      const payTbody = document.getElementById('auth-payment-sessions-tbody');
+      if (!data.paymentAuthSessions.length) {
+        payTbody.innerHTML = '<tr class="empty-row"><td colspan="7">세션 없음</td></tr>';
+      } else {
+        payTbody.innerHTML = data.paymentAuthSessions.map(s => `
+          <tr>
+            <td>${escapeHtml(String(s.id))}</td>
+            <td>${escapeHtml(s.purpose)}</td>
+            <td class="text-muted">${escapeHtml(s.scope_type || '-')} ${escapeHtml(s.scope_id || '')}</td>
+            <td class="text-muted">${escapeHtml(s.device_id || '-')}</td>
+            <td class="text-muted">${formatDate(s.expires_at)}</td>
+            <td>${sessionStatusBadge(s.status)}</td>
+            <td>${s.status === 'ACTIVE' ? `<button class="btn-small btn-danger" data-revoke-payment="${s.id}">강제종료</button>` : '-'}</td>
+          </tr>`).join('');
+      }
+      const accessTbody = document.getElementById('auth-access-sessions-tbody');
+      if (!data.auctionAccessSessions.length) {
+        accessTbody.innerHTML = '<tr class="empty-row"><td colspan="5">세션 없음</td></tr>';
+      } else {
+        accessTbody.innerHTML = data.auctionAccessSessions.map(s => `
+          <tr>
+            <td>${escapeHtml(String(s.id))}</td>
+            <td class="text-muted">${escapeHtml(s.auction_id || '-')}</td>
+            <td class="text-muted">${escapeHtml(s.scope_type || '-')}</td>
+            <td class="text-muted">${formatDate(s.expires_at)}</td>
+            <td>${sessionStatusBadge(s.status)} ${s.status === 'ACTIVE' ? `<button class="btn-small btn-danger" data-revoke-access="${s.id}">강제종료</button>` : ''}</td>
+          </tr>`).join('');
+      }
+
+      payTbody.querySelectorAll('button[data-revoke-payment]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const reason = prompt('결제 인증세션 강제종료 사유를 입력하세요.');
+          if (!reason) return;
+          try {
+            await apiFetch(`/admin/api/payment-auth-sessions/${btn.dataset.revokePayment}/revoke`, {
+              method: 'POST', body: JSON.stringify({ reason }),
+            });
+            loadAuthDetail(userId, username);
+          } catch (err) { alert(`오류: ${err.message}`); }
+        });
+      });
+      accessTbody.querySelectorAll('button[data-revoke-access]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const reason = prompt('경매 입장세션 강제종료 사유를 입력하세요.');
+          if (!reason) return;
+          try {
+            await apiFetch(`/admin/api/auction-access-sessions/${btn.dataset.revokeAccess}/revoke`, {
+              method: 'POST', body: JSON.stringify({ reason }),
+            });
+            loadAuthDetail(userId, username);
+          } catch (err) { alert(`오류: ${err.message}`); }
+        });
+      });
+    } catch (err) {
+      document.getElementById('auth-action-msg').className = 'generate-msg error';
+      document.getElementById('auth-action-msg').textContent = `조회 실패: ${err.message}`;
+    }
+  }
+
+  function selectAuthUser(userId, user) {
+    _authUserId = userId;
+    loadAuthDetail(userId, user ? user.username : null);
+  }
+
+  document.getElementById('auth-user-search-btn').addEventListener('click', () => {
+    renderUserSearchResults('auth-user-tbody', document.getElementById('auth-user-search').value.trim(), selectAuthUser);
+  });
+  document.getElementById('auth-user-search').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('auth-user-search-btn').click();
+  });
+
+  document.getElementById('auth-reset-btn').addEventListener('click', async () => {
+    if (!_authUserId) { alert('먼저 사용자를 선택하세요.'); return; }
+    const reason = document.getElementById('auth-reset-reason').value.trim();
+    const msgEl = document.getElementById('auth-action-msg');
+    if (!reason) { msgEl.className = 'generate-msg error'; msgEl.textContent = '초기화 사유를 입력하세요.'; return; }
+    if (!confirm('결제비밀번호를 강제 초기화하고 모든 인증세션을 폐기하시겠습니까?')) return;
+    try {
+      await apiFetch(`/admin/api/users/${_authUserId}/payment-credential/reset`, {
+        method: 'POST', body: JSON.stringify({ reason }),
+      });
+      msgEl.className = 'generate-msg success';
+      msgEl.textContent = '초기화가 완료되었습니다.';
+      loadAuthDetail(_authUserId);
+    } catch (err) {
+      msgEl.className = 'generate-msg error';
+      msgEl.textContent = `초기화 실패: ${err.message}`;
+    }
+  });
+}
+
+/* -------------------- REST auction management page (/admin/rest-auctions) -------------------- */
+
+function initRestAuctionsPage() {
+  if (!getToken()) { window.location.href = '/admin'; return; }
+  bindLogout();
+  let _restAuctionPage = 1;
+  let _currentRestAuction = null;
+
+  async function loadRestAuctions(page) {
+    _restAuctionPage = page;
+    const q = document.getElementById('rest-auction-search').value.trim();
+    const status = document.getElementById('rest-auction-status-filter').value;
+    const onlyUnpaid = document.getElementById('rest-auction-unpaid-only').checked;
+    const tbody = document.getElementById('rest-auctions-tbody');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="9"><span class="spinner"></span></td></tr>';
+    try {
+      const params = new URLSearchParams({ page });
+      if (q) params.set('q', q);
+      if (status) params.set('status', status);
+      if (onlyUnpaid) params.set('onlyUnpaid', 'true');
+      const data = await apiFetch(`/admin/api/rest-auctions?${params}`);
+      const rows = data.auctions || [];
+      if (!rows.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="9">없음</td></tr>'; return; }
+      tbody.innerHTML = rows.map(a => `
+        <tr data-id="${escapeHtml(String(a.id))}" style="cursor:pointer">
+          <td>${escapeHtml(String(a.id))}</td>
+          <td>${escapeHtml(a.product_name)}</td>
+          <td>${formatKRW(a.current_price)}</td>
+          <td>${escapeHtml(a.status)}</td>
+          <td>${escapeHtml(a.seller_nickname || '-')}</td>
+          <td>${escapeHtml(a.buyer_nickname || '-')}</td>
+          <td>${escapeHtml(a.authentication_mode)}</td>
+          <td>${a.order_status ? paymentStatusBadge(a.order_status) : '-'}</td>
+          <td class="text-muted">${formatDate(a.payment_due_at)}</td>
+        </tr>`).join('');
+      renderPagination('rest-auctions-pagination', page, data.total, data.pageSize || 20, loadRestAuctions);
+    } catch (err) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="9">오류: ${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+
+  function closeRestAuctionModal() { document.getElementById('rest-auction-modal').hidden = true; }
+
+  async function openRestAuctionModal(id) {
+    const modal = document.getElementById('rest-auction-modal');
+    const meta = document.getElementById('rest-auction-modal-meta');
+    const title = document.getElementById('rest-auction-modal-title');
+    const authMsg = document.getElementById('rest-auction-auth-msg');
+    authMsg.textContent = ''; authMsg.className = 'generate-msg';
+    modal.hidden = false;
+    meta.innerHTML = '<span class="text-muted"><span class="spinner"></span> 불러오는 중...</span>';
+    document.getElementById('rest-auction-orders-tbody').innerHTML = '';
+    document.getElementById('rest-auction-bids-tbody').innerHTML = '';
+    try {
+      const a = await apiFetch(`/admin/api/rest-auctions/${id}`);
+      _currentRestAuction = a;
+      title.textContent = `경매 #${a.id} — ${a.product_name || ''}`;
+      meta.innerHTML = `
+        <span>판매자: <strong>${escapeHtml(a.seller_nickname || '-')}</strong></span>
+        <span>낙찰자: <strong>${escapeHtml(a.buyer_nickname || '-')}</strong></span>
+        <span>낙찰가: <strong>${formatKRW(a.current_price)}</strong></span>
+        <span>상태: ${escapeHtml(a.status)}</span>`;
+      document.getElementById('rest-auction-auth-mode').value = a.authentication_mode;
+      document.getElementById('rest-auction-high-value').value = a.high_value_reauth_amount ?? '';
+
+      const orders = a.orders || [];
+      const ordersTbody = document.getElementById('rest-auction-orders-tbody');
+      ordersTbody.innerHTML = orders.length
+        ? orders.map(o => `
+          <tr>
+            <td>${escapeHtml(String(o.id))}</td>
+            <td>${paymentStatusBadge(o.status)}</td>
+            <td>${formatKRW(o.payment_amount)}</td>
+            <td class="text-muted">${formatDate(o.payment_due_at)}</td>
+            <td class="text-muted">${formatDate(o.created_at)}</td>
+          </tr>`).join('')
+        : '<tr class="empty-row"><td colspan="5">주문 없음</td></tr>';
+
+      const bids = a.bids || [];
+      const bidsTbody = document.getElementById('rest-auction-bids-tbody');
+      bidsTbody.innerHTML = bids.length
+        ? bids.map(b => `
+          <tr>
+            <td>${escapeHtml(String(b.id))}</td>
+            <td>${escapeHtml(b.bidder_name || '-')}</td>
+            <td>${formatKRW(b.price)}</td>
+            <td>${escapeHtml(b.status || '-')}</td>
+            <td class="text-muted">${formatDate(b.created_at)}</td>
+          </tr>`).join('')
+        : '<tr class="empty-row"><td colspan="5">입찰 내역 없음</td></tr>';
+    } catch (err) {
+      meta.innerHTML = `<span style="color:var(--danger)">불러오기 실패: ${escapeHtml(err.message)}</span>`;
+    }
+  }
+
+  document.getElementById('rest-auction-search-btn').addEventListener('click', () => loadRestAuctions(1));
+  document.getElementById('rest-auction-search').addEventListener('keydown', e => { if (e.key === 'Enter') loadRestAuctions(1); });
+  document.getElementById('rest-auctions-tbody').addEventListener('click', e => {
+    const tr = e.target.closest('tr[data-id]');
+    if (tr) openRestAuctionModal(tr.dataset.id);
+  });
+  document.getElementById('rest-auction-modal-close').addEventListener('click', closeRestAuctionModal);
+  document.getElementById('rest-auction-modal-close2').addEventListener('click', closeRestAuctionModal);
+  document.getElementById('rest-auction-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) e.currentTarget.hidden = true;
+  });
+  document.getElementById('rest-auction-auth-save-btn').addEventListener('click', async () => {
+    if (!_currentRestAuction) return;
+    const authenticationMode = document.getElementById('rest-auction-auth-mode').value;
+    const highValueRaw = document.getElementById('rest-auction-high-value').value;
+    const highValueReauthAmount = highValueRaw === '' ? null : Number(highValueRaw);
+    const msgEl = document.getElementById('rest-auction-auth-msg');
+    try {
+      await apiFetch(`/admin/api/rest-auctions/${_currentRestAuction.id}/auth-settings`, {
+        method: 'PATCH',
+        body: JSON.stringify({ authenticationMode, highValueReauthAmount }),
+      });
+      msgEl.className = 'generate-msg success';
+      msgEl.textContent = '저장되었습니다.';
+      loadRestAuctions(_restAuctionPage);
+    } catch (err) {
+      msgEl.className = 'generate-msg error';
+      msgEl.textContent = `저장 실패: ${err.message}`;
+    }
+  });
+
+  loadRestAuctions(1);
+}
+
 /* -------------------- Bootstrap -------------------- */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1989,6 +2569,10 @@ document.addEventListener('DOMContentLoaded', () => {
   else if (page === 'group-deals') initGroupDealsPage();
   else if (page === 'consignments') initConsignmentsPage();
   else if (page === 'notice') initNoticePage();
+  else if (page === 'payments') initPaymentsPage();
+  else if (page === 'wallet') initWalletPage();
+  else if (page === 'payment-auth') initPaymentAuthPage();
+  else if (page === 'rest-auctions') initRestAuctionsPage();
   // Dashboard injects after login (sidebar starts hidden); other pages have a visible sidebar.
   if (page !== 'dashboard') { initResponsiveNav(); initThemeToggle(); }
 });

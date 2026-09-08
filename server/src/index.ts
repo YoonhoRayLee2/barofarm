@@ -18,6 +18,13 @@ import chatRoomsRouter from './routes/chat-rooms';
 import consignmentsRouter from './routes/consignments';
 import deliveryAddressesRouter from './routes/delivery-addresses';
 import paymentMethodsRouter from './routes/payment-methods';
+import paymentCredentialsRouter from './routes/payment-credentials';
+import paymentAuthRouter from './routes/payment-auth';
+import payWalletRouter from './routes/pay-wallet';
+import ordersRouter from './routes/orders';
+import paymentsRouter from './routes/payments';
+import auctionBidsRouter from './routes/auction-bids';
+import adminWalletRouter from './routes/admin-wallet';
 import refundsRouter from './routes/refunds';
 import marketPricesRouter from './routes/market-prices';
 import hanaroStoresRouter from './routes/hanaro-stores';
@@ -33,6 +40,7 @@ import registerAuctionSocket from './socket/auction';
 import registerChatSocket from './socket/chat';
 import pool from './db/mysql';
 import { verifyToken } from './services/jwt';
+import { startAuctionSettlementScheduler } from './services/auction-settlement';
 
 if (!process.env.JWT_SECRET) {
   console.error('FATAL: JWT_SECRET environment variable is not set');
@@ -143,11 +151,19 @@ app.use('/api/auth', authRoutes);
 app.use('/api/favorites', createFavoritesRouter(io, pool));
 app.use('/api/products', createProductsRouter(io));
 app.use('/api/auctions', auctionRouter);
+// REST 인증형 경매 입찰(Phase 5, §22) — 기존 소켓 경매(auctionRouter 위)와 별도 경로(:auctionId/bids 등)라 충돌 없음
+app.use('/api/auctions', auctionBidsRouter);
 app.use('/api/tracking', trackingRouter);
 app.use('/api/chat-rooms', chatRoomsRouter);
 app.use('/api/consignments', consignmentsRouter);
 app.use('/api/delivery-addresses', deliveryAddressesRouter);
 app.use('/api/payment-methods', paymentMethodsRouter);
+app.use('/api/payment-credentials', paymentCredentialsRouter);
+app.use('/api/payment-auth', paymentAuthRouter);
+app.use('/api/pay/wallet', payWalletRouter);
+app.use('/api/orders', ordersRouter);
+app.use('/api/payments', paymentsRouter);
+app.use('/api/admin', adminWalletRouter);
 app.use('/api/refunds', refundsRouter);
 app.use('/api/market-prices', marketPricesRouter);
 app.use('/api/hanaro-stores', hanaroStoresRouter);
@@ -162,6 +178,10 @@ app.use('/api/reviews', reviewsRouter);
 
 registerAuctionSocket(io);
 registerChatSocket(io);
+
+// REST 경매(bidding_channel='REST') 종료 판정 + 낙찰주문 결제기한 만료 처리 폴링(Phase 5) — 기존 소켓
+// 경매 타이머(store/memory.ts startTimer, setInterval)와는 완전히 별개이며 서로 대상이 겹치지 않는다.
+startAuctionSettlementScheduler();
 
 const PORT = Number(process.env.PORT ?? 3000);
 const HOST = process.env.HOST ?? '0.0.0.0';

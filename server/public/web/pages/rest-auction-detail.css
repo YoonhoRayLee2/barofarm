@@ -1,0 +1,214 @@
+/* REST 경매 상세 — Fresh Field */
+
+.rad-page {
+  background: var(--color-bg);
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-width: 480px;
+  margin: 0 auto;
+  font-family: var(--font-body);
+}
+
+.rad-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: max(14px, env(safe-area-inset-top)) var(--space-4) 14px;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-bg-overlay);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  flex-shrink: 0;
+  z-index: var(--z-sticky);
+}
+.rad-header__back {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  font-size: var(--fs-xl);
+  color: var(--color-ink);
+  cursor: pointer;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rad-header__back:active { background: var(--color-surface-alt); transform: scale(0.94); }
+.rad-header__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-extrabold);
+  color: var(--color-ink);
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.rad-scroll { flex: 1; overflow-y: auto; }
+.rad-loading, .rad-error { padding: var(--space-7) var(--space-4); text-align: center; color: var(--color-ink-soft); font-size: var(--fs-sm); }
+.rad-error { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
+.rad-retry {
+  background: var(--color-surface); border: 1px solid var(--color-line);
+  border-radius: var(--radius-md); padding: 8px 16px; font-weight: var(--fw-bold);
+  color: var(--color-ink); cursor: pointer;
+}
+
+/* Thumb */
+.rad-thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--color-surface-alt);
+  overflow: hidden;
+}
+.rad-thumb__img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rad-thumb__ph { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 56px; }
+.rad-status {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  color: var(--color-on-danger);
+  background: var(--color-ink-mute);
+}
+.rad-status--live { background: var(--color-cta); }
+.rad-status--ended { background: var(--color-ink-mute); }
+.rad-status--pending { background: var(--color-warn); }
+
+/* Info */
+.rad-info { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+.rad-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-extrabold);
+  color: var(--color-ink);
+  margin: 0;
+  letter-spacing: -0.4px;
+}
+.rad-price-row { display: flex; align-items: baseline; justify-content: space-between; }
+.rad-price-label { font-size: var(--fs-sm); color: var(--color-ink-soft); }
+.rad-price {
+  font-family: var(--font-display);
+  font-size: var(--fs-3xl);
+  font-weight: var(--fw-black);
+  color: var(--color-accent);
+  letter-spacing: -0.5px;
+}
+
+.rad-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+}
+.rad-meta { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
+.rad-meta span { font-size: var(--fs-sm); color: var(--color-ink-soft); }
+.rad-meta b { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--color-ink); }
+
+.rad-badges { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.rad-badge {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-line);
+}
+.rad-badge--ok { color: var(--color-success); border-color: var(--color-success); }
+.rad-badge--wait { color: var(--color-warn); border-color: var(--color-warn); }
+
+/* Action */
+.rad-action { padding: 0 var(--space-4) max(var(--space-5), env(safe-area-inset-bottom)); }
+
+.rad-primary {
+  width: 100%;
+  padding: 15px;
+  background: var(--grad-cta);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--color-on-danger);
+  cursor: pointer;
+}
+.rad-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+.rad-primary:not(:disabled):active { transform: scale(0.99); opacity: 0.93; }
+
+.rad-link {
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--color-ink-soft);
+  font-size: var(--fs-sm);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: var(--space-2);
+}
+
+.rad-ended-note, .rad-won {
+  text-align: center;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+  font-size: var(--fs-sm);
+}
+.rad-won {
+  color: var(--color-success);
+  font-weight: var(--fw-bold);
+  background: var(--color-accent-tint);
+  margin-bottom: var(--space-3);
+}
+
+/* Bid */
+.rad-bid { display: flex; flex-direction: column; gap: var(--space-3); }
+.rad-bid__chips { display: flex; gap: var(--space-2); }
+.rad-chip {
+  flex: 1;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 10px 4px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--color-ink);
+  cursor: pointer;
+}
+.rad-chip:active { background: var(--color-surface-alt); transform: scale(0.97); }
+.rad-bid__field { display: flex; flex-direction: column; gap: 6px; }
+.rad-bid__hint { font-size: var(--fs-sm); color: var(--color-ink-soft); }
+.rad-bid__input {
+  display: flex;
+  align-items: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 0 14px;
+}
+.rad-bid__input:focus-within { border-color: var(--color-accent); }
+.rad-bid__input input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-bold);
+  color: var(--color-ink);
+  text-align: right;
+  padding: 12px 0;
+}
+.rad-bid__input span { font-size: var(--fs-base); color: var(--color-ink-soft); margin-left: 6px; }
+
+@media (min-width: 600px) {
+  .rad-meta-grid { grid-template-columns: repeat(3, 1fr); }
+}

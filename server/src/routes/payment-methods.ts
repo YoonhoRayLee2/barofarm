@@ -5,8 +5,8 @@ import { requireAuth } from '../middleware/auth';
 const router = Router();
 router.use(requireAuth);
 
-type PmType = 'card' | 'easy' | 'barofarm_pay';
-const VALID_TYPES: PmType[] = ['card', 'easy', 'barofarm_pay'];
+type PmType = 'card' | 'easy' | 'account';
+const VALID_TYPES: PmType[] = ['card', 'easy', 'account'];
 
 function serialize(r: any) {
   return {
@@ -18,6 +18,9 @@ function serialize(r: any) {
     cardExpiry: r.card_expiry ?? null,
     cardHolder: r.card_holder ?? null,
     easyProvider: r.easy_provider ?? null,
+    bankName: r.bank_name ?? null,
+    accountLast4: r.account_last4 ?? null,
+    accountHolder: r.account_holder ?? null,
     isDefault: Boolean(r.is_default),
     createdAt: r.created_at,
   };
@@ -43,7 +46,7 @@ router.get('/', async (req: Request, res: Response) => {
 // body: { userId, type, label?, ...type별 필드 }
 // 카드: { cardNumber, cardExpiry, cardHolder, cardBrand? } — 전체번호는 저장 안 하고 끝 4자리만 보관
 // 간편결제: { easyProvider }
-// 바로팜페이: 추가 필드 없음
+// 계좌: { bankName, accountNumber, accountHolder } — 전체계좌번호는 저장 안 하고 끝 4자리만 보관
 router.post('/', async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const { type } = req.body;
@@ -57,6 +60,9 @@ router.post('/', async (req: Request, res: Response) => {
   let cardExpiry: string | null = null;
   let cardHolder: string | null = null;
   let easyProvider: string | null = null;
+  let bankName: string | null = null;
+  let accountLast4: string | null = null;
+  let accountHolder: string | null = null;
 
   if (type === 'card') {
     const digits = String(req.body.cardNumber ?? '').replace(/\D/g, '');
@@ -73,8 +79,16 @@ router.post('/', async (req: Request, res: Response) => {
     easyProvider = String(req.body.easyProvider ?? '').trim();
     if (!easyProvider) return res.status(400).json({ error: 'easyProvider required' });
     if (!label) label = easyProvider;
-  } else if (type === 'barofarm_pay') {
-    if (!label) label = '바로팜페이';
+  } else if (type === 'account') {
+    const digits = String(req.body.accountNumber ?? '').replace(/\D/g, '');
+    if (digits.length < 6) return res.status(400).json({ error: 'invalid account number' });
+    if (!req.body.bankName || !req.body.accountHolder) {
+      return res.status(400).json({ error: 'bankName and accountHolder required' });
+    }
+    accountLast4 = digits.slice(-4);
+    bankName = String(req.body.bankName).trim();
+    accountHolder = String(req.body.accountHolder).trim();
+    if (!label) label = `${bankName} ****${accountLast4}`;
   }
 
   try {
@@ -86,9 +100,11 @@ router.post('/', async (req: Request, res: Response) => {
 
     const [result] = await pool.query<any>(
       `INSERT INTO payment_methods
-         (user_id, type, label, card_brand, card_last4, card_expiry, card_holder, easy_provider, is_default)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [userId, type, label, cardBrand, cardLast4, cardExpiry, cardHolder, easyProvider, isDefault],
+         (user_id, type, label, card_brand, card_last4, card_expiry, card_holder, easy_provider,
+          bank_name, account_last4, account_holder, is_default)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [userId, type, label, cardBrand, cardLast4, cardExpiry, cardHolder, easyProvider,
+       bankName, accountLast4, accountHolder, isDefault],
     );
 
     res.status(201).json({ id: result.insertId, isDefault: Boolean(isDefault) });

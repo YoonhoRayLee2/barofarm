@@ -836,7 +836,7 @@ function buildCollectorPanel(profileUser, scrollEl, isMe) {
     { icon: '🛍️', label: '주문 목록',       path: '/app/profile/orders' },
     { icon: '🛒', label: '공동구매 참여 현황', path: '/app/group-deals?mine=true' },
     { icon: '🏠', label: '배송지 관리',      path: '/app/delivery-addresses' },
-    { icon: '💳', label: '결제수단 관리',    path: '/app/payment-methods' },
+    { icon: '💳', label: '바로팜페이',    path: '/app/pay-wallet' },
     { icon: '🚪', label: '로그아웃',        path: '__logout__' },
   ].forEach(({ icon, label, path }) => {
     const btn = document.createElement('button');
@@ -1253,16 +1253,31 @@ export default async function load() {
     avatarWrap: hero.avatarWrap,
   }));
 
-  /* 2-b. Stats card (낙찰/경매중/찜/포인트) */
+  /* 2-b. Stats card (낙찰/경매중/찜/포인트/머니) */
   const statsCard = document.createElement('div');
   statsCard.className = 'profile-stats-card';
   statsCard.innerHTML = `
-    <div class="profile-stat"><div class="profile-stat__num" id="ps-won">—</div><div class="profile-stat__label">낙찰</div></div>
-    <div class="profile-stat profile-stat--divider"><div class="profile-stat__num" id="ps-bidding">—</div><div class="profile-stat__label">경매중</div></div>
-    <div class="profile-stat profile-stat--divider"><div class="profile-stat__num" id="ps-fav">—</div><div class="profile-stat__label">찜</div></div>
-    <div class="profile-stat profile-stat--divider"><div class="profile-stat__num" id="ps-pts">0P</div><div class="profile-stat__label">포인트</div></div>
+    <div class="profile-stats-row profile-stats-row--pay">
+      <div class="profile-stat"><div class="profile-stat__num" id="ps-money">—</div><div class="profile-stat__label">머니</div></div>
+      <div class="profile-stat profile-stat--divider"><div class="profile-stat__num" id="ps-pts">0P</div><div class="profile-stat__label">포인트</div></div>
+    </div>
+    <div class="profile-stats-row profile-stats-row--activity">
+      <div class="profile-stat"><div class="profile-stat__num" id="ps-won">—</div><div class="profile-stat__label">낙찰</div></div>
+      <div class="profile-stat profile-stat--divider"><div class="profile-stat__num" id="ps-bidding">—</div><div class="profile-stat__label">경매중</div></div>
+      <div class="profile-stat profile-stat--divider"><div class="profile-stat__num" id="ps-fav">—</div><div class="profile-stat__label">찜</div></div>
+    </div>
   `;
   scrollEl.appendChild(statsCard);
+
+  // 머니 칸 클릭 → 바로팜페이 화면
+  const moneyStat = statsCard.querySelector('#ps-money')?.closest('.profile-stat');
+  if (moneyStat) {
+    moneyStat.style.cursor = 'pointer';
+    moneyStat.setAttribute('role', 'button');
+    moneyStat.setAttribute('tabindex', '0');
+    moneyStat.addEventListener('click', () => navigate('/app/pay-wallet'));
+    moneyStat.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/app/pay-wallet'); } });
+  }
 
   // 비동기 조회 (실패 시 — 유지)
   ;(async () => {
@@ -1279,6 +1294,26 @@ export default async function load() {
       const favEl = statsCard.querySelector('#ps-fav');
       if (favEl && profileUser.favoritesCount != null) favEl.textContent = String(profileUser.favoritesCount);
     } catch { /* — 유지 */ }
+
+    // 포인트: 바로팜페이 지갑 포인트 버킷 합산 (본인 프로필일 때만 — /api/pay/wallet은 인증 사용자 지갑을 반환)
+    if (String(profileUser.id) === String(user.id)) {
+      try {
+        const w = await request('/api/pay/wallet', { method: 'GET' });
+        const pts =
+          (Number(w?.earnedPointBalance) || 0) +
+          (Number(w?.eventPointBalance) || 0) +
+          (Number(w?.compensationPointBalance) || 0) +
+          (Number(w?.testPointBalance) || 0);
+        const ptsEl = statsCard.querySelector('#ps-pts');
+        if (ptsEl) ptsEl.textContent = `${pts.toLocaleString()}P`;
+
+        // 보유머니(바로팜페이 머니 잔액) — 동일 응답 재사용, 통계 카드 머니 칸에 표시
+        const moneyEl = statsCard.querySelector('#ps-money');
+        if (moneyEl && w?.moneyBalance != null) {
+          moneyEl.textContent = `${(Number(w.moneyBalance) || 0).toLocaleString()}원`;
+        }
+      } catch (e) { console.warn('[profile] wallet points fetch failed', e); /* 0P 유지 */ }
+    }
   })();
 
   /* 3. PROF-3 Interest pills */
