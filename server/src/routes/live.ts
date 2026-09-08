@@ -19,8 +19,10 @@ const uploadLiveThumbnail = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, LIVES_UPLOADS_DIR),
     filename: (_req, file, cb) => {
+      // 같은 요청에서 여러 파일이 동일 밀리초에 도착하면 Date.now()만으로는 충돌한다.
+      // 랜덤 접미사를 더해 파일명 유일성을 보장한다.
       const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-      cb(null, `tmp_${Date.now()}${ext}`);
+      cb(null, `tmp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`);
     },
   }),
   limits: { fileSize: 5 * 1024 * 1024 },
@@ -519,26 +521,45 @@ export function createLiveRouter(io: Server) {
     void fanOutLiveNotification(io, live, 'live_started', '라이브 시작');
   });
 
-  // PATCH /api/lives/:id/memo — 라이브 메모 수정 (셀러 본인 전용)
-  r.patch('/:id/memo', requireAuth, async (req: Request, res: Response) => {
+  // PATCH /api/lives/:id/memo — 라이브 메모 수정 (셀러 본인 전용, 메모 사진 개별 추가·삭제 지원)
+  r.patch('/:id/memo', requireAuth, uploadLiveThumbnail.fields([{ name: 'newMemoImages', maxCount: 5 }]), async (req: Request, res: Response) => {
     const liveId = String(req.params.id);
     const sellerId = String(req.user!.userId);
-    const { memo } = req.body as { memo?: string };
+    const { memo, keepImageUrls: keepImageUrlsRaw } = req.body as { memo?: string; keepImageUrls?: string };
 
-    if (typeof memo !== 'string') {
+    const files = req.files as { newMemoImages?: Express.Multer.File[] } | undefined;
+    const newMemoImageFiles = files?.newMemoImages ?? [];
+    const unlinkUploaded = () => { newMemoImageFiles.forEach(f => fs.unlink(f.path, () => {})); };
+
+    if (memo !== undefined && typeof memo !== 'string') {
+      unlinkUploaded();
       res.status(400).json({ error: 'memo 는 문자열이어야 합니다.' });
       return;
     }
-    if (memo.length > 2000) {
+    if (typeof memo === 'string' && memo.length > 2000) {
+      unlinkUploaded();
       res.status(400).json({ error: 'memo 는 최대 2000자입니다.' });
       return;
+    }
+
+    let keepImageUrls: string[] | undefined;
+    if (keepImageUrlsRaw !== undefined) {
+      try {
+        const parsed = JSON.parse(keepImageUrlsRaw);
+        if (!Array.isArray(parsed) || !parsed.every((x): x is string => typeof x === 'string')) throw new Error('invalid');
+        keepImageUrls = parsed;
+      } catch {
+        unlinkUploaded();
+        res.status(400).json({ error: 'keepImageUrls 는 문자열 배열(JSON)이어야 합니다.' });
+        return;
+      }
     }
 
     let live = lives.get(liveId);
     if (!live) {
       try {
         const [[row]]: any = await pool.query('SELECT * FROM lives WHERE id = ?', [liveId]);
-        if (!row) { res.status(404).json({ error: 'Live not found' }); return; }
+        if (!row) { unlinkUploaded(); res.status(404).json({ error: 'Live not found' }); return; }
         live = {
           id: row.id, sellerId: String(row.seller_id), sellerName: row.seller_name ?? undefined,
           title: row.title, thumbnailUrl: row.thumbnail_url ?? undefined,
@@ -550,25 +571,75 @@ export function createLiveRouter(io: Server) {
         };
         lives.set(liveId, live);
       } catch {
+        unlinkUploaded();
         res.status(404).json({ error: 'Live not found' }); return;
       }
     }
 
     if (live.sellerId !== String(sellerId)) {
+      unlinkUploaded();
       res.status(403).json({ error: '셀러 권한이 없습니다.' });
       return;
     }
 
-    live.memo = memo;
+    // 사진 관련 필드가 전혀 없으면 기존 동작(텍스트만 수정)과 100% 동일하게 처리
+    const touchesImages = keepImageUrls !== undefined || newMemoImageFiles.length > 0;
+
+    let finalMemoImages = live.memoImages ?? [];
+
+    if (touchesImages) {
+      const existing = live.memoImages ?? [];
+      const kept = keepImageUrls !== undefined ? existing.filter(url => keepImageUrls!.includes(url)) : existing;
+      const removed = existing.filter(url => !kept.includes(url));
+
+      if (kept.length + newMemoImageFiles.length > 5) {
+        unlinkUploaded();
+        res.status(400).json({ error: '메모 사진은 최대 5장까지 등록 가능합니다.' });
+        return;
+      }
+
+      // 새 파일들을 생성 로직과 동일한 방식으로 최종 경로에 저장
+      const addedImages: string[] = [];
+      newMemoImageFiles.forEach((file, i) => {
+        const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+        const finalName = `${liveId}_memo_${Date.now()}_${i}${ext}`;
+        const finalPath = path.join(LIVES_UPLOADS_DIR, finalName);
+        try {
+          fs.renameSync(file.path, finalPath);
+          addedImages.push(`/uploads/lives/${finalName}`);
+        } catch (err) {
+          console.error('[live] memo image rename failed:', (err as Error).message);
+        }
+      });
+
+      // 목록에서 빠진 기존 이미지의 실제 파일 삭제 (실패해도 무시)
+      removed.forEach(url => {
+        const fileName = path.basename(url);
+        fs.unlink(path.join(LIVES_UPLOADS_DIR, fileName), () => {});
+      });
+
+      finalMemoImages = [...kept, ...addedImages];
+      live.memoImages = finalMemoImages;
+    }
+
+    if (typeof memo === 'string') {
+      live.memo = memo;
+    }
 
     // DB 동기 갱신 (DB 미영속 라이브면 0행 갱신 — 무해)
     try {
-      await pool.query('UPDATE lives SET memo = ? WHERE id = ?', [memo, liveId]);
+      if (typeof memo === 'string' && touchesImages) {
+        await pool.query('UPDATE lives SET memo = ?, memo_images = ? WHERE id = ?', [memo, finalMemoImages.length > 0 ? JSON.stringify(finalMemoImages) : null, liveId]);
+      } else if (typeof memo === 'string') {
+        await pool.query('UPDATE lives SET memo = ? WHERE id = ?', [memo, liveId]);
+      } else if (touchesImages) {
+        await pool.query('UPDATE lives SET memo_images = ? WHERE id = ?', [finalMemoImages.length > 0 ? JSON.stringify(finalMemoImages) : null, liveId]);
+      }
     } catch (err) {
       console.warn('[live] memo DB UPDATE 실패:', (err as Error).message);
     }
 
-    res.json({ memo });
+    res.json({ memo: live.memo, memoImages: finalMemoImages });
   });
 
   // PATCH /api/lives/:id/end — 방송 종료 (셀러 전용)

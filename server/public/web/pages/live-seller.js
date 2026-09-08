@@ -1209,6 +1209,7 @@ export default async function load(params) {
     // 보기 모드 — memo는 textContent로만 렌더 (개행 유지), 사진은 img.src 직접 할당
     function renderView() {
       content.innerHTML = '';
+      content._revokeEditPreviews = null;
       const memo = liveInfo && typeof liveInfo.memo === 'string' ? liveInfo.memo : '';
       const memoImgs = Array.isArray(liveInfo?.memoImages) ? liveInfo.memoImages : [];
       if (memo.trim()) {
@@ -1251,9 +1252,18 @@ export default async function load(params) {
       content.appendChild(editBtn);
     }
 
-    // 수정 모드 — textarea(2000자) + 저장 → PATCH /api/lives/:id/memo
+    // 수정 모드 — textarea(2000자) + 사진 슬롯(기존 유지/삭제 + 신규 추가) + 저장 → PATCH /api/lives/:id/memo
+    const MAX_MEMO_IMAGES = 5;
     function renderEdit() {
       content.innerHTML = '';
+
+      // 사진 편집 로컬 상태: 기존 유지 URL 목록 + 신규 추가 File 목록(+미리보기)
+      const keepUrls = Array.isArray(liveInfo?.memoImages) ? liveInfo.memoImages.slice() : [];
+      /** @type {File[]} */
+      const newFiles = [];
+      /** @type {string[]} newFiles와 1:1 대응하는 ObjectURL */
+      const newPreviews = [];
+
       const ta = document.createElement('textarea');
       ta.className = 'ls-memo-textarea';
       ta.maxLength = 2000;
@@ -1265,6 +1275,111 @@ export default async function load(params) {
       counter.textContent = `${ta.value.length}/2000`;
       ta.addEventListener('input', () => { counter.textContent = `${ta.value.length}/2000`; });
 
+      const label = document.createElement('label');
+      label.className = 'lc-label';
+      label.textContent = '메모 사진 (선택, 최대 5장)';
+
+      const imgsEl = document.createElement('div');
+      imgsEl.className = 'lc-memo-imgs';
+
+      function revokeNewPreviews() {
+        newPreviews.forEach((url) => { try { URL.revokeObjectURL(url); } catch {} });
+        newPreviews.length = 0;
+      }
+
+      function renderSlots() {
+        imgsEl.innerHTML = '';
+        const total = keepUrls.length + newFiles.length;
+
+        keepUrls.forEach((url, i) => {
+          const slot = document.createElement('div');
+          slot.className = 'lc-memo-slot';
+          const img = document.createElement('img');
+          img.src = url;
+          img.alt = `메모 사진 ${i + 1}`;
+          slot.appendChild(img);
+          const rm = document.createElement('button');
+          rm.type = 'button';
+          rm.className = 'lc-memo-slot__remove';
+          rm.setAttribute('aria-label', `메모 사진 ${i + 1} 삭제`);
+          rm.textContent = '✕';
+          rm.addEventListener('click', () => {
+            keepUrls.splice(i, 1);
+            renderSlots();
+          });
+          slot.appendChild(rm);
+          imgsEl.appendChild(slot);
+        });
+
+        newFiles.forEach((_file, i) => {
+          const slot = document.createElement('div');
+          slot.className = 'lc-memo-slot';
+          const img = document.createElement('img');
+          img.src = newPreviews[i];
+          img.alt = `추가 사진 ${i + 1}`;
+          slot.appendChild(img);
+          const rm = document.createElement('button');
+          rm.type = 'button';
+          rm.className = 'lc-memo-slot__remove';
+          rm.setAttribute('aria-label', `추가 사진 ${i + 1} 취소`);
+          rm.textContent = '✕';
+          rm.addEventListener('click', () => {
+            try { URL.revokeObjectURL(newPreviews[i]); } catch {}
+            newFiles.splice(i, 1);
+            newPreviews.splice(i, 1);
+            renderSlots();
+          });
+          slot.appendChild(rm);
+          imgsEl.appendChild(slot);
+        });
+
+        if (total < MAX_MEMO_IMAGES) {
+          const addSlot = document.createElement('div');
+          addSlot.className = 'lc-memo-slot lc-memo-slot--add';
+          addSlot.setAttribute('role', 'button');
+          addSlot.tabIndex = 0;
+          addSlot.setAttribute('aria-label', '메모 사진 추가');
+          const fileInput = document.createElement('input');
+          fileInput.type = 'file';
+          fileInput.accept = 'image/*';
+          fileInput.style.display = 'none';
+          addSlot.appendChild(fileInput);
+          const plus = document.createElement('span');
+          plus.className = 'lc-memo-slot__add';
+          plus.textContent = '+';
+          addSlot.appendChild(plus);
+          const cap = document.createElement('span');
+          cap.className = 'lc-memo-slot__count';
+          cap.textContent = `${total}/${MAX_MEMO_IMAGES}`;
+          addSlot.appendChild(cap);
+
+          fileInput.addEventListener('change', () => {
+            const file = fileInput.files && fileInput.files[0];
+            if (!file || (keepUrls.length + newFiles.length) >= MAX_MEMO_IMAGES) return;
+            newFiles.push(file);
+            newPreviews.push(URL.createObjectURL(file));
+            renderSlots();
+          });
+          addSlot.addEventListener('click', (e) => {
+            if (e.target === fileInput) return;
+            fileInput.click();
+          });
+          addSlot.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              fileInput.click();
+            }
+          });
+          imgsEl.appendChild(addSlot);
+        } else {
+          const cap = document.createElement('span');
+          cap.className = 'lc-memo-slot__count';
+          cap.textContent = `${total}/${MAX_MEMO_IMAGES}`;
+          imgsEl.appendChild(cap);
+        }
+      }
+      renderSlots();
+
       const saveBtn = document.createElement('button');
       saveBtn.type = 'button';
       saveBtn.className = 'ls-memo-save-btn';
@@ -1273,9 +1388,14 @@ export default async function load(params) {
         saveBtn.disabled = true;
         saveBtn.textContent = '저장 중...';
         try {
-          const res = await api.updateLiveMemo(liveId, ta.value, user.id);
+          const res = await api.updateLiveMemo(liveId, ta.value, user.id, {
+            keepImageUrls: keepUrls,
+            newMemoImages: newFiles,
+          });
           if (!liveInfo) liveInfo = {};
           liveInfo.memo = res && typeof res.memo === 'string' ? res.memo : ta.value;
+          if (res && Array.isArray(res.memoImages)) liveInfo.memoImages = res.memoImages;
+          revokeNewPreviews();
           showToast('메모가 저장되었습니다', 'success');
           renderView();
         } catch (err) {
@@ -1287,13 +1407,19 @@ export default async function load(params) {
 
       content.appendChild(ta);
       content.appendChild(counter);
+      content.appendChild(label);
+      content.appendChild(imgsEl);
       content.appendChild(saveBtn);
       setTimeout(() => ta.focus(), 80);
+
+      // 시트가 닫히기 전에 편집 중이던 신규 사진의 ObjectURL을 정리하기 위해 저장해 둔다.
+      content._revokeEditPreviews = revokeNewPreviews;
     }
 
     renderView();
 
     function close() {
+      if (typeof content._revokeEditPreviews === 'function') content._revokeEditPreviews();
       backdrop.classList.remove('is-open');
       setTimeout(() => backdrop.remove(), 220);
     }

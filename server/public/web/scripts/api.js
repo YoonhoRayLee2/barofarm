@@ -337,12 +337,25 @@ export async function createLive({ sellerId, title, thumbnail = null, category =
 
 /**
  * Update a live's memo (seller only, Bearer auth attached by request()).
+ * keepImageUrls/newMemoImages가 주어지면 multipart(FormData)로 전송해 사진을 함께 갱신한다.
+ * 둘 다 생략하면 기존처럼 텍스트만 JSON으로 수정한다(하위호환).
  * @param {string} liveId
  * @param {string} memo
- * @returns {Promise<{ memo: string }>}
+ * @param {string|number} sellerId
+ * @param {{ keepImageUrls?: string[], newMemoImages?: File[] }} [photoOpts]
+ * @returns {Promise<{ memo: string, memoImages?: string[] }>}
  */
-export async function updateLiveMemo(liveId, memo, sellerId) {
-  return request(`/api/lives/${encodeURIComponent(liveId)}/memo`, {
+export async function updateLiveMemo(liveId, memo, sellerId, photoOpts) {
+  const path = `/api/lives/${encodeURIComponent(liveId)}/memo`;
+  if (photoOpts && (photoOpts.keepImageUrls || photoOpts.newMemoImages)) {
+    const fd = new FormData();
+    fd.append('memo', memo == null ? '' : String(memo));
+    fd.append('sellerId', String(sellerId));
+    if (photoOpts.keepImageUrls) fd.append('keepImageUrls', JSON.stringify(photoOpts.keepImageUrls));
+    for (const f of (photoOpts.newMemoImages || [])) fd.append('newMemoImages', f);
+    return request(path, { method: 'PATCH', body: fd });
+  }
+  return request(path, {
     method: 'PATCH',
     body: JSON.stringify({ memo, sellerId }),
   });

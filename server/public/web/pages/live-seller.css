@@ -441,6 +441,56 @@
   color: #fff; font-size: var(--fs-base); font-weight: var(--fw-bold); cursor: pointer;
 }
 .ls-memo-save-btn:disabled { opacity: 0.6; cursor: default; }
+
+/* 메모 사진 편집 슬롯 (기존 유지/삭제 + 신규 추가, 최대 5장) — live-create.js의 lc-memo-slot과 동일 네이밍 */
+.lc-label {
+  font-size: var(--fs-13);
+  font-weight: var(--fw-bold);
+  color: var(--color-ink-soft);
+}
+.lc-memo-imgs { display: flex; flex-wrap: wrap; gap: 10px; }
+.lc-memo-slot {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.lc-memo-slot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lc-memo-slot__remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-overlay-dim);
+  color: #fff;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.lc-memo-slot--add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  color: var(--color-ink-mute);
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.lc-memo-slot--add:active { border-color: var(--color-accent); }
+.lc-memo-slot__add { font-size: var(--fs-lg); line-height: 1; }
+.lc-memo-slot__count { font-size: var(--fs-xs); }
 .product-sheet__close-btn {
   width: 100%; height: 46px; border-radius: var(--radius-md);
   background: var(--color-surface-alt); border: 1px solid var(--color-line);
