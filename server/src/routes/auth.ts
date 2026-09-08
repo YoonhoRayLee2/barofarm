@@ -7,7 +7,6 @@ import { generateUniqueNickname } from '../services/nickname';
 import { signToken, signRefreshToken, verifyToken } from '../services/jwt';
 import { requireAuth } from '../middleware/auth';
 import { normalizePhone } from '../utils/phone';
-import { LOGIN_WHITELIST } from '../config/login-whitelist';
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
@@ -90,11 +89,6 @@ router.post('/login', authLimiter, async (req: Request, res: Response): Promise<
 
   if (!username || !password) {
     res.status(400).json({ error: 'username and password are required' });
-    return;
-  }
-
-  if (!LOGIN_WHITELIST.has(username.trim())) {
-    res.status(403).json({ error: '현재 로그인이 제한되어 있습니다.' });
     return;
   }
 

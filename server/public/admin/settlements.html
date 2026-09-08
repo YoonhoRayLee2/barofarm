@@ -2,9 +2,10 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=1280" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>정산 관리 · NH 바로팜 어드민</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <script>try{var t=localStorage.getItem('adminTheme');if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
   <link rel="stylesheet" href="/admin/admin.css" />
 </head>
 <body data-page="settlements">
@@ -17,6 +18,10 @@
         <a class="sidebar__link" href="/admin/auctions">경매·라이브</a>
         <a class="sidebar__link" href="/admin/products">상품·거래</a>
         <a class="sidebar__link sidebar__link--active" href="/admin/settlements">정산</a>
+        <a class="sidebar__link" href="/admin/reviews">리뷰</a>
+        <a class="sidebar__link" href="/admin/group-deals">공동구매</a>
+        <a class="sidebar__link" href="/admin/consignments">위탁</a>
+        <a class="sidebar__link" href="/admin/notice">공지</a>
         <a class="sidebar__link" href="/admin/payments">결제 관리</a>
         <a class="sidebar__link" href="/admin/wallet">지갑 관리</a>
         <a class="sidebar__link" href="/admin/payment-auth">인증 관리</a>
@@ -26,6 +31,32 @@
     </aside>
 
     <main class="main">
+      <section class="settle-summary">
+        <div class="summary-cards" id="summary-cards"></div>
+
+        <h2 style="padding:0;margin:0 0 var(--space-3)">미지급 지연</h2>
+        <div class="overdue-list" id="overdue-list">
+          <div class="overdue-empty">불러오는 중...</div>
+        </div>
+
+        <div class="charts-row">
+          <div class="chart-panel">
+            <div class="chart-panel__head">
+              <h2 class="chart-panel__title">매출 추이</h2>
+              <span class="chart-panel__sub">최근 30일 · 낙찰 기준</span>
+            </div>
+            <div id="chart-settle-trend"></div>
+          </div>
+          <div class="chart-panel">
+            <div class="chart-panel__head">
+              <h2 class="chart-panel__title">판매자별 정산 현황</h2>
+              <span class="chart-panel__sub">미지급 / 지급</span>
+            </div>
+            <div id="seller-status"></div>
+          </div>
+        </div>
+      </section>
+
       <section class="generate-section">
         <h2>정산 데이터 생성</h2>
         <div class="form-row">
@@ -58,6 +89,7 @@
           <option value="">전체</option>
           <option value="pending">대기</option>
           <option value="paid">완료</option>
+          <option value="cancelled">취소</option>
         </select>
         <button id="refresh-btn" class="btn-secondary">새로고침</button>
       </div>

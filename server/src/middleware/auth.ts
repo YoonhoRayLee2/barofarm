@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken, JwtPayload } from '../services/jwt';
-import { LOGIN_WHITELIST } from '../config/login-whitelist';
 
 // Express Request 타입 확장
 declare global {
@@ -25,10 +24,6 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   const payload = verifyToken(token);
   if (!payload) {
     res.status(401).json({ error: 'Invalid or expired token' });
-    return;
-  }
-  if (!LOGIN_WHITELIST.has(String(payload.username).trim())) {
-    res.status(403).json({ error: '현재 접근이 제한되어 있습니다.' });
     return;
   }
   req.user = payload;

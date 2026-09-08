@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>공지 발송 · NH 바로팜 어드민</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <script>try{var t=localStorage.getItem('adminTheme');if(t)document.documentElement.dataset.theme=t;}catch(e){}</script>
+  <link rel="stylesheet" href="/admin/admin.css" />
+</head>
+<body data-page="notice">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar__brand">NH <span class="accent">바로팜</span></div>
+      <nav class="sidebar__nav">
+        <a class="sidebar__link" href="/admin">대시보드</a>
+        <a class="sidebar__link" href="/admin/users">사용자</a>
+        <a class="sidebar__link" href="/admin/auctions">경매·라이브</a>
+        <a class="sidebar__link" href="/admin/products">상품·거래</a>
+        <a class="sidebar__link" href="/admin/settlements">정산</a>
+        <a class="sidebar__link" href="/admin/reviews">리뷰</a>
+        <a class="sidebar__link" href="/admin/group-deals">공동구매</a>
+        <a class="sidebar__link" href="/admin/consignments">위탁</a>
+        <a class="sidebar__link sidebar__link--active" href="/admin/notice">공지</a>
+      </nav>
+      <a id="logout-btn" class="sidebar__logout" href="#">로그아웃</a>
+    </aside>
+
+    <main class="main">
+      <div class="page-pad">
+        <div class="page-header">
+          <h1>공지 · 알림 발송</h1>
+        </div>
+        <div class="generate-section" style="max-width:560px">
+          <div class="modal-field">
+            <label>대상</label>
+            <select id="notice-target">
+              <option value="all">전체 사용자</option>
+              <option value="sellers">판매자</option>
+              <option value="buyers">구매자</option>
+            </select>
+          </div>
+          <div class="modal-field">
+            <label>제목</label>
+            <input type="text" id="notice-title" placeholder="공지 제목" maxlength="100" />
+          </div>
+          <div class="modal-field">
+            <label>내용</label>
+            <textarea id="notice-body" rows="4" placeholder="공지 내용" maxlength="1000"></textarea>
+          </div>
+          <button id="notice-send-btn">발송</button>
+        </div>
+        <h2 style="margin-top:1.5rem">최근 공지 발송 이력</h2>
+        <table class="data-table">
+          <thead><tr><th>일시</th><th>관리자</th><th>대상·건수</th></tr></thead>
+          <tbody id="notice-history-tbody"></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script src="/admin/admin.js"></script>
+</body>
+</html>

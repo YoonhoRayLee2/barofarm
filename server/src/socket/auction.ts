@@ -9,6 +9,30 @@ import pool from '../db/mysql';
 // liveId → Map<socketId, { userName: string; avatarUrl: string | null }>
 const viewerCounts = new Map<string, Map<string, { userName: string; avatarUrl: string | null }>>();
 
+// socket.data.userId → is_admin 여부. admin 전용 이벤트마다 DB 조회를 피하기 위한 짧은 캐시.
+const adminCheckCache = new Map<number, { isAdmin: boolean; expiresAt: number }>();
+const ADMIN_CACHE_TTL_MS = 60 * 1000;
+
+// handshake JWT로 인증된 socket.data.userId가 실제 관리자인지 DB로 확인한다.
+// payload는 신뢰하지 않고(사칭 방지) socket.data.userId만 사용한다.
+async function verifyIsAdmin(userId: number | undefined): Promise<boolean> {
+  if (!userId) return false;
+  const cached = adminCheckCache.get(userId);
+  if (cached && cached.expiresAt > Date.now()) return cached.isAdmin;
+  try {
+    const [rows] = await pool.query<any[]>('SELECT is_admin FROM users WHERE id = ? LIMIT 1', [userId]);
+    const isAdmin = !!rows[0]?.is_admin;
+    adminCheckCache.set(userId, { isAdmin, expiresAt: Date.now() + ADMIN_CACHE_TTL_MS });
+    return isAdmin;
+  } catch (err) {
+    console.error('[auction] verifyIsAdmin 조회 실패:', (err as Error).message);
+    return false;
+  }
+}
+
+// liveId → admin 소켓 id 집합. admin:live:subscribe로 join한 소켓은 viewer 카운트/목록에서 항상 제외한다.
+const adminSockets = new Map<string, Set<string>>();
+
 // FCFS(선착순) 경매: 구매 시점마다 개별 주문(auctions row + bids row)을 즉시 영속화한다.
 // 하나의 auction id에 여러 구매자가 존재할 수 있으므로 매 구매마다 새 UUID를 발급해 별도 row로 저장한다.
 async function persistFcfsPurchase(
@@ -110,6 +134,10 @@ export default function registerAuctionSocket(io: Server): void {
         if (userName) auction.topBidderName = userName;
         // 10초 연장: 잔여 시간이 10초 이하이면 +10초
         if (auction.timeLeft <= 10) auction.timeLeft += 10;
+
+        // 입찰 이력 기록 — 경매 종료 시 낙찰자/패찰자 구분(개인화 추천용)
+        if (!auction.bidHistory) auction.bidHistory = [];
+        auction.bidHistory.push({ userId, userName, price, ts: Date.now() });
 
         io.to(liveId).emit('auction:update', auction);
       } catch (err) {
@@ -311,6 +339,61 @@ export default function registerAuctionSocket(io: Server): void {
       if (authedUserId) socket.join(`user:${authedUserId}`);
     });
 
+    // admin:live:subscribe: { liveId } — 관리자 전용 관제 구독. viewer 카운트/목록에 영향 없음.
+    socket.on('admin:live:subscribe', async ({ liveId }: { liveId: string }) => {
+      if (!liveId) return;
+      const isAdmin = await verifyIsAdmin(socket.data.userId);
+      if (!isAdmin) return; // 비admin은 조용히 무시
+      socket.join(liveId);
+      if (!adminSockets.has(liveId)) adminSockets.set(liveId, new Set());
+      adminSockets.get(liveId)!.add(socket.id);
+
+      // 현재 상태 즉시 전송 (viewer count, 진행중 경매)
+      const room = viewerCounts.get(liveId);
+      socket.emit('viewer:count', { count: room ? room.size : 0 });
+      const live = lives.get(liveId);
+      if (live?.currentAuctionId) {
+        const auction = auctions.get(live.currentAuctionId);
+        if (auction) socket.emit('auction:update', auction);
+      }
+    });
+
+    // admin:live:unsubscribe: { liveId } — 관제 구독 해제
+    socket.on('admin:live:unsubscribe', ({ liveId }: { liveId: string }) => {
+      if (!liveId) return;
+      socket.leave(liveId);
+      adminSockets.get(liveId)?.delete(socket.id);
+    });
+
+    // admin:chat:delete: { liveId, ts } — 관리자 채팅 삭제(모더레이션). 라이브 채팅은 비영속이므로 ts 기반 식별.
+    socket.on('admin:chat:delete', async ({ liveId, ts }: { liveId: string; ts: number }) => {
+      if (!liveId || !ts) return;
+      const isAdmin = await verifyIsAdmin(socket.data.userId);
+      if (!isAdmin) return;
+      io.to(liveId).emit('chat:deleted', { ts });
+    });
+
+    // admin:live:kick: { liveId, userId } — 관리자가 특정 사용자를 라이브에서 강퇴
+    socket.on('admin:live:kick', async ({ liveId, userId }: { liveId: string; userId: string }) => {
+      if (!liveId || !userId) return;
+      const isAdmin = await verifyIsAdmin(socket.data.userId);
+      if (!isAdmin) return;
+
+      const room = viewerCounts.get(liveId);
+      if (!room) return;
+      for (const [socketId, viewer] of room) {
+        const targetSocket = io.sockets.sockets.get(socketId);
+        if (targetSocket && String(targetSocket.data.userId) === String(userId)) {
+          targetSocket.emit('kicked', { liveId });
+          targetSocket.leave(liveId);
+          room.delete(socketId);
+        }
+      }
+      const viewers = Array.from(room.values());
+      io.to(liveId).emit('viewer:count', { count: room.size });
+      io.to(liveId).emit('viewer:list', { viewers });
+    });
+
     socket.on('disconnect', () => {
       viewerCounts.forEach((room, liveId) => {
         if (room.has(socket.id)) {
@@ -320,6 +403,9 @@ export default function registerAuctionSocket(io: Server): void {
           io.to(liveId).emit('viewer:list', { viewers });
           if (room.size === 0) viewerCounts.delete(liveId);
         }
+      });
+      adminSockets.forEach((set, liveId) => {
+        if (set.delete(socket.id) && set.size === 0) adminSockets.delete(liveId);
       });
     });
   });

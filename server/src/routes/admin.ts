@@ -5,9 +5,10 @@ import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
 import pool from '../db/mysql';
 import { verifyPassword, hashPassword } from '../services/auth';
+import { generateUniqueNickname } from '../services/nickname';
 import { lives, auctions, endAuctionState, endLive } from '../store/memory';
 import { endAuction } from '../services/livekit-service';
-import { createNotification } from '../services/notifications';
+import { createNotification, createNotificationsBulk } from '../services/notifications';
 import { requireAdmin } from '../middleware/admin-auth';
 import createAdminPaymentsRouter from './admin-payments';
 import createAdminAuthManagementRouter from './admin-auth-management';
@@ -15,6 +16,31 @@ import createAdminRestAuctionsRouter from './admin-rest-auctions';
 
 function getSecret(): string {
   return process.env.JWT_SECRET!;
+}
+
+async function writeAudit(
+  req: Request,
+  action: string,
+  targetType?: string | null,
+  targetId?: string | string[] | number | null,
+  detail?: unknown,
+): Promise<void> {
+  try {
+    const adminUserId = (req as any).adminUserId;
+    await pool.query(
+      'INSERT INTO admin_audit_logs (admin_user_id, action, target_type, target_id, detail, ip) VALUES (?, ?, ?, ?, ?, ?)',
+      [
+        adminUserId,
+        action,
+        targetType ?? null,
+        targetId != null ? String(targetId) : null,
+        detail !== undefined ? JSON.stringify(detail) : null,
+        req.ip ?? null,
+      ],
+    );
+  } catch (err) {
+    console.error('[admin/writeAudit]', err);
+  }
 }
 
 export default function createAdminRouter(io: Server) {
@@ -57,6 +83,8 @@ export default function createAdminRouter(io: Server) {
         getSecret(),
         { algorithm: 'HS256', expiresIn: '14d' },
       );
+      (req as any).adminUserId = user.id;
+      await writeAudit(req, 'admin.login', 'user', user.id);
       res.json({ token });
     } catch (err) {
       console.error('[admin/login]', err);
@@ -66,6 +94,53 @@ export default function createAdminRouter(io: Server) {
 
   // 인증관리 라우터는 /api 전역에 걸리므로 인증 없는 /api/login 등록 이후에 마운트한다(로그인 교착 방지)
   router.use('/api', createAdminAuthManagementRouter());
+
+  // POST /admin/api/users — 관리자용 테스트 계정 생성
+  // body: { username, password, role } — role: seller|buyer
+  router.post('/api/users', requireAdmin, async (req: Request, res: Response) => {
+    const { username, password, role } = req.body as { username?: string; password?: string; role?: string };
+    if (!username || !password || !role) {
+      res.status(400).json({ error: 'username, password, role are required' });
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]{4,30}$/.test(username)) {
+      res.status(400).json({ error: 'username must be 4–30 alphanumeric/underscore characters' });
+      return;
+    }
+    if (password.length < 8) {
+      res.status(400).json({ error: 'password must be at least 8 characters' });
+      return;
+    }
+    if (role !== 'seller' && role !== 'buyer') {
+      res.status(400).json({ error: 'role must be seller or buyer' });
+      return;
+    }
+    try {
+      const nickname = await generateUniqueNickname();
+      const passwordHash = await hashPassword(password);
+      // 테스트용 더미 유니크 phone: 010 + 8자리 랜덤(zero-padded). users.phone UNIQUE 제약은
+      // INSERT 시 ER_DUP_ENTRY로 걸러진다(회원가입과 동일 처리 패턴).
+      const dummyPhone = `010-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+
+      const [result] = await pool.query(
+        `INSERT INTO users (username, password_hash, nickname, name, phone, role, status)
+         VALUES (?, ?, ?, ?, ?, ?, 'active')`,
+        [username, passwordHash, nickname, username, dummyPhone, role],
+      ) as [{ insertId: number }, unknown];
+
+      const insertId = result.insertId;
+      await writeAudit(req, 'user.create', 'user', String(insertId), { username, role });
+      res.status(201).json({ id: insertId, username, nickname, role });
+    } catch (err: unknown) {
+      const mysqlErr = err as { code?: string };
+      if (mysqlErr.code === 'ER_DUP_ENTRY') {
+        res.status(409).json({ error: '이미 존재하는 아이디' });
+        return;
+      }
+      console.error('[admin/users POST]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
 
   // GET /admin/api/dashboard
   router.get('/api/dashboard', requireAdmin, async (_req: Request, res: Response) => {
@@ -115,6 +190,123 @@ export default function createAdminRouter(io: Server) {
     }
   });
 
+  // ─── 대시보드 차트용 집계 ────────────────────────────────────────────────────
+
+  // GET /admin/api/stats/timeseries?metric=gross|count&days=30
+  router.get('/api/stats/timeseries', requireAdmin, async (req: Request, res: Response) => {
+    const metric = req.query.metric === 'count' ? 'count' : 'gross';
+    let days = parseInt(req.query.days as string, 10);
+    if (!Number.isFinite(days) || days <= 0) days = 30;
+    days = Math.min(days, 365);
+    try {
+      const [rows] = await pool.query<any[]>(
+        `SELECT DATE(created_at) AS d,
+                COALESCE(SUM(current_price),0) AS gross,
+                COUNT(*) AS cnt
+         FROM auctions
+         WHERE status='ended' AND created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+         GROUP BY DATE(created_at)`,
+        [days - 1],
+      );
+      const byDate = new Map<string, number>();
+      for (const row of rows) {
+        const dateStr = row.d instanceof Date
+          ? row.d.toISOString().slice(0, 10)
+          : String(row.d).slice(0, 10);
+        byDate.set(dateStr, metric === 'count' ? Number(row.cnt) : Number(row.gross));
+      }
+      const series: { date: string; value: number }[] = [];
+      const today = new Date();
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().slice(0, 10);
+        series.push({ date: dateStr, value: byDate.get(dateStr) ?? 0 });
+      }
+      res.json({ metric, days, series });
+    } catch (err) {
+      console.error('[admin/stats/timeseries]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // GET /admin/api/stats/category
+  router.get('/api/stats/category', requireAdmin, async (_req: Request, res: Response) => {
+    try {
+      const [rows] = await pool.query<any[]>(
+        `SELECT p.category AS category,
+                COUNT(DISTINCT p.id) AS productCount,
+                COALESCE(SUM(a.current_price),0) AS gross
+         FROM products p
+         LEFT JOIN auctions a
+           ON a.seller_id = p.seller_id AND a.product_name = p.name AND a.status='ended'
+         GROUP BY p.category`,
+      );
+      const categories = rows.map((r) => ({
+        category: r.category,
+        productCount: Number(r.productCount),
+        gross: Number(r.gross),
+      }));
+      res.json({ categories });
+    } catch (err) {
+      console.error('[admin/stats/category]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // ─── 정산 요약 ──────────────────────────────────────────────────────────────
+
+  // GET /admin/api/settlements/summary
+  router.get('/api/settlements/summary', requireAdmin, async (_req: Request, res: Response) => {
+    try {
+      const [byStatusRows, bySellerRows, oldestPendingRows] = await Promise.all([
+        pool.query<any[]>(
+          `SELECT status, COUNT(*) AS cnt, COALESCE(SUM(net_amount),0) AS amt
+           FROM settlements GROUP BY status`,
+        ),
+        pool.query<any[]>(
+          `SELECT seller_id, seller_name,
+                  SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pendingCount,
+                  COALESCE(SUM(CASE WHEN status='pending' THEN net_amount ELSE 0 END),0) AS pendingAmount,
+                  SUM(CASE WHEN status='paid' THEN 1 ELSE 0 END) AS paidCount,
+                  COALESCE(SUM(CASE WHEN status='paid' THEN net_amount ELSE 0 END),0) AS paidAmount
+           FROM settlements
+           GROUP BY seller_id, seller_name
+           ORDER BY pendingAmount DESC
+           LIMIT 20`,
+        ),
+        pool.query<any[]>(
+          `SELECT id, seller_name, gross_amount, period_start, period_end, created_at
+           FROM settlements
+           WHERE status='pending'
+           ORDER BY created_at ASC
+           LIMIT 10`,
+        ),
+      ]);
+
+      const byStatus = { pending: { count: 0, amount: 0 }, paid: { count: 0, amount: 0 }, cancelled: { count: 0, amount: 0 } };
+      for (const row of byStatusRows[0]) {
+        if (row.status in byStatus) {
+          (byStatus as any)[row.status] = { count: Number(row.cnt), amount: Number(row.amt) };
+        }
+      }
+
+      const bySeller = bySellerRows[0].map((r) => ({
+        sellerId: r.seller_id,
+        sellerName: r.seller_name,
+        pendingCount: Number(r.pendingCount),
+        pendingAmount: Number(r.pendingAmount),
+        paidCount: Number(r.paidCount),
+        paidAmount: Number(r.paidAmount),
+      }));
+
+      res.json({ byStatus, bySeller, oldestPending: oldestPendingRows[0] });
+    } catch (err) {
+      console.error('[admin/settlements/summary]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
   // POST /admin/api/settlements/generate
   router.post('/api/settlements/generate', requireAdmin, async (req: Request, res: Response) => {
     const { periodStart, periodEnd } = req.body as { periodStart?: string; periodEnd?: string };
@@ -150,6 +342,7 @@ export default function createAdminRouter(io: Server) {
         );
         generated++;
       }
+      await writeAudit(req, 'settlement.generate', 'settlement', null, { periodStart, periodEnd, generated });
       res.json({ generated });
     } catch (err) {
       console.error('[admin/settlements/generate]', err);
@@ -223,6 +416,7 @@ export default function createAdminRouter(io: Server) {
         "UPDATE settlements SET status='paid', paid_at=NOW() WHERE id=?",
         [id],
       );
+      await writeAudit(req, 'settlement.pay', 'settlement', id);
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/settlements/:id/pay]', err);
@@ -293,6 +487,7 @@ export default function createAdminRouter(io: Server) {
     if (!fields.length) { res.status(400).json({ error: 'No fields' }); return; }
     try {
       await pool.query(`UPDATE users SET ${fields.join(',')} WHERE id=?`, [...vals, id]);
+      await writeAudit(req, 'user.update', 'user', id, { is_admin, role, status, nickname });
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/users/:id PATCH]', err);
@@ -339,7 +534,9 @@ export default function createAdminRouter(io: Server) {
   });
 
   // POST /admin/api/live/:id/force-end
+  // body: { reason?: string } — 강제 중단 사유(선택)를 감사 로그에 기록
   router.post('/api/live/:id/force-end', requireAdmin, async (req, res) => {
+    const { reason } = req.body as { reason?: string };
     const live = lives.get(String(req.params.id));
     if (!live || live.status !== 'live') { res.status(400).json({ error: '진행 중인 라이브 없음' }); return; }
     try {
@@ -355,9 +552,64 @@ export default function createAdminRouter(io: Server) {
         }
       }
       endLive(live.id);
+      await writeAudit(req, 'live.force_end', 'live', req.params.id, reason ? { reason } : undefined);
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/live/force-end]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // GET /admin/api/live/history?page=1 — 종료된 라이브 이력 (lives 테이블, DB 영속)
+  router.get('/api/live/history', requireAdmin, async (req, res) => {
+    const { page = '1' } = req.query as any;
+    const pageNum = Math.max(1, parseInt(page));
+    const offset = (pageNum - 1) * 20;
+    try {
+      const [[{ total }]] = await pool.query<any>(
+        "SELECT COUNT(*) AS total FROM lives WHERE status='ended'",
+      ) as any;
+      const [rows] = await pool.query<any>(
+        `SELECT l.id, l.seller_id, l.seller_name, l.title, l.thumbnail_url, l.category, l.created_at
+         FROM lives l WHERE l.status='ended' ORDER BY l.created_at DESC LIMIT 20 OFFSET ?`,
+        [offset],
+      ) as any;
+      res.json({ lives: rows, total, page: pageNum, pageSize: 20 });
+    } catch (err) {
+      console.error('[admin/live/history]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // GET /admin/api/live/:id/stats — 해당 라이브의 낙찰수·매출 집계 (auctions.live_id 기준)
+  router.get('/api/live/:id/stats', requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+      const [[live]] = await pool.query<any>(
+        'SELECT id, title, seller_name, created_at FROM lives WHERE id=? LIMIT 1',
+        [id],
+      ) as any;
+      if (!live) { res.status(404).json({ error: 'Not found' }); return; }
+      const [[agg]] = await pool.query<any>(
+        `SELECT COUNT(*) AS soldCount, COALESCE(SUM(current_price),0) AS gross, COALESCE(SUM(seller_fee_amt),0) AS fee
+         FROM auctions WHERE live_id=? AND status='ended'`,
+        [id],
+      ) as any;
+      // 시청자 피크: 메모리에 현재값만 존재하고 이력을 남기지 않으므로, 현재 진행 중이면 그 값을, 아니면 null(데이터 없음)로 정직하게 응답.
+      const memLive = lives.get(String(id));
+      const peakViewerCount = memLive ? memLive.viewerCount : null;
+      res.json({
+        liveId: live.id,
+        title: live.title,
+        sellerName: live.seller_name,
+        createdAt: live.created_at,
+        soldCount: Number(agg.soldCount),
+        gross: Number(agg.gross),
+        fee: Number(agg.fee),
+        peakViewerCount,
+      });
+    } catch (err) {
+      console.error('[admin/live/:id/stats]', err);
       res.status(500).json({ error: 'server error' });
     }
   });
@@ -394,6 +646,7 @@ export default function createAdminRouter(io: Server) {
       }
       await pool.query('DELETE FROM product_images WHERE product_id=?', [id]);
       await pool.query('DELETE FROM products WHERE id=?', [id]);
+      await writeAudit(req, 'product.delete', 'product', id);
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/products/:id DELETE]', err);
@@ -429,6 +682,7 @@ export default function createAdminRouter(io: Server) {
       try {
         await createNotification(refund.buyer_id, { type: 'refund_approved', title: '환불 승인', body: '환불 신청이 승인되었습니다.' });
       } catch {}
+      await writeAudit(req, 'refund.approve', 'refund', id);
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/refunds/:id/approve]', err);
@@ -447,6 +701,7 @@ export default function createAdminRouter(io: Server) {
       try {
         await createNotification(refund.buyer_id, { type: 'refund_rejected', title: '환불 거부', body: '환불 신청이 거부되었습니다.' });
       } catch {}
+      await writeAudit(req, 'refund.reject', 'refund', id, { rejectReason: rejectReason || null });
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/refunds/:id/reject]', err);
@@ -461,6 +716,7 @@ export default function createAdminRouter(io: Server) {
       const [[refund]] = await pool.query<any>('SELECT * FROM refunds WHERE id=?', [id]) as any;
       if (!refund || refund.status !== 'approved') { res.status(400).json({ error: '처리 불가' }); return; }
       await pool.query("UPDATE refunds SET status='completed', completed_at=NOW() WHERE id=?", [id]);
+      await writeAudit(req, 'refund.complete', 'refund', id);
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/refunds/:id/complete]', err);
@@ -478,9 +734,9 @@ export default function createAdminRouter(io: Server) {
         const params: any[] = [];
         if (from) { where += ' AND s.period_start>=?'; params.push(from); }
         if (to) { where += ' AND s.period_end<=?'; params.push(to); }
-        const [rows] = await pool.query<any>(`SELECT s.id, u.nickname AS seller, s.period_start, s.period_end, s.auction_count, s.total_sales, s.fee_amount, s.net_amount, s.status FROM settlements s JOIN users u ON u.id=s.seller_id ${where} ORDER BY s.id DESC`, params) as any;
+        const [rows] = await pool.query<any>(`SELECT s.id, u.nickname AS seller, s.period_start, s.period_end, s.auction_count, s.gross_amount, s.fee_amount, s.net_amount, s.status FROM settlements s JOIN users u ON u.id=s.seller_id ${where} ORDER BY s.id DESC`, params) as any;
         const header = 'ID,판매자,기간시작,기간종료,낙찰건수,총낙찰액,수수료,실지급액,상태\n';
-        const csv = BOM + header + rows.map((r: any) => [r.id, r.seller, r.period_start, r.period_end, r.auction_count, r.total_sales, r.fee_amount, r.net_amount, r.status].join(',')).join('\n');
+        const csv = BOM + header + rows.map((r: any) => [r.id, r.seller, r.period_start, r.period_end, r.auction_count, r.gross_amount, r.fee_amount, r.net_amount, r.status].join(',')).join('\n');
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
         res.setHeader('Content-Disposition', 'attachment; filename=settlements.csv');
         return res.send(csv);
@@ -515,6 +771,7 @@ export default function createAdminRouter(io: Server) {
     try {
       const passwordHash = await hashPassword(newPassword);
       await pool.query('UPDATE users SET password_hash=? WHERE id=?', [passwordHash, id]);
+      await writeAudit(req, 'user.reset_password', 'user', id);
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/users/:id/reset-password]', err);
@@ -560,9 +817,32 @@ export default function createAdminRouter(io: Server) {
           resolve();
         });
       });
+      await writeAudit(req, 'auction.force_end', 'auction', req.params.id);
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/auctions/:id/force-end]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // POST /admin/api/auctions/:id/extend — 진행 중인 경매의 잔여시간(timeLeft)을 연장한다.
+  // body: { seconds: number } (1~600 범위)
+  router.post('/api/auctions/:id/extend', requireAdmin, async (req, res) => {
+    const { seconds } = req.body as { seconds?: number };
+    if (!Number.isFinite(seconds) || (seconds as number) <= 0 || (seconds as number) > 600) {
+      res.status(400).json({ error: 'seconds must be a number between 1 and 600' });
+      return;
+    }
+    const auc = auctions.get(String(req.params.id));
+    if (!auc) { res.status(400).json({ error: '메모리에 진행 중인 경매 없음' }); return; }
+    if (auc.status !== 'live') { res.status(400).json({ error: '진행 중(live) 상태 경매만 연장 가능' }); return; }
+    try {
+      auc.timeLeft += Number(seconds);
+      io.to(auc.liveId).emit('auction:update', auc);
+      await writeAudit(req, 'auction.extend', 'auction', req.params.id, { seconds });
+      res.json({ ok: true, timeLeft: auc.timeLeft });
+    } catch (err) {
+      console.error('[admin/auctions/:id/extend]', err);
       res.status(500).json({ error: 'server error' });
     }
   });
@@ -581,6 +861,7 @@ export default function createAdminRouter(io: Server) {
       const [[auction]] = await pool.query<any>('SELECT id FROM auctions WHERE id=? LIMIT 1', [id]) as any;
       if (!auction) { res.status(404).json({ error: 'Not found' }); return; }
       await pool.query('UPDATE auctions SET delivery_status=? WHERE id=?', [deliveryStatus, id]);
+      await writeAudit(req, 'auction.delivery_status', 'auction', id, { deliveryStatus });
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/auctions/:id/delivery-status]', err);
@@ -616,6 +897,7 @@ export default function createAdminRouter(io: Server) {
       // bids 외래키에 CASCADE 없으므로 먼저 삭제
       await pool.query('DELETE FROM bids WHERE auction_id=?', [String(id)]);
       await pool.query('DELETE FROM auctions WHERE id=?', [String(id)]);
+      await writeAudit(req, 'auction.delete', 'auction', id);
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/auctions/:id DELETE]', err);
@@ -626,9 +908,10 @@ export default function createAdminRouter(io: Server) {
   // DELETE /admin/api/auctions/:id/bids/:bidId
   // DB 기록만 삭제, 메모리 경매 진행중이면 영향 없음
   router.delete('/api/auctions/:id/bids/:bidId', requireAdmin, async (req, res) => {
-    const { bidId } = req.params;
+    const { id, bidId } = req.params;
     try {
       await pool.query('DELETE FROM bids WHERE id=?', [bidId]);
+      await writeAudit(req, 'auction.bid_delete', 'auction', id, { bidId });
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/auctions/:id/bids/:bidId DELETE]', err);
@@ -683,6 +966,7 @@ export default function createAdminRouter(io: Server) {
       const [[product]] = await pool.query<any>('SELECT id FROM products WHERE id=? LIMIT 1', [id]) as any;
       if (!product) { res.status(404).json({ error: 'Not found' }); return; }
       await pool.query(`UPDATE products SET ${fields.join(',')} WHERE id=?`, [...vals, id]);
+      await writeAudit(req, 'product.update', 'product', id, { name, description, price, category, status });
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/products/:id PATCH]', err);
@@ -693,16 +977,286 @@ export default function createAdminRouter(io: Server) {
   // ─── 정산 ────────────────────────────────────────────────────────────────────
 
   // POST /admin/api/settlements/:id/cancel
-  // settlements ENUM은 'pending'|'paid' 뿐이므로 'pending'으로 되돌린다 (cancelled 미지원)
   router.post('/api/settlements/:id/cancel', requireAdmin, async (req, res) => {
     const { id } = req.params;
     try {
       const [[settlement]] = await pool.query<any>('SELECT id, status FROM settlements WHERE id=? LIMIT 1', [id]) as any;
       if (!settlement) { res.status(404).json({ error: 'Not found' }); return; }
-      await pool.query("UPDATE settlements SET status='pending', paid_at=NULL WHERE id=?", [id]);
+      await pool.query("UPDATE settlements SET status='cancelled', paid_at=NULL WHERE id=?", [id]);
+      await writeAudit(req, 'settlement.cancel', 'settlement', id);
       res.json({ ok: true });
     } catch (err) {
       console.error('[admin/settlements/:id/cancel]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // ─── 감사 로그 ────────────────────────────────────────────────────────────────
+
+  // GET /admin/api/audit-logs
+  router.get('/api/audit-logs', requireAdmin, async (req, res) => {
+    const { adminUserId, action, from, to, page = '1' } = req.query as any;
+    const pageNum = Math.max(1, parseInt(page));
+    const offset = (pageNum - 1) * 20;
+    let where = 'WHERE 1=1';
+    const params: any[] = [];
+    if (adminUserId) { where += ' AND l.admin_user_id=?'; params.push(adminUserId); }
+    if (action) { where += ' AND l.action=?'; params.push(action); }
+    if (from) { where += ' AND l.created_at>=?'; params.push(from); }
+    if (to) { where += ' AND l.created_at<=?'; params.push(to); }
+    try {
+      const [[{ total }]] = await pool.query<any>(`SELECT COUNT(*) AS total FROM admin_audit_logs l ${where}`, params) as any;
+      const [logs] = await pool.query<any>(
+        `SELECT l.*, u.nickname AS admin_nickname FROM admin_audit_logs l
+         JOIN users u ON u.id = l.admin_user_id
+         ${where} ORDER BY l.created_at DESC LIMIT 20 OFFSET ?`,
+        [...params, offset],
+      ) as any;
+      res.json({ logs, total, page: pageNum, pageSize: 20 });
+    } catch (err) {
+      console.error('[admin/audit-logs]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // ─── 리뷰 모더레이션 ──────────────────────────────────────────────────────────
+
+  // GET /admin/api/reviews
+  router.get('/api/reviews', requireAdmin, async (req, res) => {
+    const { page = '1', sellerId, minRating, maxRating } = req.query as any;
+    const pageNum = Math.max(1, parseInt(page));
+    const offset = (pageNum - 1) * 20;
+    let where = 'WHERE 1=1';
+    const params: any[] = [];
+    if (sellerId) { where += ' AND r.seller_id=?'; params.push(sellerId); }
+    if (minRating) { where += ' AND r.rating>=?'; params.push(minRating); }
+    if (maxRating) { where += ' AND r.rating<=?'; params.push(maxRating); }
+    try {
+      const [[{ total }]] = await pool.query<any>(`SELECT COUNT(*) AS total FROM reviews r ${where}`, params) as any;
+      const [reviews] = await pool.query<any>(
+        `SELECT r.id, r.auction_id, r.rating, r.comment, r.seller_reply, r.created_at,
+                reviewer.id AS reviewer_id, reviewer.nickname AS reviewer_nickname,
+                seller.id AS seller_id, seller.nickname AS seller_nickname
+         FROM reviews r
+         JOIN users reviewer ON reviewer.id = r.reviewer_id
+         JOIN users seller ON seller.id = r.seller_id
+         ${where} ORDER BY r.created_at DESC LIMIT 20 OFFSET ?`,
+        [...params, offset],
+      ) as any;
+      res.json({ reviews, total, page: pageNum, pageSize: 20 });
+    } catch (err) {
+      console.error('[admin/reviews]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // DELETE /admin/api/reviews/:id
+  router.delete('/api/reviews/:id', requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+      const [[review]] = await pool.query<any>('SELECT id FROM reviews WHERE id=? LIMIT 1', [id]) as any;
+      if (!review) { res.status(404).json({ error: 'Not found' }); return; }
+      await pool.query('DELETE FROM reviews WHERE id=?', [id]);
+      await writeAudit(req, 'review.delete', 'review', id);
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('[admin/reviews/:id DELETE]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // ─── 공동구매 개입 ────────────────────────────────────────────────────────────
+
+  const VALID_GROUP_DEAL_STATUSES = ['recruiting', 'confirmed', 'shipped', 'completed', 'cancelled'];
+
+  // GET /admin/api/group-deals
+  router.get('/api/group-deals', requireAdmin, async (req, res) => {
+    const { page = '1', status } = req.query as any;
+    const pageNum = Math.max(1, parseInt(page));
+    const offset = (pageNum - 1) * 20;
+    let where = 'WHERE 1=1';
+    const params: any[] = [];
+    if (status) { where += ' AND g.status=?'; params.push(status); }
+    try {
+      const [[{ total }]] = await pool.query<any>(`SELECT COUNT(*) AS total FROM group_deals g ${where}`, params) as any;
+      const [deals] = await pool.query<any>(
+        `SELECT g.id, g.title, g.category, g.price_per_unit, g.unit_label, g.min_participants, g.max_participants,
+                g.current_participants, g.status, g.closes_at, g.created_at,
+                seller.id AS seller_id, seller.nickname AS seller_nickname,
+                (SELECT COUNT(*) FROM group_deal_participants gp WHERE gp.deal_id = g.id) AS participant_count
+         FROM group_deals g
+         JOIN users seller ON seller.id = g.seller_id
+         ${where} ORDER BY g.created_at DESC LIMIT 20 OFFSET ?`,
+        [...params, offset],
+      ) as any;
+      res.json({ deals, total, page: pageNum, pageSize: 20 });
+    } catch (err) {
+      console.error('[admin/group-deals]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // GET /admin/api/group-deals/:id
+  router.get('/api/group-deals/:id', requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+      const [[deal]] = await pool.query<any>(
+        `SELECT g.*, seller.nickname AS seller_nickname
+         FROM group_deals g JOIN users seller ON seller.id = g.seller_id WHERE g.id=? LIMIT 1`,
+        [id],
+      ) as any;
+      if (!deal) { res.status(404).json({ error: 'Not found' }); return; }
+      const [participants] = await pool.query<any>(
+        `SELECT gp.id, gp.buyer_id, gp.quantity, gp.joined_at, u.nickname AS buyer_nickname
+         FROM group_deal_participants gp JOIN users u ON u.id = gp.buyer_id
+         WHERE gp.deal_id=? ORDER BY gp.joined_at ASC`,
+        [id],
+      ) as any;
+      res.json({ ...deal, participants });
+    } catch (err) {
+      console.error('[admin/group-deals/:id]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // PATCH /admin/api/group-deals/:id/status
+  // body: { status } — recruiting/confirmed/shipped/completed/cancelled
+  router.patch('/api/group-deals/:id/status', requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body as { status?: string };
+    if (!status || !VALID_GROUP_DEAL_STATUSES.includes(status)) {
+      res.status(400).json({ error: `status must be one of: ${VALID_GROUP_DEAL_STATUSES.join(', ')}` });
+      return;
+    }
+    try {
+      const [[deal]] = await pool.query<any>('SELECT id FROM group_deals WHERE id=? LIMIT 1', [id]) as any;
+      if (!deal) { res.status(404).json({ error: 'Not found' }); return; }
+      await pool.query('UPDATE group_deals SET status=? WHERE id=?', [status, id]);
+      await writeAudit(req, 'group_deal.status', 'group_deal', id, { status });
+      if (status === 'cancelled') {
+        const [participants] = await pool.query<any>(
+          'SELECT buyer_id FROM group_deal_participants WHERE deal_id=?',
+          [id],
+        ) as any;
+        const buyerIds = participants.map((p: any) => Number(p.buyer_id));
+        if (buyerIds.length) {
+          await createNotificationsBulk(buyerIds, {
+            type: 'group_deal_cancelled',
+            title: '공동구매 취소',
+            body: '참여하신 공동구매가 취소되었습니다.',
+          });
+        }
+      }
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('[admin/group-deals/:id/status PATCH]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // ─── 위탁 관리 ────────────────────────────────────────────────────────────────
+
+  const VALID_CONSIGNMENT_STATUSES = ['pending', 'matched', 'closed'];
+
+  // GET /admin/api/consignments
+  router.get('/api/consignments', requireAdmin, async (req, res) => {
+    const { page = '1', status } = req.query as any;
+    const pageNum = Math.max(1, parseInt(page));
+    const offset = (pageNum - 1) * 20;
+    let where = 'WHERE 1=1';
+    const params: any[] = [];
+    if (status) { where += ' AND c.status=?'; params.push(status); }
+    try {
+      const [[{ total }]] = await pool.query<any>(`SELECT COUNT(*) AS total FROM consignments c ${where}`, params) as any;
+      const [consignments] = await pool.query<any>(
+        `SELECT c.id, c.consignment_type, c.category, c.quantity, c.expected_price, c.status, c.created_at,
+                u.id AS buyer_id, u.nickname AS buyer_nickname
+         FROM consignments c
+         JOIN users u ON u.id = c.buyer_id
+         ${where} ORDER BY c.created_at DESC LIMIT 20 OFFSET ?`,
+        [...params, offset],
+      ) as any;
+      res.json({ consignments, total, page: pageNum, pageSize: 20 });
+    } catch (err) {
+      console.error('[admin/consignments]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // GET /admin/api/consignments/:id
+  router.get('/api/consignments/:id', requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+      const [[consignment]] = await pool.query<any>(
+        `SELECT c.*, u.nickname AS buyer_nickname
+         FROM consignments c JOIN users u ON u.id = c.buyer_id WHERE c.id=? LIMIT 1`,
+        [id],
+      ) as any;
+      if (!consignment) { res.status(404).json({ error: 'Not found' }); return; }
+      const [images] = await pool.query<any>(
+        'SELECT image_url, is_primary, display_order FROM consignment_images WHERE consignment_id=? ORDER BY display_order',
+        [id],
+      ) as any;
+      res.json({ ...consignment, images });
+    } catch (err) {
+      console.error('[admin/consignments/:id]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // PATCH /admin/api/consignments/:id/status
+  // body: { status } — pending/matched/closed
+  router.patch('/api/consignments/:id/status', requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body as { status?: string };
+    if (!status || !VALID_CONSIGNMENT_STATUSES.includes(status)) {
+      res.status(400).json({ error: `status must be one of: ${VALID_CONSIGNMENT_STATUSES.join(', ')}` });
+      return;
+    }
+    try {
+      const [[consignment]] = await pool.query<any>('SELECT id FROM consignments WHERE id=? LIMIT 1', [id]) as any;
+      if (!consignment) { res.status(404).json({ error: 'Not found' }); return; }
+      await pool.query('UPDATE consignments SET status=? WHERE id=?', [status, id]);
+      await writeAudit(req, 'consignment.status', 'consignment', id, { status });
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('[admin/consignments/:id/status PATCH]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // ─── 공지/알림 발송 ───────────────────────────────────────────────────────────
+
+  // POST /admin/api/notifications/broadcast
+  // body: { title, body, target } — target: all/sellers/buyers
+  router.post('/api/notifications/broadcast', requireAdmin, async (req, res) => {
+    const { title, body, target } = req.body as { title?: string; body?: string; target?: string };
+    const VALID_TARGETS = ['all', 'sellers', 'buyers'];
+    if (!title || !target || !VALID_TARGETS.includes(target)) {
+      res.status(400).json({ error: `title required, target must be one of: ${VALID_TARGETS.join(', ')}` });
+      return;
+    }
+    try {
+      let userIds: number[];
+      if (target === 'all') {
+        const [rows] = await pool.query<any>('SELECT id FROM users') as any;
+        userIds = rows.map((r: any) => Number(r.id));
+      } else {
+        const role = target === 'sellers' ? 'seller' : 'buyer';
+        const [rows] = await pool.query<any>('SELECT id FROM users WHERE role=?', [role]) as any;
+        userIds = rows.map((r: any) => Number(r.id));
+      }
+      // createNotificationsBulk는 단일 INSERT로 전체 userIds를 바인딩하므로,
+      // 대량 발송 시 MySQL placeholder 한계 방지를 위해 청크 단위로 분할 호출한다.
+      const CHUNK_SIZE = 500;
+      for (let i = 0; i < userIds.length; i += CHUNK_SIZE) {
+        const chunk = userIds.slice(i, i + CHUNK_SIZE);
+        await createNotificationsBulk(chunk, { type: 'admin_broadcast', title, body: body ?? null });
+      }
+      await writeAudit(req, 'notification.broadcast', null, null, { target, count: userIds.length });
+      res.json({ sent: userIds.length });
+    } catch (err) {
+      console.error('[admin/notifications/broadcast]', err);
       res.status(500).json({ error: 'server error' });
     }
   });
@@ -711,6 +1265,10 @@ export default function createAdminRouter(io: Server) {
   router.get('/users', (_req, res) => res.sendFile(path.join(adminPublicPath, 'users.html')));
   router.get('/auctions', (_req, res) => res.sendFile(path.join(adminPublicPath, 'auctions.html')));
   router.get('/products', (_req, res) => res.sendFile(path.join(adminPublicPath, 'products.html')));
+  router.get('/reviews', (_req, res) => res.sendFile(path.join(adminPublicPath, 'reviews.html')));
+  router.get('/group-deals', (_req, res) => res.sendFile(path.join(adminPublicPath, 'group-deals.html')));
+  router.get('/consignments', (_req, res) => res.sendFile(path.join(adminPublicPath, 'consignments.html')));
+  router.get('/notice', (_req, res) => res.sendFile(path.join(adminPublicPath, 'notice.html')));
 
   // Phase 7(§19) 신규 어드민 화면
   router.get('/payments', (_req, res) => res.sendFile(path.join(adminPublicPath, 'payments.html')));

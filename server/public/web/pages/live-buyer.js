@@ -742,6 +742,77 @@ export default async function load(params) {
     }
   }
 
+  // ---- Personalized recommendation modal (post-auction) ----
+  let _recModalTimer = null;
+
+  function closeRecModal(backdrop) {
+    clearTimeout(_recModalTimer);
+    _recModalTimer = null;
+    backdrop.classList.remove('rec-modal-overlay--visible');
+    setTimeout(() => { if (backdrop.parentNode) backdrop.remove(); }, 220);
+  }
+
+  function showRecommendationModal(payload) {
+    const recs = Array.isArray(payload?.recommendations) ? payload.recommendations : [];
+    if (recs.length === 0) return;
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'rec-modal-overlay';
+
+    const heading = payload.isWinner
+      ? '낙찰을 축하합니다! 이런 상품도 함께 보세요'
+      : '아쉽게 놓치셨어요, 이런 상품은 어떠세요?';
+
+    const cardsHtml = recs.map((r, i) => {
+      const name = escapeHtml(r.name || '');
+      const price = (typeof r.price === 'number' ? r.price : 0).toLocaleString('ko-KR');
+      const img = r.imageUrl
+        ? `<img class="rec-card__thumb" src="${escapeHtml(r.imageUrl)}" alt="" />`
+        : `<div class="rec-card__thumb rec-card__thumb--empty"></div>`;
+      return `
+        <div class="rec-card" data-idx="${i}">
+          ${img}
+          <div class="rec-card__name">${name}</div>
+          <div class="rec-card__price">${price}원</div>
+        </div>
+      `;
+    }).join('');
+
+    backdrop.innerHTML = `
+      <div class="rec-modal-card">
+        <button class="rec-modal-card__close" id="rec-modal-close" aria-label="닫기">✕</button>
+        <div class="rec-modal-card__title">${escapeHtml(heading)}</div>
+        <div class="rec-modal-card__list">${cardsHtml}</div>
+      </div>
+    `;
+
+    backdrop.querySelector('.rec-modal-card__list').addEventListener('click', (e) => {
+      const card = e.target.closest('.rec-card');
+      if (!card) return;
+      const idx = Number(card.dataset.idx);
+      const rec = recs[idx];
+      if (!rec) return;
+      closeRecModal(backdrop);
+      if (rec.source === 'nonghyup') {
+        if (rec.url) window.open(rec.url, '_blank', 'noopener');
+      } else {
+        navigate('/app/product-detail/' + rec.id);
+      }
+    });
+
+    backdrop.querySelector('#rec-modal-close').addEventListener('click', () => closeRecModal(backdrop));
+
+    page.appendChild(backdrop);
+    requestAnimationFrame(() => backdrop.classList.add('rec-modal-overlay--visible'));
+
+    clearTimeout(_recModalTimer);
+    _recModalTimer = setTimeout(() => closeRecModal(backdrop), 10000);
+  }
+
+  const handleAuctionRecommendation = (payload) => {
+    showRecommendationModal(payload || {});
+  };
+
   function showWonOverlay(auction) {
     const backdrop = document.createElement('div');
     backdrop.className = 'won-overlay';
@@ -1459,12 +1530,15 @@ export default async function load(params) {
     spawnFloatingEmoji(emoji);
   });
 
+  socket.on('auction:recommendation', handleAuctionRecommendation);
+
   unsubFns.push(
     unsubAuctionUpdate, unsubAuctionNew, unsubAuctionEnded, unsubChat, unsubViewers, unsubViewerList,
     unsubBlindBidCount, unsubGiveawayCount, unsubGiveawayJoinAck, unsubViewerJoin,
     unsubPurchaseMade, unsubBidBlindAck, unsubBidRejected, unsubLiveEnded,
     unsubEmoji,
     () => socket.off('connect', onSocketConnect),
+    () => socket.off('auction:recommendation', handleAuctionRecommendation),
   );
 
   // ---- Image zoom overlay ----
@@ -1600,6 +1674,7 @@ export default async function load(params) {
       videoEl.srcObject = null;
     }
     clearTimeout(buyReenableTimer);
+    clearTimeout(_recModalTimer);
     timer.destroy();
     chatOverlay.destroy();
     if (slideBidComp) { slideBidComp.destroy(); slideBidComp = null; }

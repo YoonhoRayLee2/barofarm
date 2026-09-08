@@ -1,5 +1,8 @@
 import fs from 'fs';
 import path from 'path';
+import pool from '../db/mysql';
+
+const ALL_CATEGORIES_FALLBACK = ['과일', '채소', '수산', '축산', '곡물', '기타'];
 
 interface Product {
   wrsC: string;
@@ -208,4 +211,139 @@ export function getRecommendations(
       category: p.category,
       detailUrl: p.detailUrl,
     }));
+}
+
+// 경매 종료 시 개인화 추천에 쓰이는 통일 상품 형태.
+// barofarm 자체 상품(source:'barofarm')은 url 없음 — 프론트가 내부 id로 라우팅.
+// 농협몰 스냅샷(source:'nonghyup')은 detailUrl 포함.
+export interface RecommendedProduct {
+  source: 'barofarm' | 'nonghyup';
+  id: string;
+  name: string;
+  price: number;
+  imageUrl: string | null;
+  category: string;
+  url?: string;
+}
+
+interface AuctionEndRecommendationParams {
+  category?: string | null;
+  productName: string;
+  priceRange: number; // 종료된 경매 낙찰가(스코어링 기준가)
+  userId?: string | null;
+}
+
+/**
+ * 라이브 경매 종료 시 낙찰자/패찰자에게 보여줄 개인화 추천 상품 목록.
+ * 1순위: barofarm 자체 products 테이블에서 다중신호 스코어링.
+ * 2순위: 결과가 부족하면(6개 미만) 농협몰 스냅샷(productRecommender 기존 함수)으로 보강.
+ */
+export async function getAuctionEndRecommendations(
+  { category, productName, priceRange, userId }: AuctionEndRecommendationParams,
+  limit = 8,
+): Promise<RecommendedProduct[]> {
+  const results: RecommendedProduct[] = [];
+
+  try {
+    if (category) {
+      const [candidateRows] = await pool.query<any[]>(
+        `SELECT id, name, price, category, image_url, created_at
+           FROM products
+          WHERE category = ? AND status = 'active'`,
+        [category],
+      );
+
+      if (candidateRows.length > 0) {
+        // 실시간 인기도: 최근 24시간 내 같은 카테고리 낙찰 건수(상품명 매칭)를 상품별로 집계.
+        // auctions에는 product_id가 없으므로 product_name 일치로 근사한다.
+        const [popularityRows] = await pool.query<any[]>(
+          `SELECT product_name, COUNT(*) AS cnt
+             FROM auctions
+            WHERE status = 'ended' AND created_at > NOW() - INTERVAL 1 DAY
+            GROUP BY product_name`,
+        );
+        const popularityByName = new Map<string, number>(
+          popularityRows.map((r) => [String(r.product_name), Number(r.cnt)]),
+        );
+
+        // 개인 낙찰 이력의 카테고리 집합 — 협업 신호(+2점)용.
+        let userCategorySet = new Set<string>();
+        if (userId) {
+          const [historyRows] = await pool.query<any[]>(
+            `SELECT DISTINCT p.category AS category
+               FROM auctions a
+               JOIN products p ON p.name = a.product_name
+              WHERE a.top_bidder_id = ? AND a.status = 'ended'`,
+            [Number(userId)],
+          );
+          userCategorySet = new Set(historyRows.map((r) => String(r.category)).filter(Boolean));
+        }
+
+        const now = Date.now();
+        const scored = candidateRows.map((row) => {
+          let score = 0;
+          const price = Number(row.price);
+
+          // 카테고리 일치 (조회 자체가 카테고리 필터이므로 항상 성립)
+          score += 3;
+
+          // 가격대 유사도
+          if (priceRange > 0) {
+            const diffRatio = Math.abs(price - priceRange) / priceRange;
+            if (diffRatio <= 0.3) score += 2;
+            else if (diffRatio <= 0.5) score += 1;
+          }
+
+          // 실시간 인기도 (로그 스케일 근사: min(count, 5))
+          const popCount = popularityByName.get(String(row.name)) ?? 0;
+          score += Math.min(popCount, 5);
+
+          // 개인 낙찰 이력 카테고리 겹침
+          if (userCategorySet.has(String(row.category))) score += 2;
+
+          // 최신 등록 가산 (최근 7일 이내 소폭 가산, 0~1점)
+          const createdAt = new Date(row.created_at).getTime();
+          const daysAgo = (now - createdAt) / (24 * 60 * 60 * 1000);
+          score += daysAgo <= 7 ? Math.max(0, 1 - daysAgo / 7) : 0;
+
+          return { row, score };
+        });
+
+        scored.sort((a, b) => b.score - a.score);
+        for (const { row } of scored.slice(0, limit)) {
+          results.push({
+            source: 'barofarm',
+            id: String(row.id),
+            name: row.name,
+            price: Number(row.price),
+            imageUrl: row.image_url ?? null,
+            category: row.category,
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[productRecommender] getAuctionEndRecommendations DB 조회 실패:', (err as Error).message);
+  }
+
+  // 2순위 보강: barofarm 결과가 부족하면 농협몰 스냅샷으로 채운다.
+  if (results.length < 6) {
+    const fallbackLimit = limit - results.length;
+    const fallback = category
+      ? getRecommendations(productName, category, fallbackLimit)
+      : getRecommendationsByCategories(ALL_CATEGORIES_FALLBACK, fallbackLimit);
+    for (const p of fallback) {
+      results.push({
+        source: 'nonghyup',
+        id: p.wrsC,
+        name: p.name,
+        price: p.price,
+        imageUrl: p.imgUrl,
+        category: p.category,
+        url: p.detailUrl,
+      });
+    }
+  }
+
+  return results.slice(0, limit);
 }
