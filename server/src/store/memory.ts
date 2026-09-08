@@ -1,4 +1,5 @@
 import type { Server } from 'socket.io';
+import { getAuctionEndRecommendations } from '../utils/productRecommender';
 
 export interface LiveState {
   id: string;          // UUID, LiveKit roomName
@@ -28,6 +29,14 @@ export interface GiveawayParticipant {
   userName: string;
 }
 
+// normal 경매 입찰 이력 — 경매 종료 시 낙찰자/패찰자 구분(개인화 추천용)에 사용.
+export interface BidRecord {
+  userId: string;
+  userName?: string;
+  price: number;
+  ts: number;
+}
+
 export interface AuctionState {
   id: string;
   liveId: string;
@@ -48,6 +57,8 @@ export interface AuctionState {
   // 블라인드(blind) 전용
   blindBids?: BlindBid[];
   revealAt?: number;
+  // 일반(normal) 경매 입찰 이력 — 낙찰자/패찰자 구분(개인화 추천용)
+  bidHistory?: BidRecord[];
   // 무료나눔(giveaway) 전용
   giveawayParticipants?: GiveawayParticipant[];
   // 상품 이미지
@@ -150,6 +161,10 @@ export function createAuction(
     sellerShippingFee: sellerShippingFee ?? 3000,
   };
 
+  if (mode === 'normal') {
+    state.bidHistory = [];
+  }
+
   if (mode === 'fcfs') {
     state.stockTotal = stockTotal ?? 1;
     state.stockSold = 0;
@@ -165,6 +180,55 @@ export function createAuction(
   }
 
   auctions.set(id, state);
+}
+
+// 경매 종료 시 참여자(낙찰자/패찰자) 목록을 모드별로 계산한다.
+// fcfs는 구매 즉시 개별 낙찰이 이미 발생하고 패찰 개념이 약해 스킵한다(빈 배열 반환).
+function getAuctionParticipants(auc: AuctionState): string[] {
+  if (auc.mode === 'normal') {
+    return Array.from(new Set((auc.bidHistory ?? []).map((b) => b.userId)));
+  }
+  if (auc.mode === 'blind') {
+    return Array.from(new Set((auc.blindBids ?? []).map((b) => b.userId)));
+  }
+  if (auc.mode === 'giveaway') {
+    return Array.from(new Set((auc.giveawayParticipants ?? []).map((p) => p.userId)));
+  }
+  return [];
+}
+
+// 경매 종료 후 낙찰자/패찰자 전원에게 개인화 추천 상품을 emit한다.
+// 종료 응답(auction:ended)을 막지 않도록 setImmediate로 비동기 처리하며, 에러는 삼킨다.
+function emitAuctionEndRecommendations(auc: AuctionState, io: Server): void {
+  const participants = getAuctionParticipants(auc);
+  if (participants.length === 0) return;
+
+  const live = lives.get(auc.liveId);
+  const category = live?.category;
+
+  setImmediate(async () => {
+    await Promise.all(participants.map(async (userId) => {
+      try {
+        const recommendations = await getAuctionEndRecommendations({
+          category,
+          productName: auc.productName,
+          priceRange: auc.currentPrice,
+          userId,
+        });
+        const isWinner = userId === auc.topBidder;
+        io.to(`user:${userId}`).emit('auction:recommendation', {
+          auctionId: auc.id,
+          liveId: auc.liveId,
+          productName: auc.productName,
+          category: category ?? null,
+          isWinner,
+          recommendations,
+        });
+      } catch (err) {
+        console.error(`[memory] emitAuctionEndRecommendations 실패 (auction=${auc.id}, user=${userId}):`, (err as Error).message);
+      }
+    }));
+  });
 }
 
 export async function endAuctionState(
@@ -222,6 +286,8 @@ export async function endAuctionState(
     unitLabel: auc.unitLabel,
     participants: auc.mode === 'giveaway' ? (auc.giveawayParticipants ?? []) : undefined,
   });
+
+  emitAuctionEndRecommendations(auc, io);
 
   stopTimer(auc.id);
 

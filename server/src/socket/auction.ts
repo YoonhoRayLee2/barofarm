@@ -135,6 +135,10 @@ export default function registerAuctionSocket(io: Server): void {
         // 10초 연장: 잔여 시간이 10초 이하이면 +10초
         if (auction.timeLeft <= 10) auction.timeLeft += 10;
 
+        // 입찰 이력 기록 — 경매 종료 시 낙찰자/패찰자 구분(개인화 추천용)
+        if (!auction.bidHistory) auction.bidHistory = [];
+        auction.bidHistory.push({ userId, userName, price, ts: Date.now() });
+
         io.to(liveId).emit('auction:update', auction);
       } catch (err) {
         socket.emit('error', { message: (err as Error).message });
