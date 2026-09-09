@@ -76,12 +76,13 @@ function extractKeywords(name: string): string[] {
 
 export function getRecommendationsByCategories(
   categories: string[],
-  limit = 8
+  limit = 8,
+  excludeName?: string,
 ): Pick<Product, 'wrsC' | 'name' | 'price' | 'listPrice' | 'discountRate' | 'imgUrl' | 'category' | 'detailUrl'>[] {
   if (allProducts.length === 0 || categories.length === 0) return [];
 
   const candidates = allProducts.filter(
-    (p) => !p.soldOut && categories.includes(p.category)
+    (p) => !p.soldOut && categories.includes(p.category) && p.name !== excludeName
   );
 
   return candidates
@@ -170,23 +171,22 @@ export function getPersonalizedRecommendations(
 export function getRecommendations(
   productName: string,
   category?: string,
-  limit = 6
+  limit = 6,
+  excludeName?: string,
 ): Pick<Product, 'wrsC' | 'name' | 'price' | 'listPrice' | 'discountRate' | 'imgUrl' | 'category' | 'detailUrl'>[] {
   if (allProducts.length === 0) return [];
 
   const keywords = extractKeywords(productName);
   if (keywords.length === 0) return [];
 
-  const allCandidates = allProducts.filter((p) => !p.soldOut);
+  const allCandidates = allProducts.filter((p) => !p.soldOut && p.name !== excludeName);
 
-  // 같은 카테고리 우선
-  let candidates = allCandidates;
-  if (category) {
-    const sameCat = allCandidates.filter((p) => p.category === category);
-    if (sameCat.length > 0) {
-      candidates = sameCat;
-    }
-  }
+  // 카테고리가 지정되면 그 카테고리를 벗어나지 않는다(호출부가 의도적으로 다른 카테고리를
+  // 지정한 경우 — 예: 낙찰자에게 다른 카테고리를 추천 — 매칭 실패를 이유로 카테고리 밖의
+  // 상품을 섞으면 그 의도가 무력화된다). 카테고리 미지정 시에만 전체 상품을 후보로 쓴다.
+  const candidates = category
+    ? allCandidates.filter((p) => p.category === category)
+    : allCandidates;
 
   // 점수 계산: 키워드 매칭(키워드당 2점), items 매칭(키워드당 1점)
   const scoreOf = (pool: Product[]) =>
@@ -199,17 +199,17 @@ export function getRecommendations(
       return { p, score };
     }).filter(({ score }) => score > 0);
 
-  let scored = scoreOf(candidates);
+  const scored = scoreOf(candidates);
 
-  // 카테고리로 좁힌 후보에서 매칭이 0건이면, 카테고리 필터를 풀고 전체에서 재시도.
-  if (scored.length === 0 && candidates !== allCandidates) {
-    scored = scoreOf(allCandidates);
-  }
+  // 카테고리 내 키워드 매칭이 0건이면, 카테고리는 유지한 채 할인율순으로 채운다
+  // (카테고리 자체를 이탈하는 폴백은 하지 않는다).
+  const finalPicks = scored.length > 0
+    ? scored.sort((a, b) => b.score - a.score || a.p.price - b.p.price).map(({ p }) => p)
+    : [...candidates].sort((a, b) => b.discountRate - a.discountRate || a.price - b.price);
 
-  return scored
-    .sort((a, b) => b.score - a.score || a.p.price - b.p.price)
+  return finalPicks
     .slice(0, limit)
-    .map(({ p }) => ({
+    .map((p) => ({
       wrsC: p.wrsC,
       name: p.name,
       price: p.price,
@@ -345,8 +345,8 @@ export async function getAuctionEndRecommendations(
   }
 
   const fallback = queryCategory
-    ? getRecommendations(productName, queryCategory, limit)
-    : getRecommendationsByCategories(ALL_CATEGORIES_FALLBACK, limit);
+    ? getRecommendations(productName, queryCategory, limit, productName)
+    : getRecommendationsByCategories(ALL_CATEGORIES_FALLBACK, limit, productName);
 
   return fallback.map((p) => ({
     source: 'nonghyup' as const,

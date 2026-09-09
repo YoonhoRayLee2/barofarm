@@ -797,7 +797,20 @@ export default async function load(params) {
       </div>
     `;
 
-    backdrop.querySelector('.rec-modal-card__list').addEventListener('click', (e) => {
+    // 가로 스크롤(스와이프) 중 손을 뗀 지점이 카드 위라면 click 이벤트가 발생해 카드를
+    // 클릭한 것으로 오인될 수 있다 — pointerdown 지점 대비 이동거리가 임계값 이하일 때만
+    // 실제 클릭으로 간주한다.
+    const cardList = backdrop.querySelector('.rec-modal-card__list');
+    let pointerDownX = 0;
+    let pointerDownY = 0;
+    cardList.addEventListener('pointerdown', (e) => {
+      pointerDownX = e.clientX;
+      pointerDownY = e.clientY;
+    });
+    cardList.addEventListener('click', (e) => {
+      const dx = Math.abs((e.clientX ?? pointerDownX) - pointerDownX);
+      const dy = Math.abs((e.clientY ?? pointerDownY) - pointerDownY);
+      if (dx > 8 || dy > 8) return; // 드래그(스와이프)로 판단 — 닫지 않음
       const card = e.target.closest('.rec-card');
       if (!card) return;
       const idx = Number(card.dataset.idx);
