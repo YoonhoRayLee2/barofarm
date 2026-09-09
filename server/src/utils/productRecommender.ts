@@ -74,6 +74,59 @@ function extractKeywords(name: string): string[] {
   });
 }
 
+// 카테고리별 키워드 인덱스 — 농협몰 스냅샷(카테고리 라벨 보유)의 상품명에서 추출한 키워드가
+// 어느 카테고리에 몇 번 등장하는지 집계한다. 상품명 기반 카테고리 추론(inferCategoryFromName)에 사용.
+// allProducts 로드 직후 1회 구축, 이후 재사용(요청마다 1.27만개 재순회하지 않도록).
+let categoryKeywordIndex: Map<string, Map<string, number>> | null = null;
+
+function buildCategoryKeywordIndex(): Map<string, Map<string, number>> {
+  const index = new Map<string, Map<string, number>>();
+  for (const p of allProducts) {
+    for (const kw of extractKeywords(p.name)) {
+      let byCategory = index.get(kw);
+      if (!byCategory) { byCategory = new Map(); index.set(kw, byCategory); }
+      byCategory.set(p.category, (byCategory.get(p.category) ?? 0) + 1);
+    }
+  }
+  return index;
+}
+
+/**
+ * 경매 상품명에서 실제 카테고리를 추론한다. 라이브 자체에 설정된 카테고리(판매자가 방송
+ * 개설 시 한 번 고르는 값)는 방송 중인 개별 경매 상품과 다를 수 있으므로, 카테고리 판정은
+ * 상품명 기반 추론을 우선하고, 추론 실패 시에만 라이브 카테고리로 폴백한다.
+ *
+ * 방식: 상품명에서 키워드를 추출해 각 키워드가 농협몰 스냅샷에서 가장 많이 등장하는
+ * 카테고리에 1표씩 던지고(키워드 내 최빈 카테고리에 그 키워드의 총 등장수만큼 가중),
+ * 최다 득표 카테고리를 반환한다. 키워드가 없거나 매칭 카테고리가 없으면 null.
+ */
+function inferCategoryFromName(productName: string): string | null {
+  if (allProducts.length === 0) return null;
+  if (!categoryKeywordIndex) categoryKeywordIndex = buildCategoryKeywordIndex();
+
+  const keywords = extractKeywords(productName);
+  if (keywords.length === 0) return null;
+
+  const votes = new Map<string, number>();
+  for (const kw of keywords) {
+    const byCategory = categoryKeywordIndex.get(kw);
+    if (!byCategory || byCategory.size === 0) continue;
+    let bestCategory: string | null = null;
+    let bestCount = 0;
+    for (const [cat, count] of byCategory) {
+      if (count > bestCount) { bestCategory = cat; bestCount = count; }
+    }
+    if (bestCategory) votes.set(bestCategory, (votes.get(bestCategory) ?? 0) + bestCount);
+  }
+
+  let winner: string | null = null;
+  let winnerVotes = 0;
+  for (const [cat, v] of votes) {
+    if (v > winnerVotes) { winner = cat; winnerVotes = v; }
+  }
+  return winner;
+}
+
 export function getRecommendationsByCategories(
   categories: string[],
   limit = 8,
@@ -335,14 +388,19 @@ export async function getAuctionEndRecommendations(
   { category, productName, priceRange: _priceRange, userId, isWinner }: AuctionEndRecommendationParams,
   limit = 8,
 ): Promise<RecommendedProduct[]> {
+  // 카테고리 판정은 라이브 자체의 category 필드(방송 개설 시 선택, 개별 상품과 불일치 가능)가
+  // 아니라 실제 경매 상품명에서 추론한 카테고리를 우선한다. 추론 실패 시에만 라이브 필드로 폴백.
+  const inferredCategory = inferCategoryFromName(productName);
+  const baseCategory = inferredCategory ?? category;
+
   // 낙찰자는 조회 대상 카테고리를 "선호 카테고리"로 치환한다(없으면 인기 카테고리 폴백).
   // 패찰자는 방금 낙찰된 카테고리 그대로 유지한다.
-  let queryCategory = category;
+  let queryCategory = baseCategory;
   if (isWinner) {
     queryCategory = userId
-      ? (await getPreferredCategoryExcluding(userId, category).catch(() => null)) ??
-        (await getPopularCategoryExcluding(category).catch(() => null))
-      : await getPopularCategoryExcluding(category).catch(() => null);
+      ? (await getPreferredCategoryExcluding(userId, baseCategory).catch(() => null)) ??
+        (await getPopularCategoryExcluding(baseCategory).catch(() => null))
+      : await getPopularCategoryExcluding(baseCategory).catch(() => null);
   }
 
   const fallback = queryCategory
