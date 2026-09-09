@@ -327,15 +327,16 @@ async function getPopularCategoryExcluding(excludeCategory?: string | null): Pro
 /**
  * 라이브 경매 종료 시 낙찰자/패찰자에게 보여줄 추천 상품 목록. 항상 농협몰 스냅샷에서만 추천한다.
  *
- * 패찰자(isWinner=false): 같은 카테고리 위주(기존 로직 그대로).
  * 낙찰자(isWinner=true): 방금 낙찰받은 카테고리는 제외하고, 과거 낙찰+입찰 이력 기반
  * 선호 카테고리(없으면 최근 인기 카테고리)로 방향을 바꾼다.
+ * 패찰자(isWinner=false): 방금 낙찰된 카테고리 위주로 추천(같은 카테고리 그대로).
  */
 export async function getAuctionEndRecommendations(
   { category, productName, priceRange: _priceRange, userId, isWinner }: AuctionEndRecommendationParams,
   limit = 8,
 ): Promise<RecommendedProduct[]> {
   // 낙찰자는 조회 대상 카테고리를 "선호 카테고리"로 치환한다(없으면 인기 카테고리 폴백).
+  // 패찰자는 방금 낙찰된 카테고리 그대로 유지한다.
   let queryCategory = category;
   if (isWinner) {
     queryCategory = userId
