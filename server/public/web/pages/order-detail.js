@@ -976,7 +976,9 @@ async function loadRecommendations(container, auctionId) {
   if (isNhmallRecHidden()) { section.classList.add('is-hidden'); return; }
 
   try {
-    const { recommendations } = await request(`/api/auctions/${encodeURIComponent(auctionId)}/recommendations`);
+    const { recommendations, noHistory } = await request(`/api/auctions/${encodeURIComponent(auctionId)}/recommendations`);
+
+    if (noHistory) { section.classList.add('is-hidden'); return; }
 
     if (!recommendations || recommendations.length === 0) {
       section.querySelector('.od-recommendations__loading').textContent = '추천 상품이 없습니다';

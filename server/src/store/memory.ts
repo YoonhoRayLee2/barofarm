@@ -54,6 +54,8 @@ export interface AuctionState {
   // 선착순(fcfs) 전용
   stockTotal?: number;
   stockSold?: number;
+  // fcfs 구매자 userId 목록(구매 순서대로 누적) — 경매종료 추천 emit 시 전원을 낙찰자로 처리하는 데 사용.
+  fcfsBuyers?: string[];
   // 블라인드(blind) 전용
   blindBids?: BlindBid[];
   revealAt?: number;
@@ -168,6 +170,7 @@ export function createAuction(
   if (mode === 'fcfs') {
     state.stockTotal = stockTotal ?? 1;
     state.stockSold = 0;
+    state.fcfsBuyers = [];
   }
 
   if (mode === 'blind') {
@@ -183,7 +186,7 @@ export function createAuction(
 }
 
 // 경매 종료 시 참여자(낙찰자/패찰자) 목록을 모드별로 계산한다.
-// fcfs는 구매 즉시 개별 낙찰이 이미 발생하고 패찰 개념이 약해 스킵한다(빈 배열 반환).
+// fcfs는 구매자가 여럿일 수 있으므로 fcfsBuyers 전원을 참여자(전원 낙찰자)로 처리한다.
 function getAuctionParticipants(auc: AuctionState): string[] {
   if (auc.mode === 'normal') {
     return Array.from(new Set((auc.bidHistory ?? []).map((b) => b.userId)));
@@ -193,6 +196,9 @@ function getAuctionParticipants(auc: AuctionState): string[] {
   }
   if (auc.mode === 'giveaway') {
     return Array.from(new Set((auc.giveawayParticipants ?? []).map((p) => p.userId)));
+  }
+  if (auc.mode === 'fcfs') {
+    return Array.from(new Set(auc.fcfsBuyers ?? []));
   }
   return [];
 }
@@ -205,17 +211,20 @@ function emitAuctionEndRecommendations(auc: AuctionState, io: Server): void {
 
   const live = lives.get(auc.liveId);
   const category = live?.category;
+  // fcfs는 구매자 전원이 낙찰자다(topBidder는 마지막 구매자만 가리켜 판정 기준으로 쓸 수 없음).
+  const fcfsBuyerSet = auc.mode === 'fcfs' ? new Set(auc.fcfsBuyers ?? []) : null;
 
   setImmediate(async () => {
     await Promise.all(participants.map(async (userId) => {
       try {
+        const isWinner = fcfsBuyerSet ? fcfsBuyerSet.has(userId) : userId === auc.topBidder;
         const recommendations = await getAuctionEndRecommendations({
           category,
           productName: auc.productName,
           priceRange: auc.currentPrice,
           userId,
+          isWinner,
         });
-        const isWinner = userId === auc.topBidder;
         io.to(`user:${userId}`).emit('auction:recommendation', {
           auctionId: auc.id,
           liveId: auc.liveId,

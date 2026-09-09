@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import pool from '../db/mysql';
-import { getRecommendations } from '../utils/productRecommender';
+import { getRecommendations, hasBidOrPurchaseHistory } from '../utils/productRecommender';
 import { createNotification } from '../services/notifications';
 import { requireAuth, optionalAuth } from '../middleware/auth';
 import {
@@ -242,9 +242,14 @@ router.get('/combinable-shipping', async (req: Request, res: Response) => {
 });
 
 // GET /api/auctions/:id/recommendations
-router.get('/:id/recommendations', async (req: Request, res: Response) => {
+router.get('/:id/recommendations', optionalAuth, async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
+    // 로그인 사용자가 구매+입찰 이력이 전무하면 추천을 숨긴다(비로그인은 기존 동작 유지).
+    if (req.user && !(await hasBidOrPurchaseHistory(req.user.userId))) {
+      res.json({ recommendations: [], noHistory: true });
+      return;
+    }
     const [rows] = await pool.execute(AUCTION_QUERY, [id]) as [unknown[], unknown];
     const row = (rows as AuctionRow[])[0];
     if (!row) {

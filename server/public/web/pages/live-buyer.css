@@ -867,6 +867,15 @@
 .rec-card__price {
   font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--color-accent);
 }
+.rec-modal-card__dismiss {
+  display: flex; align-items: center; gap: var(--space-2);
+  font-size: var(--fs-xs); color: var(--color-ink-soft);
+  cursor: pointer; user-select: none;
+}
+.rec-modal-card__dismiss input[type="checkbox"] {
+  width: 14px; height: 14px; accent-color: var(--color-accent);
+  cursor: pointer;
+}
 
 /* Won slot machine (giveaway animation) */
 .won-slot { overflow: hidden; height: 2em; display: flex; align-items: center; justify-content: center; }

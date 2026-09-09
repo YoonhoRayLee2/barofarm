@@ -745,9 +745,16 @@ export default async function load(params) {
   // ---- Personalized recommendation modal (post-auction) ----
   let _recModalTimer = null;
 
+  function recModalDismissKey() {
+    return 'rec-modal-dismissed:' + liveId;
+  }
+
   function closeRecModal(backdrop) {
     clearTimeout(_recModalTimer);
     _recModalTimer = null;
+    if (backdrop.querySelector('#rec-modal-dont-show')?.checked) {
+      try { sessionStorage.setItem(recModalDismissKey(), '1'); } catch (_) {}
+    }
     backdrop.classList.remove('rec-modal-overlay--visible');
     setTimeout(() => { if (backdrop.parentNode) backdrop.remove(); }, 220);
   }
@@ -783,6 +790,10 @@ export default async function load(params) {
         <button class="rec-modal-card__close" id="rec-modal-close" aria-label="닫기">✕</button>
         <div class="rec-modal-card__title">${escapeHtml(heading)}</div>
         <div class="rec-modal-card__list">${cardsHtml}</div>
+        <label class="rec-modal-card__dismiss">
+          <input type="checkbox" id="rec-modal-dont-show" />
+          <span>이번 라이브 동안 다시 보지 않기</span>
+        </label>
       </div>
     `;
 
@@ -810,6 +821,9 @@ export default async function load(params) {
   }
 
   const handleAuctionRecommendation = (payload) => {
+    let dismissed = null;
+    try { dismissed = sessionStorage.getItem(recModalDismissKey()); } catch (_) {}
+    if (dismissed) return;
     showRecommendationModal(payload || {});
   };
 

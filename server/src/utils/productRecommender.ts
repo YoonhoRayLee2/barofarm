@@ -177,28 +177,36 @@ export function getRecommendations(
   const keywords = extractKeywords(productName);
   if (keywords.length === 0) return [];
 
-  let candidates = allProducts.filter((p) => !p.soldOut);
+  const allCandidates = allProducts.filter((p) => !p.soldOut);
 
   // 같은 카테고리 우선
+  let candidates = allCandidates;
   if (category) {
-    const sameCat = candidates.filter((p) => p.category === category);
+    const sameCat = allCandidates.filter((p) => p.category === category);
     if (sameCat.length > 0) {
       candidates = sameCat;
     }
   }
 
   // 점수 계산: 키워드 매칭(키워드당 2점), items 매칭(키워드당 1점)
-  const scored = candidates.map((p) => {
-    let score = 0;
-    for (const kw of keywords) {
-      if (p.name.includes(kw)) score += 2;
-      if (p.items.some((item) => item.includes(kw))) score += 1;
-    }
-    return { p, score };
-  });
+  const scoreOf = (pool: Product[]) =>
+    pool.map((p) => {
+      let score = 0;
+      for (const kw of keywords) {
+        if (p.name.includes(kw)) score += 2;
+        if (p.items.some((item) => item.includes(kw))) score += 1;
+      }
+      return { p, score };
+    }).filter(({ score }) => score > 0);
+
+  let scored = scoreOf(candidates);
+
+  // 카테고리로 좁힌 후보에서 매칭이 0건이면, 카테고리 필터를 풀고 전체에서 재시도.
+  if (scored.length === 0 && candidates !== allCandidates) {
+    scored = scoreOf(allCandidates);
+  }
 
   return scored
-    .filter(({ score }) => score > 0)
     .sort((a, b) => b.score - a.score || a.p.price - b.p.price)
     .slice(0, limit)
     .map(({ p }) => ({
@@ -231,26 +239,124 @@ interface AuctionEndRecommendationParams {
   productName: string;
   priceRange: number; // 종료된 경매 낙찰가(스코어링 기준가)
   userId?: string | null;
+  isWinner?: boolean;
+}
+
+/**
+ * 사용자의 낙찰(구매) 또는 입찰 이력이 1건이라도 있는지 확인.
+ * 이력 없는 사용자에게 추천 슬라이더를 숨기기 위한 판단 기준.
+ */
+export async function hasBidOrPurchaseHistory(userId: number): Promise<boolean> {
+  const [wonRows] = await pool.query<any[]>(
+    `SELECT 1 FROM auctions WHERE top_bidder_id = ? AND status = 'ended' LIMIT 1`,
+    [userId],
+  );
+  if (wonRows.length > 0) return true;
+
+  const [bidRows] = await pool.query<any[]>(
+    `SELECT 1 FROM bids WHERE bidder_id = ? LIMIT 1`,
+    [userId],
+  );
+  return bidRows.length > 0;
+}
+
+// 낙찰자의 과거 낙찰+입찰 이력을 카테고리별로 집계해, 방금 낙찰받은 카테고리를 제외한
+// 최선호 카테고리를 반환한다. 이력이 없으면 null(호출부에서 인기순 폴백 처리).
+async function getPreferredCategoryExcluding(
+  userId: string,
+  excludeCategory?: string | null,
+): Promise<string | null> {
+  const [wonRows] = await pool.query<any[]>(
+    `SELECT p.category AS category, COUNT(*) AS cnt
+       FROM auctions a
+       JOIN products p ON p.name = a.product_name
+      WHERE a.top_bidder_id = ? AND a.status = 'ended'
+      GROUP BY p.category`,
+    [Number(userId)],
+  );
+  const [bidRows] = await pool.query<any[]>(
+    `SELECT p.category AS category, COUNT(*) AS cnt
+       FROM bids b
+       JOIN auctions a ON a.id = b.auction_id
+       JOIN products p ON p.name = a.product_name
+      WHERE b.bidder_id = ?
+      GROUP BY p.category`,
+    [Number(userId)],
+  );
+
+  const scoreByCategory = new Map<string, number>();
+  for (const row of wonRows) {
+    const cat = String(row.category);
+    scoreByCategory.set(cat, (scoreByCategory.get(cat) ?? 0) + Number(row.cnt) * 2);
+  }
+  for (const row of bidRows) {
+    const cat = String(row.category);
+    scoreByCategory.set(cat, (scoreByCategory.get(cat) ?? 0) + Number(row.cnt) * 1);
+  }
+  if (excludeCategory) scoreByCategory.delete(excludeCategory);
+
+  if (scoreByCategory.size === 0) return null;
+
+  let best: string | null = null;
+  let bestScore = -1;
+  for (const [cat, score] of scoreByCategory) {
+    if (score > bestScore) {
+      best = cat;
+      bestScore = score;
+    }
+  }
+  return best;
+}
+
+// 낙찰자용: 방금 카테고리를 제외한 전체 카테고리 중 최근 24시간 인기순(낙찰 건수)으로 1개 선택.
+async function getPopularCategoryExcluding(excludeCategory?: string | null): Promise<string | null> {
+  const [popularityRows] = await pool.query<any[]>(
+    `SELECT p.category AS category, COUNT(*) AS cnt
+       FROM auctions a
+       JOIN products p ON p.name = a.product_name
+      WHERE a.status = 'ended' AND a.created_at > NOW() - INTERVAL 1 DAY
+      GROUP BY p.category
+      ORDER BY cnt DESC`,
+  );
+  for (const row of popularityRows) {
+    const cat = String(row.category);
+    if (cat !== excludeCategory) return cat;
+  }
+  const fallbackPool = ALL_CATEGORIES_FALLBACK.filter((c) => c !== excludeCategory);
+  return fallbackPool.length > 0 ? fallbackPool[0] : null;
 }
 
 /**
  * 라이브 경매 종료 시 낙찰자/패찰자에게 보여줄 개인화 추천 상품 목록.
  * 1순위: barofarm 자체 products 테이블에서 다중신호 스코어링.
  * 2순위: 결과가 부족하면(6개 미만) 농협몰 스냅샷(productRecommender 기존 함수)으로 보강.
+ *
+ * 패찰자(isWinner=false): 같은 카테고리 위주 다중신호 스코어링(기존 로직 그대로).
+ * 낙찰자(isWinner=true): 방금 낙찰받은 카테고리는 제외하고, 과거 낙찰+입찰 이력 기반
+ * 선호 카테고리(없으면 최근 인기 카테고리)로 방향을 바꾼다.
  */
 export async function getAuctionEndRecommendations(
-  { category, productName, priceRange, userId }: AuctionEndRecommendationParams,
+  { category, productName, priceRange, userId, isWinner }: AuctionEndRecommendationParams,
   limit = 8,
 ): Promise<RecommendedProduct[]> {
   const results: RecommendedProduct[] = [];
 
+  // 낙찰자는 조회 대상 카테고리를 "선호 카테고리"로 치환한다(없으면 인기 카테고리 폴백).
+  let queryCategory = category;
+  if (isWinner) {
+    queryCategory = userId
+      ? (await getPreferredCategoryExcluding(userId, category).catch(() => null)) ??
+        (await getPopularCategoryExcluding(category).catch(() => null))
+      : await getPopularCategoryExcluding(category).catch(() => null);
+  }
+
   try {
-    if (category) {
+    if (queryCategory) {
       const [candidateRows] = await pool.query<any[]>(
         `SELECT id, name, price, category, image_url, created_at
            FROM products
           WHERE category = ? AND status = 'active'`,
-        [category],
+        [queryCategory],
       );
 
       if (candidateRows.length > 0) {
@@ -329,8 +435,8 @@ export async function getAuctionEndRecommendations(
   // 2순위 보강: barofarm 결과가 부족하면 농협몰 스냅샷으로 채운다.
   if (results.length < 6) {
     const fallbackLimit = limit - results.length;
-    const fallback = category
-      ? getRecommendations(productName, category, fallbackLimit)
+    const fallback = queryCategory
+      ? getRecommendations(productName, queryCategory, fallbackLimit)
       : getRecommendationsByCategories(ALL_CATEGORIES_FALLBACK, fallbackLimit);
     for (const p of fallback) {
       results.push({

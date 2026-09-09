@@ -236,6 +236,9 @@ export default function registerAuctionSocket(io: Server): void {
         // 구매자를 topBidder로 갱신 (대표/최종 낙찰자 표시용 — 실제 주문은 개별 저장됨)
         auction.topBidder = userId;
         if (userName) auction.topBidderName = userName;
+        // fcfs는 구매자가 여럿일 수 있으므로 전원을 기록해 경매종료 추천 emit 시 전원을 낙찰자로 처리한다.
+        if (!auction.fcfsBuyers) auction.fcfsBuyers = [];
+        auction.fcfsBuyers.push(userId);
 
         const ts = Date.now();
         io.to(liveId).emit('purchase:made', { userId, userName, soldIndex, price: auction.currentPrice, ts });

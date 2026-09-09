@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import pool from '../db/mysql';
-import { getRecommendationsByCategories, getPersonalizedRecommendations } from '../utils/productRecommender';
+import { getRecommendationsByCategories, getPersonalizedRecommendations, hasBidOrPurchaseHistory } from '../utils/productRecommender';
 
 const router = Router();
 
@@ -26,6 +26,12 @@ router.get('/by-interests', async (req: Request, res: Response) => {
     const token = authHeader.slice(7);
     try {
       const payload = jwt.verify(token, process.env.JWT_SECRET!) as { userId: number };
+
+      // 구매+입찰 이력이 전무하면 추천 자체를 숨긴다(프론트에서 섹션 숨김 처리).
+      if (!(await hasBidOrPurchaseHistory(payload.userId))) {
+        return res.json({ recommendations: [], noHistory: true });
+      }
+
       const [rows] = await pool.query<any[]>(
         'SELECT interests FROM users WHERE id = ?',
         [payload.userId]
@@ -68,6 +74,11 @@ router.get('/personalized', async (req: Request, res: Response) => {
   try {
     const token = authHeader.slice(7);
     const payload = jwt.verify(token, process.env.JWT_SECRET!) as { userId: number };
+
+    // 구매+입찰 이력이 전무하면 fallback으로 채우지 않고 숨김 플래그만 반환.
+    if (!(await hasBidOrPurchaseHistory(payload.userId))) {
+      return res.json({ recommendations: [], noHistory: true });
+    }
 
     // 관심 카테고리
     const [userRows] = await pool.query<any[]>(

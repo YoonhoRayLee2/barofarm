@@ -510,7 +510,9 @@ async function loadProductRecommendations(page, category) {
     const params = category
       ? `categories=${encodeURIComponent(category)}&limit=6`
       : 'limit=6';
-    const { recommendations } = await request(`/api/recommendations/by-interests?${params}`);
+    const { recommendations, noHistory } = await request(`/api/recommendations/by-interests?${params}`);
+
+    if (noHistory) { section.classList.add('is-hidden'); return; }
 
     if (!recommendations || recommendations.length === 0) return;
 

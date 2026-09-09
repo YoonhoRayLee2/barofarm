@@ -743,7 +743,9 @@ async function loadHomeRecommendations(feed) {
   if (isNhmallRecHidden()) { section.classList.add('is-hidden'); return; }
 
   try {
-    const { recommendations } = await request('/api/recommendations/personalized?limit=8');
+    const { recommendations, noHistory } = await request('/api/recommendations/personalized?limit=8');
+
+    if (noHistory) { section.classList.add('is-hidden'); return; }
 
     if (!recommendations || recommendations.length === 0) return;
 
