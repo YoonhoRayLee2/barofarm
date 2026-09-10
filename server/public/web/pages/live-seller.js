@@ -512,6 +512,12 @@ export default async function load(params) {
   }
 
   function updateAuctionUI(auction) {
+    // auction:update(매초 타이머 tick)는 서버 AuctionState 전체를 새로 보내는데 여기엔
+    // giveawayCount 필드가 없다(참여 시점 giveaway:count 이벤트로만 갱신되는 클라이언트 전용 값).
+    // 그대로 덮어쓰면 tick마다 참여자 수가 0으로 리셋되므로 같은 경매면 이어받는다.
+    if (auction && currentAuction && String(currentAuction.id) === String(auction.id) && auction.giveawayCount == null) {
+      auction.giveawayCount = currentAuction.giveawayCount;
+    }
     currentAuction = auction;
     const noAuction = page.querySelector('#ls-no-auction');
     const productBlock = page.querySelector('#ls-product-block');

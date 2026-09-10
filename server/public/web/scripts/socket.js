@@ -152,6 +152,17 @@ export function onViewerCount(socket, cb) {
 }
 
 /**
+ * Subscribe to live memo updates (seller edits memo while broadcasting).
+ * @param {Socket} socket
+ * @param {(data: { liveId: string, memo: string|null, memoImages: string[] }) => void} cb
+ * @returns {() => void} unsubscribe
+ */
+export function onLiveMemoUpdated(socket, cb) {
+  socket.on('live:memo:updated', cb);
+  return () => socket.off('live:memo:updated', cb);
+}
+
+/**
  * Subscribe to lobby — new live created.
  * @param {Socket} socket
  * @param {(live: import('./models.js').Live) => void} cb

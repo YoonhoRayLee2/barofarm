@@ -639,6 +639,9 @@ export function createLiveRouter(io: Server) {
       console.warn('[live] memo DB UPDATE 실패:', (err as Error).message);
     }
 
+    // 이미 입장해 있는 버이어들에게 실시간 반영 — 없으면 페이지 재진입 전까지 옛 메모가 보임
+    io.to(liveId).emit('live:memo:updated', { liveId, memo: live.memo, memoImages: finalMemoImages });
+
     res.json({ memo: live.memo, memoImages: finalMemoImages });
   });
 

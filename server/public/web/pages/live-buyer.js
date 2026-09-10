@@ -1411,6 +1411,13 @@ export default async function load(params) {
     if (el) el.textContent = String(count);
   });
 
+  const unsubMemoUpdated = Sock.onLiveMemoUpdated(socket, ({ liveId: updatedLiveId, memo, memoImages }) => {
+    if (String(updatedLiveId) !== String(liveId)) return;
+    if (!liveInfo) liveInfo = {};
+    liveInfo.memo = memo;
+    liveInfo.memoImages = memoImages;
+  });
+
   let _viewerNames = [];
   const unsubViewerList = Sock.onViewerList(socket, ({ viewers }) => {
     _viewerNames = viewers || [];
@@ -1556,7 +1563,7 @@ export default async function load(params) {
   unsubFns.push(
     unsubAuctionUpdate, unsubAuctionNew, unsubAuctionEnded, unsubChat, unsubViewers, unsubViewerList,
     unsubBlindBidCount, unsubGiveawayCount, unsubGiveawayJoinAck, unsubViewerJoin,
-    unsubPurchaseMade, unsubBidBlindAck, unsubBidRejected, unsubLiveEnded,
+    unsubPurchaseMade, unsubBidBlindAck, unsubBidRejected, unsubLiveEnded, unsubMemoUpdated,
     unsubEmoji,
     () => socket.off('connect', onSocketConnect),
     () => socket.off('auction:recommendation', handleAuctionRecommendation),
