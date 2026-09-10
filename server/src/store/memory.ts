@@ -206,6 +206,7 @@ function getAuctionParticipants(auc: AuctionState): string[] {
 // 경매 종료 후 낙찰자/패찰자 전원에게 개인화 추천 상품을 emit한다.
 // 종료 응답(auction:ended)을 막지 않도록 setImmediate로 비동기 처리하며, 에러는 삼킨다.
 function emitAuctionEndRecommendations(auc: AuctionState, io: Server): void {
+  if (auc.mode === 'giveaway') return; // 무료나눔은 낙찰/구매 성격이 아니므로 추천 미emit
   const participants = getAuctionParticipants(auc);
   if (participants.length === 0) return;
 
@@ -230,6 +231,7 @@ function emitAuctionEndRecommendations(auc: AuctionState, io: Server): void {
           liveId: auc.liveId,
           productName: auc.productName,
           category: category ?? null,
+          mode: auc.mode,
           isWinner,
           recommendations,
         });

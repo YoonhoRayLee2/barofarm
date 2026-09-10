@@ -827,6 +827,7 @@ export default async function load(params) {
   }
 
   const handleAuctionRecommendation = (payload) => {
+    if (payload?.mode === 'giveaway') return; // 무료나눔은 낙찰/구매 성격이 아니므로 추천모달 미표시
     let dismissed = null;
     try { dismissed = sessionStorage.getItem(recModalDismissKey()); } catch (_) {}
     if (dismissed) return;
