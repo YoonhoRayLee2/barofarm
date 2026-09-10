@@ -313,35 +313,40 @@ export async function hasBidOrPurchaseHistory(userId: number): Promise<boolean> 
 
 // 낙찰자의 과거 낙찰+입찰 이력을 카테고리별로 집계해, 방금 낙찰받은 카테고리를 제외한
 // 최선호 카테고리를 반환한다. 이력이 없으면 null(호출부에서 인기순 폴백 처리).
+//
+// 카테고리는 barofarm 자체 products 테이블 조인이 아니라 상품명(product_name) 기반
+// inferCategoryFromName으로 추론한다 — products 테이블은 실사용 안 되는 소수 row뿐이라
+// 조인 시 실제 낙찰/입찰 상품명("배추 10kg" 등)과 거의 매칭되지 않아 이 함수가 항상 null을
+// 반환하는 죽은 코드였다(호출부는 항상 인기순 폴백으로 흐름).
 async function getPreferredCategoryExcluding(
   userId: string,
   excludeCategory?: string | null,
 ): Promise<string | null> {
   const [wonRows] = await pool.query<any[]>(
-    `SELECT p.category AS category, COUNT(*) AS cnt
-       FROM auctions a
-       JOIN products p ON p.name = a.product_name
-      WHERE a.top_bidder_id = ? AND a.status = 'ended'
-      GROUP BY p.category`,
+    `SELECT product_name, COUNT(*) AS cnt
+       FROM auctions
+      WHERE top_bidder_id = ? AND status = 'ended'
+      GROUP BY product_name`,
     [Number(userId)],
   );
   const [bidRows] = await pool.query<any[]>(
-    `SELECT p.category AS category, COUNT(*) AS cnt
+    `SELECT a.product_name AS product_name, COUNT(*) AS cnt
        FROM bids b
        JOIN auctions a ON a.id = b.auction_id
-       JOIN products p ON p.name = a.product_name
       WHERE b.bidder_id = ?
-      GROUP BY p.category`,
+      GROUP BY a.product_name`,
     [Number(userId)],
   );
 
   const scoreByCategory = new Map<string, number>();
   for (const row of wonRows) {
-    const cat = String(row.category);
+    const cat = inferCategoryFromName(String(row.product_name));
+    if (!cat) continue;
     scoreByCategory.set(cat, (scoreByCategory.get(cat) ?? 0) + Number(row.cnt) * 2);
   }
   for (const row of bidRows) {
-    const cat = String(row.category);
+    const cat = inferCategoryFromName(String(row.product_name));
+    if (!cat) continue;
     scoreByCategory.set(cat, (scoreByCategory.get(cat) ?? 0) + Number(row.cnt) * 1);
   }
   if (excludeCategory) scoreByCategory.delete(excludeCategory);
@@ -360,17 +365,22 @@ async function getPreferredCategoryExcluding(
 }
 
 // 낙찰자용: 방금 카테고리를 제외한 전체 카테고리 중 최근 24시간 인기순(낙찰 건수)으로 1개 선택.
+// getPreferredCategoryExcluding과 동일한 이유로 products 테이블 조인 대신 상품명 추론을 사용한다.
 async function getPopularCategoryExcluding(excludeCategory?: string | null): Promise<string | null> {
-  const [popularityRows] = await pool.query<any[]>(
-    `SELECT p.category AS category, COUNT(*) AS cnt
-       FROM auctions a
-       JOIN products p ON p.name = a.product_name
-      WHERE a.status = 'ended' AND a.created_at > NOW() - INTERVAL 1 DAY
-      GROUP BY p.category
-      ORDER BY cnt DESC`,
+  const [endedRows] = await pool.query<any[]>(
+    `SELECT product_name, COUNT(*) AS cnt
+       FROM auctions
+      WHERE status = 'ended' AND created_at > NOW() - INTERVAL 1 DAY
+      GROUP BY product_name`,
   );
-  for (const row of popularityRows) {
-    const cat = String(row.category);
+  const cntByCategory = new Map<string, number>();
+  for (const row of endedRows) {
+    const cat = inferCategoryFromName(String(row.product_name));
+    if (!cat) continue;
+    cntByCategory.set(cat, (cntByCategory.get(cat) ?? 0) + Number(row.cnt));
+  }
+  const sorted = [...cntByCategory.entries()].sort((a, b) => b[1] - a[1]);
+  for (const [cat] of sorted) {
     if (cat !== excludeCategory) return cat;
   }
   const fallbackPool = ALL_CATEGORIES_FALLBACK.filter((c) => c !== excludeCategory);
