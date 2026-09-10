@@ -743,15 +743,11 @@ export default async function load(params) {
   }
 
   // ---- Personalized recommendation modal (post-auction) ----
-  let _recModalTimer = null;
-
   function recModalDismissKey() {
     return 'rec-modal-dismissed:' + liveId;
   }
 
   function closeRecModal(backdrop) {
-    clearTimeout(_recModalTimer);
-    _recModalTimer = null;
     if (backdrop.querySelector('#rec-modal-dont-show')?.checked) {
       try { sessionStorage.setItem(recModalDismissKey(), '1'); } catch (_) {}
     }
@@ -828,9 +824,6 @@ export default async function load(params) {
 
     page.appendChild(backdrop);
     requestAnimationFrame(() => backdrop.classList.add('rec-modal-overlay--visible'));
-
-    clearTimeout(_recModalTimer);
-    _recModalTimer = setTimeout(() => closeRecModal(backdrop), 10000);
   }
 
   const handleAuctionRecommendation = (payload) => {
@@ -1701,7 +1694,6 @@ export default async function load(params) {
       videoEl.srcObject = null;
     }
     clearTimeout(buyReenableTimer);
-    clearTimeout(_recModalTimer);
     timer.destroy();
     chatOverlay.destroy();
     if (slideBidComp) { slideBidComp.destroy(); slideBidComp = null; }
