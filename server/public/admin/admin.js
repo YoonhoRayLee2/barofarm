@@ -1140,6 +1140,133 @@ function initUsersPage() {
     await apiFetch(`/admin/api/users/${_currentUser.id}`, { method: 'PATCH', body: JSON.stringify(body) });
   }
 
+  function addressCardHtml(a) {
+    return `
+      <div class="address-card" data-addrid="${escapeHtml(String(a.id))}">
+        <div class="address-card__row">
+          <strong>${escapeHtml(a.name)}</strong> · ${escapeHtml(a.phone)}
+          ${a.isDefault ? '<span class="badge badge--success">기본</span>' : ''}
+        </div>
+        <div class="address-card__row text-muted">[${escapeHtml(a.zipcode)}] ${escapeHtml(a.address)} ${escapeHtml(a.detail || '')}</div>
+        <div class="address-card__actions">
+          <button class="btn-small btn-secondary" data-edit="${escapeHtml(String(a.id))}">수정</button>
+          ${a.isDefault ? '' : `<button class="btn-small btn-secondary" data-setdefault="${escapeHtml(String(a.id))}">기본 지정</button>`}
+          <button class="btn-small btn-danger" data-delete="${escapeHtml(String(a.id))}">삭제</button>
+        </div>
+      </div>`;
+  }
+
+  function addressFormHtml(addr) {
+    const a = addr || {};
+    return `
+      <div class="address-form">
+        <div class="modal-field">
+          <label>이름*</label>
+          <input type="text" id="addr-form-name" maxlength="60" value="${escapeHtml(a.name || '')}" />
+        </div>
+        <div class="modal-field">
+          <label>연락처*</label>
+          <input type="text" id="addr-form-phone" maxlength="20" value="${escapeHtml(a.phone || '')}" />
+        </div>
+        <div class="modal-field">
+          <label>우편번호*</label>
+          <input type="text" id="addr-form-zipcode" maxlength="10" value="${escapeHtml(a.zipcode || '')}" />
+        </div>
+        <div class="modal-field">
+          <label>주소*</label>
+          <input type="text" id="addr-form-address" maxlength="255" value="${escapeHtml(a.address || '')}" />
+        </div>
+        <div class="modal-field">
+          <label>상세</label>
+          <input type="text" id="addr-form-detail" maxlength="100" value="${escapeHtml(a.detail || '')}" />
+        </div>
+        <div class="modal-field--row">
+          <button class="btn-small" id="addr-form-save">저장</button>
+          <button class="btn-small btn-secondary" id="addr-form-cancel">취소</button>
+        </div>
+      </div>`;
+  }
+
+  function readAddressForm() {
+    const name = document.getElementById('addr-form-name').value.trim();
+    const phone = document.getElementById('addr-form-phone').value.trim();
+    const zipcode = document.getElementById('addr-form-zipcode').value.trim();
+    const address = document.getElementById('addr-form-address').value.trim();
+    const detail = document.getElementById('addr-form-detail').value.trim();
+    if (!name || !phone || !zipcode || !address) {
+      adminToast('이름, 연락처, 우편번호, 주소는 필수입니다.', { type: 'error' });
+      return null;
+    }
+    return { name, phone, zipcode, address, detail };
+  }
+
+  function bindAddressForm(userId, section, addr, onDone) {
+    section.querySelector('#addr-form-cancel').addEventListener('click', () => loadUserAddresses(userId));
+    section.querySelector('#addr-form-save').addEventListener('click', async () => {
+      const body = readAddressForm();
+      if (!body) return;
+      try {
+        if (addr && addr.id) {
+          await apiFetch(`/admin/api/users/${userId}/delivery-addresses/${addr.id}`, { method: 'PATCH', body: JSON.stringify(body) });
+        } else {
+          await apiFetch(`/admin/api/users/${userId}/delivery-addresses`, { method: 'POST', body: JSON.stringify(body) });
+        }
+        adminToast('저장되었습니다.', { type: 'success' });
+        onDone();
+      } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
+    });
+  }
+
+  async function loadUserAddresses(userId) {
+    const section = document.getElementById('user-addresses-section');
+    if (!section) return;
+    section.innerHTML = '<span class="spinner"></span>';
+    try {
+      const data = await apiFetch(`/admin/api/users/${userId}/delivery-addresses`);
+      const addresses = data.addresses || [];
+      section.innerHTML = `
+        <div class="address-list">${addresses.length
+          ? addresses.map(addressCardHtml).join('')
+          : '<p class="text-muted">등록된 배송지가 없습니다.</p>'}</div>
+        <div class="modal-field--row">
+          <button class="btn-small btn-secondary" id="addr-add-btn">+ 배송지 추가</button>
+        </div>`;
+
+      section.querySelectorAll('button[data-edit]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const addr = addresses.find(a => String(a.id) === btn.dataset.edit);
+          section.innerHTML = addressFormHtml(addr);
+          bindAddressForm(userId, section, addr, () => loadUserAddresses(userId));
+        });
+      });
+      section.querySelectorAll('button[data-setdefault]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          try {
+            await apiFetch(`/admin/api/users/${userId}/delivery-addresses/${btn.dataset.setdefault}/set-default`, { method: 'PATCH' });
+            adminToast('기본 배송지로 지정되었습니다.', { type: 'success' });
+            loadUserAddresses(userId);
+          } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
+        });
+      });
+      section.querySelectorAll('button[data-delete]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!(await adminConfirm({ title: '배송지 삭제', message: '이 배송지를 삭제하시겠습니까?', danger: true }))) return;
+          try {
+            await apiFetch(`/admin/api/users/${userId}/delivery-addresses/${btn.dataset.delete}`, { method: 'DELETE' });
+            adminToast('삭제되었습니다.', { type: 'success' });
+            loadUserAddresses(userId);
+          } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
+        });
+      });
+      section.querySelector('#addr-add-btn').addEventListener('click', () => {
+        section.innerHTML = addressFormHtml(null);
+        bindAddressForm(userId, section, null, () => loadUserAddresses(userId));
+      });
+    } catch (err) {
+      section.innerHTML = `<p style="color:var(--danger)">오류: ${escapeHtml(err.message)}</p>`;
+    }
+  }
+
   async function openUserModal(userId) {
     const modal = document.getElementById('user-modal');
     const body = document.getElementById('user-modal-body');
@@ -1173,7 +1300,10 @@ function initUsersPage() {
         <div class="modal-section-title">계정 상태</div>
         <div class="modal-field--row">
           <button class="btn-small ${u.status === 'suspended' ? '' : 'btn-danger'}" id="user-toggle-status-btn">${u.status === 'suspended' ? '정지 해제' : '계정 정지'}</button>
-        </div>`;
+        </div>
+
+        <div class="modal-section-title">배송지</div>
+        <div id="user-addresses-section"><span class="spinner"></span></div>`;
       adminBtn.textContent = u.is_admin ? '운영자 해제' : '운영자 지정';
       sellerBtn.textContent = u.role === 'seller' ? '판매자 해제' : '판매자 지정';
 
@@ -1202,6 +1332,8 @@ function initUsersPage() {
         try { await patchUser({ status: newStatus }); closeUserModal(); loadUsers(_currentPage); }
         catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
       });
+
+      loadUserAddresses(userId);
     } catch (err) {
       body.innerHTML = `<p style="color:var(--danger)">오류: ${escapeHtml(err.message)}</p>`;
     }
@@ -2556,6 +2688,171 @@ function initRestAuctionsPage() {
   loadRestAuctions(1);
 }
 
+/* -------------------- Chat rooms page (/admin/chat-rooms) -------------------- */
+
+function initChatRoomsPage() {
+  if (!getToken()) { window.location.href = '/admin'; return; }
+  bindLogout();
+  let _page = 1;
+  let _current = null;
+  let _oldestLoadedId = null;
+  let _hasMore = false;
+
+  function roomDisplayName(r) {
+    if (r.isDm) {
+      const names = (r.members || []).map(m => m.nickname);
+      return names.length ? names.join(' ↔ ') : 'DM';
+    }
+    return r.name || '-';
+  }
+
+  async function load(page) {
+    _page = page;
+    const q = document.getElementById('cr-search').value.trim();
+    const type = document.getElementById('cr-type-filter').value;
+    const tbody = document.getElementById('cr-tbody');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="7"><span class="spinner"></span></td></tr>';
+    try {
+      const params = new URLSearchParams({ page });
+      if (q) params.set('q', q);
+      if (type) params.set('type', type);
+      const data = await apiFetch(`/admin/api/chat-rooms?${params}`);
+      const rows = data.rooms || [];
+      if (!rows.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="7">없음</td></tr>'; return; }
+      tbody.innerHTML = rows.map(r => `<tr data-id="${escapeHtml(String(r.id))}" style="cursor:pointer">
+        <td>${escapeHtml(String(r.id))}</td>
+        <td>${r.isDm ? '1:1 DM' : '그룹'}</td>
+        <td>${escapeHtml(roomDisplayName(r))}</td>
+        <td>${escapeHtml(String(r.memberCount ?? '-'))}</td>
+        <td>${escapeHtml(String(r.messageCount ?? '-'))}</td>
+        <td class="text-muted">${escapeHtml(r.lastMessage ? (r.lastMessage.length > 30 ? r.lastMessage.slice(0, 30) + '…' : r.lastMessage) : '-')}</td>
+        <td class="text-muted">${formatDate(r.lastMessageAt || r.createdAt)}</td></tr>`).join('');
+      renderPagination('cr-pagination', page, data.total, data.pageSize || 20, load);
+    } catch (err) { tbody.innerHTML = `<tr class="empty-row"><td colspan="7">오류: ${escapeHtml(err.message)}</td></tr>`; }
+  }
+
+  function renderMembers(members) {
+    return (members || []).map(m => `
+      <div class="cr-member-row">
+        <span>${escapeHtml(m.nickname)} ${m.username ? `(${escapeHtml(m.username)})` : ''}</span>
+        <button class="btn-small btn-danger" data-kick="${escapeHtml(String(m.userId))}">강퇴</button>
+      </div>`).join('') || '<p class="text-muted">멤버 없음</p>';
+  }
+
+  function renderMessages(messages, prepend) {
+    const panel = document.getElementById('cr-messages-panel');
+    const html = (messages || []).map(m => `
+      <div class="cr-admin-msg" data-msgid="${escapeHtml(String(m.id))}">
+        <div class="cr-admin-msg__meta">
+          <strong>${escapeHtml(m.nickname)}</strong>
+          <span class="text-muted">${formatDate(m.createdAt)}</span>
+          <button class="btn-small btn-danger" data-delmsg="${escapeHtml(String(m.id))}">삭제</button>
+        </div>
+        <div class="cr-admin-msg__text">${escapeHtml(m.message)}</div>
+      </div>`).join('');
+    if (prepend) {
+      const scrollBefore = panel.scrollHeight - panel.scrollTop;
+      panel.insertAdjacentHTML('afterbegin', html);
+      panel.scrollTop = panel.scrollHeight - scrollBefore;
+    } else {
+      panel.innerHTML = html || '<p class="text-muted">메시지 없음</p>';
+      panel.scrollTop = panel.scrollHeight;
+    }
+    bindMessageDeleteButtons();
+  }
+
+  function bindMessageDeleteButtons() {
+    document.querySelectorAll('#cr-messages-panel button[data-delmsg]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!(await adminConfirm({ title: '메시지 삭제', message: '이 메시지를 삭제하시겠습니까?', danger: true }))) return;
+        try {
+          await apiFetch(`/admin/api/chat-rooms/${_current.id}/messages/${btn.dataset.delmsg}`, { method: 'DELETE' });
+          document.querySelector(`#cr-messages-panel [data-msgid="${btn.dataset.delmsg}"]`)?.remove();
+          adminToast('삭제되었습니다.', { type: 'success' });
+        } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
+      });
+    });
+  }
+
+  async function loadMoreMessages() {
+    if (!_hasMore || !_current) return;
+    try {
+      const params = new URLSearchParams({ limit: 50 });
+      if (_oldestLoadedId != null) params.set('before', _oldestLoadedId);
+      const data = await apiFetch(`/admin/api/chat-rooms/${_current.id}/messages?${params}`);
+      const msgs = data.messages || [];
+      if (msgs.length) _oldestLoadedId = msgs[0].id;
+      _hasMore = !!data.hasMore;
+      document.getElementById('cr-load-more-btn').hidden = !_hasMore;
+      renderMessages(msgs, true);
+    } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
+  }
+
+  async function openModal(id) {
+    const modal = document.getElementById('cr-modal');
+    const body = document.getElementById('cr-modal-body');
+    modal.hidden = false;
+    body.innerHTML = '<span class="spinner"></span>';
+    _oldestLoadedId = null;
+    _hasMore = false;
+    try {
+      const [detail, msgData] = await Promise.all([
+        apiFetch(`/admin/api/chat-rooms/${id}`),
+        apiFetch(`/admin/api/chat-rooms/${id}/messages?limit=50`),
+      ]);
+      _current = detail.room;
+      document.getElementById('cr-modal-title').textContent = `채팅방 #${detail.room.id} — ${detail.room.isDm ? '1:1 DM' : (detail.room.name || '')}`;
+      const msgs = msgData.messages || [];
+      if (msgs.length) _oldestLoadedId = msgs[0].id;
+      _hasMore = !!msgData.hasMore;
+      body.innerHTML = `
+        <div class="modal-section-title">멤버</div>
+        <div id="cr-members-list">${renderMembers(detail.members)}</div>
+        <div class="modal-section-title">메시지</div>
+        <button class="btn-small btn-secondary" id="cr-load-more-btn" ${_hasMore ? '' : 'hidden'}>이전 메시지 더보기</button>
+        <div id="cr-messages-panel" class="cr-messages-panel"></div>`;
+      renderMessages(msgs, false);
+      document.getElementById('cr-load-more-btn').addEventListener('click', loadMoreMessages);
+      document.querySelectorAll('#cr-members-list button[data-kick]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!(await adminConfirm({ title: '멤버 강퇴', message: '이 멤버를 강퇴하시겠습니까?', danger: true }))) return;
+          try {
+            await apiFetch(`/admin/api/chat-rooms/${_current.id}/members/${btn.dataset.kick}`, { method: 'DELETE' });
+            adminToast('강퇴되었습니다.', { type: 'success' });
+            openModal(_current.id);
+          } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
+        });
+      });
+    } catch (err) {
+      body.innerHTML = `<p style="color:var(--danger)">오류: ${escapeHtml(err.message)}</p>`;
+    }
+  }
+
+  function closeModal() { document.getElementById('cr-modal').hidden = true; _current = null; }
+
+  document.getElementById('cr-search-btn').addEventListener('click', () => load(1));
+  document.getElementById('cr-search').addEventListener('keydown', e => { if (e.key === 'Enter') load(1); });
+  document.getElementById('cr-type-filter').addEventListener('change', () => load(1));
+  document.getElementById('cr-tbody').addEventListener('click', e => {
+    const tr = e.target.closest('tr[data-id]');
+    if (tr) openModal(tr.dataset.id);
+  });
+  document.getElementById('cr-modal-close').addEventListener('click', closeModal);
+  document.getElementById('cr-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+  document.getElementById('cr-delete-room-btn').addEventListener('click', async () => {
+    if (!_current) return;
+    if (!(await adminConfirm({ title: '채팅방 삭제', message: '이 채팅방을 삭제하시겠습니까? 되돌릴 수 없습니다.', danger: true }))) return;
+    try {
+      await apiFetch(`/admin/api/chat-rooms/${_current.id}`, { method: 'DELETE' });
+      adminToast('삭제되었습니다.', { type: 'success' });
+      closeModal();
+      load(_page);
+    } catch (err) { adminToast(`오류: ${err.message}`, { type: 'error' }); }
+  });
+
+  load(1);
+}
+
 /* -------------------- Bootstrap -------------------- */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -2566,6 +2863,7 @@ document.addEventListener('DOMContentLoaded', () => {
   else if (page === 'auctions') initAuctionsPage();
   else if (page === 'products') initProductsPage();
   else if (page === 'reviews') initReviewsPage();
+  else if (page === 'chat-rooms') initChatRoomsPage();
   else if (page === 'group-deals') initGroupDealsPage();
   else if (page === 'consignments') initConsignmentsPage();
   else if (page === 'notice') initNoticePage();

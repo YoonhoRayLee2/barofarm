@@ -13,6 +13,7 @@ import { requireAdmin } from '../middleware/admin-auth';
 import createAdminPaymentsRouter from './admin-payments';
 import createAdminAuthManagementRouter from './admin-auth-management';
 import createAdminRestAuctionsRouter from './admin-rest-auctions';
+import { listAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress, getAddress } from '../services/delivery-addresses';
 
 function getSecret(): string {
   return process.env.JWT_SECRET!;
@@ -779,6 +780,108 @@ export default function createAdminRouter(io: Server) {
     }
   });
 
+  const DELIVERY_ADDRESS_MAX_LENGTHS: Record<string, number> = {
+    name: 60,
+    phone: 20,
+    zipcode: 10,
+    address: 255,
+    detail: 100,
+  };
+
+  function validateDeliveryAddressBody(body: any): string | null {
+    const { name, phone, zipcode, address } = body ?? {};
+    if (!name || !phone || !zipcode || !address) return 'name, phone, zipcode, address는 필수입니다';
+    for (const [field, max] of Object.entries(DELIVERY_ADDRESS_MAX_LENGTHS)) {
+      const value = body[field];
+      if (value != null && String(value).length > max) {
+        return `${field}는 최대 ${max}자까지 가능합니다`;
+      }
+    }
+    return null;
+  }
+
+  // GET /admin/api/users/:id/delivery-addresses
+  router.get('/api/users/:id/delivery-addresses', requireAdmin, async (req, res) => {
+    const userId = Number(req.params.id);
+    try {
+      const [[user]] = await pool.query<any>('SELECT id FROM users WHERE id=? LIMIT 1', [userId]) as any;
+      if (!user) { res.status(404).json({ error: 'Not found' }); return; }
+      const addresses = await listAddresses(userId);
+      res.json({ addresses });
+    } catch (err) {
+      console.error('[admin/users/:id/delivery-addresses GET]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // POST /admin/api/users/:id/delivery-addresses
+  router.post('/api/users/:id/delivery-addresses', requireAdmin, async (req, res) => {
+    const userId = Number(req.params.id);
+    const validationError = validateDeliveryAddressBody(req.body);
+    if (validationError) { res.status(400).json({ error: validationError }); return; }
+    try {
+      const [[user]] = await pool.query<any>('SELECT id FROM users WHERE id=? LIMIT 1', [userId]) as any;
+      if (!user) { res.status(404).json({ error: 'Not found' }); return; }
+      const { name, phone, zipcode, address, detail } = req.body;
+      const { id } = await createAddress(userId, { name, phone, zipcode, address, detail });
+      const created = await getAddress(userId, id);
+      await writeAudit(req, 'user.delivery_address.create', 'user', userId, { addrId: id });
+      res.json({ address: created });
+    } catch (err) {
+      console.error('[admin/users/:id/delivery-addresses POST]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // PATCH /admin/api/users/:id/delivery-addresses/:addrId
+  router.patch('/api/users/:id/delivery-addresses/:addrId', requireAdmin, async (req, res) => {
+    const userId = Number(req.params.id);
+    const addrId = Number(req.params.addrId);
+    const validationError = validateDeliveryAddressBody(req.body);
+    if (validationError) { res.status(400).json({ error: validationError }); return; }
+    try {
+      const { name, phone, zipcode, address, detail } = req.body;
+      const result = await updateAddress(userId, addrId, { name, phone, zipcode, address, detail });
+      if (!result) { res.status(404).json({ error: 'Not found' }); return; }
+      const updated = await getAddress(userId, addrId);
+      await writeAudit(req, 'user.delivery_address.update', 'user', userId, { addrId });
+      res.json({ address: updated });
+    } catch (err) {
+      console.error('[admin/users/:id/delivery-addresses/:addrId PATCH]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // DELETE /admin/api/users/:id/delivery-addresses/:addrId
+  router.delete('/api/users/:id/delivery-addresses/:addrId', requireAdmin, async (req, res) => {
+    const userId = Number(req.params.id);
+    const addrId = Number(req.params.addrId);
+    try {
+      const result = await deleteAddress(userId, addrId);
+      if (!result) { res.status(404).json({ error: 'Not found' }); return; }
+      await writeAudit(req, 'user.delivery_address.delete', 'user', userId, { addrId });
+      res.json({ success: true });
+    } catch (err) {
+      console.error('[admin/users/:id/delivery-addresses/:addrId DELETE]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // PATCH /admin/api/users/:id/delivery-addresses/:addrId/set-default
+  router.patch('/api/users/:id/delivery-addresses/:addrId/set-default', requireAdmin, async (req, res) => {
+    const userId = Number(req.params.id);
+    const addrId = Number(req.params.addrId);
+    try {
+      const result = await setDefaultAddress(userId, addrId);
+      if (!result) { res.status(404).json({ error: 'Not found' }); return; }
+      await writeAudit(req, 'user.delivery_address.set_default', 'user', userId, { addrId });
+      res.json({ success: true });
+    } catch (err) {
+      console.error('[admin/users/:id/delivery-addresses/:addrId/set-default PATCH]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
   // ─── 경매·라이브 ─────────────────────────────────────────────────────────────
 
   // GET /admin/api/auctions/:id
@@ -1225,6 +1328,245 @@ export default function createAdminRouter(io: Server) {
     }
   });
 
+  // ─── 채팅방 관리 ────────────────────────────────────────────────────────────────
+
+  // GET /admin/api/chat-rooms?q=&type=dm|group&page=
+  router.get('/api/chat-rooms', requireAdmin, async (req, res) => {
+    const { page = '1', q, type } = req.query as any;
+    const pageNum = Math.max(1, parseInt(page));
+    const offset = (pageNum - 1) * 20;
+    let where = 'WHERE 1=1';
+    const params: any[] = [];
+    if (type === 'dm') { where += ' AND r.is_dm=1'; }
+    else if (type === 'group') { where += ' AND r.is_dm=0'; }
+    if (q) {
+      where += ` AND (r.name LIKE ? OR EXISTS (
+        SELECT 1 FROM chat_room_members cm2 JOIN users u2 ON u2.id = cm2.user_id
+        WHERE cm2.room_id = r.id AND (u2.nickname LIKE ? OR u2.username LIKE ?)
+      ))`;
+      params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+    }
+    try {
+      const [[{ total }]] = await pool.query<any>(
+        `SELECT COUNT(*) AS total FROM chat_rooms r ${where}`,
+        params,
+      ) as any;
+      const [rooms] = await pool.query<any>(
+        `SELECT r.id, r.is_dm, r.name, r.created_at,
+                (SELECT COUNT(*) FROM chat_room_members cm WHERE cm.room_id = r.id) AS member_count,
+                (SELECT COUNT(*) FROM chat_messages cmsg WHERE cmsg.room_id = r.id) AS message_count,
+                (SELECT cmsg.message FROM chat_messages cmsg WHERE cmsg.room_id = r.id ORDER BY cmsg.id DESC LIMIT 1) AS last_message,
+                (SELECT cmsg.created_at FROM chat_messages cmsg WHERE cmsg.room_id = r.id ORDER BY cmsg.id DESC LIMIT 1) AS last_message_at
+         FROM chat_rooms r
+         ${where}
+         ORDER BY COALESCE(
+           (SELECT cmsg.created_at FROM chat_messages cmsg WHERE cmsg.room_id = r.id ORDER BY cmsg.id DESC LIMIT 1),
+           r.created_at
+         ) DESC
+         LIMIT 20 OFFSET ?`,
+        [...params, offset],
+      ) as any;
+
+      const roomIds = rooms.map((r: any) => r.id);
+      let membersByRoom = new Map<number, { id: number; nickname: string }[]>();
+      if (roomIds.length) {
+        const [memberRows] = await pool.query<any>(
+          `SELECT cm.room_id, u.id, u.nickname,
+                  ROW_NUMBER() OVER (PARTITION BY cm.room_id ORDER BY cm.joined_at ASC) AS rn
+           FROM chat_room_members cm
+           JOIN users u ON u.id = cm.user_id
+           WHERE cm.room_id IN (?)`,
+          [roomIds],
+        ) as any;
+        for (const row of memberRows) {
+          if (row.rn > 5) continue;
+          const list = membersByRoom.get(row.room_id) ?? [];
+          list.push({ id: row.id, nickname: row.nickname });
+          membersByRoom.set(row.room_id, list);
+        }
+      }
+
+      res.json({
+        rooms: rooms.map((r: any) => ({
+          id: r.id,
+          isDm: Boolean(r.is_dm),
+          name: r.name,
+          memberCount: Number(r.member_count),
+          members: membersByRoom.get(r.id) ?? [],
+          messageCount: Number(r.message_count),
+          lastMessage: r.last_message ?? null,
+          lastMessageAt: r.last_message_at ?? null,
+          createdAt: r.created_at,
+        })),
+        total,
+        page: pageNum,
+        pageSize: 20,
+      });
+    } catch (err) {
+      console.error('[admin/chat-rooms]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // GET /admin/api/chat-rooms/:id
+  router.get('/api/chat-rooms/:id', requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+      const [[room]] = await pool.query<any>(
+        'SELECT id, is_dm, name, description, created_by, created_at FROM chat_rooms WHERE id=? LIMIT 1',
+        [id],
+      ) as any;
+      if (!room) { res.status(404).json({ error: 'Not found' }); return; }
+      const [members] = await pool.query<any>(
+        `SELECT cm.user_id, u.nickname, u.username, cm.joined_at
+         FROM chat_room_members cm JOIN users u ON u.id = cm.user_id
+         WHERE cm.room_id = ? ORDER BY cm.joined_at ASC`,
+        [id],
+      ) as any;
+      res.json({
+        room: {
+          id: room.id,
+          isDm: Boolean(room.is_dm),
+          name: room.name,
+          description: room.description,
+          createdBy: room.created_by,
+          createdAt: room.created_at,
+        },
+        members: members.map((m: any) => ({
+          userId: m.user_id,
+          nickname: m.nickname,
+          username: m.username,
+          joinedAt: m.joined_at,
+        })),
+      });
+    } catch (err) {
+      console.error('[admin/chat-rooms/:id]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // GET /admin/api/chat-rooms/:id/messages?before=&limit=
+  router.get('/api/chat-rooms/:id/messages', requireAdmin, async (req, res) => {
+    const roomId = Number(req.params.id);
+    const limit = Math.min(Number(req.query.limit) || 50, 100);
+    const before = req.query.before ? Number(req.query.before) : null;
+    try {
+      const params: any[] = [roomId];
+      let beforeClause = '';
+      if (before) {
+        beforeClause = 'AND cm.id < ?';
+        params.push(before);
+      }
+      params.push(limit + 1);
+
+      const [rows] = await pool.query<any>(
+        `SELECT cm.id, cm.user_id, u.nickname, cm.message, cm.created_at
+         FROM chat_messages cm
+         JOIN users u ON u.id = cm.user_id
+         WHERE cm.room_id = ? ${beforeClause}
+         ORDER BY cm.id DESC
+         LIMIT ?`,
+        params,
+      ) as any;
+
+      const hasMore = rows.length > limit;
+      const page = rows.slice(0, limit).reverse();
+
+      res.json({
+        messages: page.map((r: any) => ({
+          id: r.id,
+          userId: r.user_id,
+          nickname: r.nickname,
+          message: r.message,
+          createdAt: r.created_at,
+        })),
+        hasMore,
+      });
+    } catch (err) {
+      console.error('[admin/chat-rooms/:id/messages]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // DELETE /admin/api/chat-rooms/:id/messages/:msgId
+  router.delete('/api/chat-rooms/:id/messages/:msgId', requireAdmin, async (req, res) => {
+    const roomId = Number(req.params.id);
+    const msgId = Number(req.params.msgId);
+    try {
+      const [[message]] = await pool.query<any>(
+        'SELECT id, user_id, message FROM chat_messages WHERE id=? AND room_id=? LIMIT 1',
+        [msgId, roomId],
+      ) as any;
+      if (!message) { res.status(404).json({ error: 'Not found' }); return; }
+      await pool.query('DELETE FROM chat_messages WHERE id=?', [msgId]);
+      io.to(`cr_${roomId}`).emit('cr:message_deleted', { roomId, messageId: msgId });
+      await writeAudit(req, 'chat.message.delete', 'chat_room', roomId, {
+        messageId: msgId,
+        userId: message.user_id,
+        message: message.message,
+      });
+      res.json({ success: true });
+    } catch (err) {
+      console.error('[admin/chat-rooms/:id/messages/:msgId DELETE]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // DELETE /admin/api/chat-rooms/:id/members/:userId
+  router.delete('/api/chat-rooms/:id/members/:userId', requireAdmin, async (req, res) => {
+    const roomId = Number(req.params.id);
+    const memberUserId = Number(req.params.userId);
+    try {
+      const [result] = await pool.query<any>(
+        'DELETE FROM chat_room_members WHERE room_id=? AND user_id=?',
+        [roomId, memberUserId],
+      ) as any;
+      if (result.affectedRows === 0) { res.status(404).json({ error: 'Not found' }); return; }
+      io.in(`user:${memberUserId}`).socketsLeave(`cr_${roomId}`);
+      io.to(`user:${memberUserId}`).emit('cr:kicked', { roomId });
+      await writeAudit(req, 'chat.member.kick', 'chat_room', roomId, { userId: memberUserId });
+      res.json({ success: true });
+    } catch (err) {
+      console.error('[admin/chat-rooms/:id/members/:userId DELETE]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
+  // DELETE /admin/api/chat-rooms/:id
+  router.delete('/api/chat-rooms/:id', requireAdmin, async (req, res) => {
+    const roomId = Number(req.params.id);
+    try {
+      const [[room]] = await pool.query<any>(
+        'SELECT id, name, is_dm FROM chat_rooms WHERE id=? LIMIT 1',
+        [roomId],
+      ) as any;
+      if (!room) { res.status(404).json({ error: 'Not found' }); return; }
+      const [memberRows] = await pool.query<any>(
+        'SELECT user_id FROM chat_room_members WHERE room_id=?',
+        [roomId],
+      ) as any;
+      const memberIds = memberRows.map((m: any) => m.user_id);
+
+      await pool.query('DELETE FROM chat_rooms WHERE id=?', [roomId]);
+
+      io.to(`cr_${roomId}`).emit('cr:room_deleted', { roomId });
+      for (const memberId of memberIds) {
+        io.to(`user:${memberId}`).emit('cr:room_deleted', { roomId });
+      }
+      io.in(`cr_${roomId}`).socketsLeave(`cr_${roomId}`);
+
+      await writeAudit(req, 'chat.room.delete', 'chat_room', roomId, {
+        name: room.name,
+        isDm: Boolean(room.is_dm),
+        memberIds,
+      });
+      res.json({ success: true });
+    } catch (err) {
+      console.error('[admin/chat-rooms/:id DELETE]', err);
+      res.status(500).json({ error: 'server error' });
+    }
+  });
+
   // ─── 공지/알림 발송 ───────────────────────────────────────────────────────────
 
   // POST /admin/api/notifications/broadcast
@@ -1275,6 +1617,7 @@ export default function createAdminRouter(io: Server) {
   router.get('/wallet', (_req, res) => res.sendFile(path.join(adminPublicPath, 'wallet.html')));
   router.get('/payment-auth', (_req, res) => res.sendFile(path.join(adminPublicPath, 'payment-auth.html')));
   router.get('/rest-auctions', (_req, res) => res.sendFile(path.join(adminPublicPath, 'rest-auctions.html')));
+  router.get('/chat-rooms', (_req, res) => res.sendFile(path.join(adminPublicPath, 'chat-rooms.html')));
 
   // 정적 파일 서빙
   router.get('/', (_req, res) => res.sendFile(path.join(adminPublicPath, 'index.html')));

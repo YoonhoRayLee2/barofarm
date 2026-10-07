@@ -31,9 +31,24 @@ export default function registerChatSocket(io: Server): void {
       if (authedUserId) socket.join(`user:${authedUserId}`);
     });
 
-    // cr:join { roomId, userId, userName }
-    socket.on('cr:join', async ({ roomId, userId }: { roomId: number; userId: number; userName: string }) => {
+    // cr:join { roomId, userId, userName } — userId는 payload 호환을 위해 받지만 신뢰하지 않는다.
+    // 인증은 socket.data.userId(handshake JWT)만 사용하고, 해당 유저가 room의 멤버인지 확인한다.
+    socket.on('cr:join', async ({ roomId }: { roomId: number; userId: number; userName: string }) => {
+      const authedUserId = socket.data.userId;
+      if (!authedUserId) {
+        socket.emit('cr:error', { message: '로그인이 필요합니다' });
+        return;
+      }
       try {
+        const [memberRows] = await pool.query<any[]>(
+          'SELECT 1 FROM chat_room_members WHERE room_id = ? AND user_id = ?',
+          [roomId, authedUserId],
+        );
+        if (!memberRows.length) {
+          socket.emit('cr:error', { message: '로그인이 필요합니다' });
+          return;
+        }
+
         socket.join(`cr_${roomId}`);
         const memberCount = io.sockets.adapter.rooms.get(`cr_${roomId}`)?.size ?? 0;
         const [[{ total: memberTotal }]] = await pool.query<any[]>(
@@ -43,14 +58,14 @@ export default function registerChatSocket(io: Server): void {
         io.to(`cr_${roomId}`).emit('cr:member_count', { roomId, memberCount, memberTotal });
 
         // 캐시 미스 시에만 DB 조회
-        if (!userCache.has(userId)) {
+        if (!userCache.has(authedUserId)) {
           const [rows] = await pool.query<any[]>(
             'SELECT nickname, avatar_url FROM users WHERE id = ?',
-            [userId],
+            [authedUserId],
           );
           const row = rows[0];
           if (row) {
-            setCachedUser(userId, { nickname: row.nickname, avatarUrl: row.avatar_url });
+            setCachedUser(authedUserId, { nickname: row.nickname, avatarUrl: row.avatar_url });
           }
         }
       } catch (err) {
@@ -58,9 +73,25 @@ export default function registerChatSocket(io: Server): void {
       }
     });
 
-    // cr:send { roomId, userId, message }
-    socket.on('cr:send', async ({ roomId, userId, message }: { roomId: number; userId: number; message: string }) => {
+    // cr:send { roomId, userId, message } — userId는 payload 호환을 위해 받지만 신뢰하지 않는다.
+    // 인증은 socket.data.userId(handshake JWT)만 사용하고, 해당 유저가 room의 멤버인지 확인한다.
+    socket.on('cr:send', async ({ roomId, message }: { roomId: number; userId: number; message: string }) => {
+      const authedUserId = socket.data.userId;
+      if (!authedUserId) {
+        socket.emit('cr:error', { message: '로그인이 필요합니다' });
+        return;
+      }
+      const userId = authedUserId;
       try {
+        const [memberRows] = await pool.query<any[]>(
+          'SELECT 1 FROM chat_room_members WHERE room_id = ? AND user_id = ?',
+          [roomId, userId],
+        );
+        if (!memberRows.length) {
+          socket.emit('cr:error', { message: '로그인이 필요합니다' });
+          return;
+        }
+
         const createdAt = new Date();
 
         const [result] = await pool.query<any>(

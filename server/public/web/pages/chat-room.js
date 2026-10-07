@@ -290,6 +290,7 @@ export default async function load(params) {
           if (row) {
             row.removeAttribute('data-pending-id');
             row.classList.remove('cr-msg--pending');
+            if (msg.id != null) row.dataset.msgId = msg.id;
             // 시간 span이 없으면 추가(연속 전송으로 직전에 제거된 경우는 서버 확정 후에도 없어도 무방)
           }
           scrollToBottom();
@@ -327,6 +328,30 @@ export default async function load(params) {
         if (row) row.remove();
       }
     });
+
+    socket.on('cr:message_deleted', ({ roomId: rid, messageId } = {}) => {
+      if (rid !== roomId || messageId == null) return;
+      const idx = messages.findIndex(m => m.id === messageId);
+      if (idx !== -1) messages.splice(idx, 1);
+      const row = messagesEl.querySelector(`[data-msg-id="${messageId}"]`);
+      if (row) row.remove();
+    });
+
+    // cr:room_deleted는 방 룸과 개인 룸 양쪽으로 와서 중복 수신될 수 있다 — 한 번만 처리.
+    let _forcedOut = false;
+    socket.on('cr:kicked', ({ roomId: rid } = {}) => {
+      if (rid !== roomId || _forcedOut) return;
+      _forcedOut = true;
+      showToast('채팅방에서 나가졌습니다', { variant: 'error' });
+      replace('/app/chat');
+    });
+
+    socket.on('cr:room_deleted', ({ roomId: rid } = {}) => {
+      if (rid !== roomId || _forcedOut) return;
+      _forcedOut = true;
+      showToast('삭제된 채팅방입니다', { variant: 'error' });
+      replace('/app/chat');
+    });
   }
 
   /* ---------------- Keyboard / visualViewport ---------------- */
@@ -357,6 +382,11 @@ export default async function load(params) {
     formEl.style.transform = '';
     if (socket) {
       try { socket.emit('cr:leave', { roomId }); } catch {}
+      try {
+        socket.off('cr:message_deleted');
+        socket.off('cr:kicked');
+        socket.off('cr:room_deleted');
+      } catch {}
       try { socket.disconnect(); } catch {}
     }
   });
@@ -453,6 +483,7 @@ export default async function load(params) {
 
     const row = document.createElement('div');
     row.className = 'cr-msg' + (isMe ? ' cr-msg--me' : ' cr-msg--other') + (grouped ? ' is-grouped' : '');
+    if (msg.id != null) row.dataset.msgId = msg.id;
 
     if (isMe) {
       row.innerHTML = `
