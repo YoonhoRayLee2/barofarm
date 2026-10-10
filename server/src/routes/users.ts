@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
+import sharp from 'sharp';
 import pool from '../db/mysql';
 import { lives, auctions } from '../store/memory';
 import {
@@ -28,9 +30,8 @@ fs.mkdirSync(AVATARS_DIR, { recursive: true });
 const uploadAvatar = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, AVATARS_DIR),
-    filename: (req, file, cb) => {
-      const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-      cb(null, `${(req as Request).params.id}${ext}`);
+    filename: (_req, _file, cb) => {
+      cb(null, `tmp_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`);
     },
   }),
   limits: { fileSize: 5 * 1024 * 1024 },
@@ -425,11 +426,13 @@ router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
 router.patch('/:id', requireAuth, uploadAvatar.single('avatar'), async (req: Request, res: Response) => {
   const userId = String(req.params.id);
   if (!userId) {
+    if (req.file) fs.unlink(req.file.path, () => {});
     res.status(400).json({ error: 'user id is required' });
     return;
   }
 
   if (req.user!.userId !== parseInt(userId, 10)) {
+    if (req.file) fs.unlink(req.file.path, () => {});
     res.status(403).json({ error: '권한이 없습니다' });
     return;
   }
@@ -445,9 +448,32 @@ router.patch('/:id', requireAuth, uploadAvatar.single('avatar'), async (req: Req
   try {
     // 1. 아바타
     if (req.file) {
-      const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
-      const avatarUrl = `/uploads/avatars/${userId}${ext}`;
+      const tmpPath = req.file.path;
+      const filename = `${userId}_${Date.now()}.webp`;
+      const finalPath = path.join(AVATARS_DIR, filename);
+
+      try {
+        await sharp(tmpPath).rotate().resize(256, 256, { fit: 'cover' }).webp({ quality: 85 }).toFile(finalPath);
+      } catch (err) {
+        fs.unlink(tmpPath, () => {});
+        res.status(400).json({ error: '이미지 파일을 처리할 수 없습니다.' });
+        return;
+      }
+      fs.unlink(tmpPath, () => {});
+
+      const [prevRows] = await pool.execute(
+        'SELECT avatar_url FROM users WHERE id = ?',
+        [userId],
+      ) as [unknown[], unknown];
+      const prevAvatarUrl = (prevRows as Array<{ avatar_url: string | null }>)[0]?.avatar_url ?? null;
+
+      const avatarUrl = `/uploads/avatars/${filename}`;
       await pool.execute('UPDATE users SET avatar_url = ? WHERE id = ?', [avatarUrl, userId]);
+
+      if (prevAvatarUrl && prevAvatarUrl.startsWith('/uploads/avatars/') && prevAvatarUrl !== avatarUrl) {
+        const prevPath = path.join(AVATARS_DIR, path.basename(prevAvatarUrl));
+        fs.unlink(prevPath, () => {});
+      }
     }
 
     // 2. 닉네임

@@ -35,7 +35,10 @@
   display: flex; align-items: center; justify-content: center;
   font-weight: var(--fw-extrabold); font-size: var(--fs-base); color: #fff;
   flex-shrink: 0;
+  overflow: hidden;
 }
+.ls-avatar.has-img { background: none; }
+.ls-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ls-host-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .ls-host-name {
   font-size: var(--fs-base); font-weight: var(--fw-bold); color: #fff;

@@ -19,6 +19,7 @@ import { createChatOverlay } from '/app/components/chat-overlay.js';
 import { showConfirmDialog } from '/app/components/confirm-dialog.js';
 import { showToast as _globalToast } from '/app/components/toast.js';
 import { personIconSVG } from '/app/scripts/person-icon.js';
+import { renderAvatar } from '/app/scripts/avatar.js';
 
 // Inject page CSS once
 const _cssId = 'page-css-live-seller';
@@ -413,13 +414,7 @@ export default async function load(params) {
   const _titleEl = page.querySelector('#ls-live-title');
   if (_titleEl) _titleEl.textContent = liveInfo?.title || '라이브 방송 중';
   const _avatarEl = page.querySelector('#ls-seller-avatar');
-  if (_avatarEl) {
-    if (user.avatarUrl) {
-      _avatarEl.innerHTML = `<img src="${escapeHtml(user.avatarUrl)}" alt="${escapeHtml(sellerDisplayName)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
-    } else {
-      _avatarEl.textContent = (sellerDisplayName[0] || '판').toUpperCase();
-    }
-  }
+  if (_avatarEl) renderAvatar(_avatarEl, { url: user.avatarUrl, name: sellerDisplayName });
 
   if (liveInfo?.status === 'upcoming') {
     hideOverlay();

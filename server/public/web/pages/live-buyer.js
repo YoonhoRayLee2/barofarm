@@ -19,6 +19,7 @@ import { createBlindBid } from '/app/components/blind-bid.js';
 import { createSlideBid } from '/app/components/slide-bid.js';
 import { showToast } from '/app/components/toast.js';
 import { personIconSVG } from '/app/scripts/person-icon.js';
+import { renderAvatar } from '/app/scripts/avatar.js';
 
 // ---- Swipe navigation state (module-level) ----
 let _liveList = [];
@@ -964,13 +965,7 @@ export default async function load(params) {
       const sellerUser = await api.getUser(sellerId);
       const displayName = sellerUser.nickname || sellerUser.displayName || sellerUser.username || live.sellerName || '판매자';
       if (nameEl) nameEl.textContent = displayName;
-      if (avatarEl) {
-        if (sellerUser.avatarUrl) {
-          avatarEl.innerHTML = `<img src="${escapeHtml(sellerUser.avatarUrl)}" alt="${escapeHtml(displayName)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
-        } else {
-          avatarEl.innerHTML = personIconSVG(36);
-        }
-      }
+      if (avatarEl) renderAvatar(avatarEl, { url: sellerUser.avatarUrl, name: displayName });
       if (_sellerId !== String(user.id)) {
         attachFollowButton(_sellerId);
       }
