@@ -3,7 +3,6 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import sharp from 'sharp';
 import pool from '../db/mysql';
 import { lives, auctions } from '../store/memory';
 import {
@@ -39,6 +38,23 @@ const uploadAvatar = multer({
     cb(null, /^image\//.test(file.mimetype));
   },
 });
+
+// sharp는 네이티브 바이너리라 배포 환경(OS·Node 버전)에 따라 로드에 실패할 수 있다.
+// 최상단 import로 두면 서버 전체가 기동 실패하므로 지연 로드하고, 실패 시 원본 저장으로 대체한다.
+let sharpLoader: Promise<any | null> | null = null;
+function loadSharp(): Promise<any | null> {
+  if (!sharpLoader) {
+    sharpLoader = import('sharp')
+      .then((m: any) => m.default ?? m)
+      .catch((err: Error) => {
+        console.error('[users] sharp 로드 실패 — 아바타를 원본으로 저장합니다:', err.message);
+        return null;
+      });
+  }
+  return sharpLoader;
+}
+
+const AVATAR_FALLBACK_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
 
 const router = Router();
 
@@ -449,17 +465,24 @@ router.patch('/:id', requireAuth, uploadAvatar.single('avatar'), async (req: Req
     // 1. 아바타
     if (req.file) {
       const tmpPath = req.file.path;
-      const filename = `${userId}_${Date.now()}.webp`;
-      const finalPath = path.join(AVATARS_DIR, filename);
+      const sharp = await loadSharp();
+      let filename: string;
 
-      try {
-        await sharp(tmpPath).rotate().resize(256, 256, { fit: 'cover' }).webp({ quality: 85 }).toFile(finalPath);
-      } catch (err) {
+      if (sharp) {
+        filename = `${userId}_${Date.now()}.webp`;
+        try {
+          await sharp(tmpPath).rotate().resize(256, 256, { fit: 'cover' }).webp({ quality: 85 }).toFile(path.join(AVATARS_DIR, filename));
+        } catch (err) {
+          fs.unlink(tmpPath, () => {});
+          res.status(400).json({ error: '이미지 파일을 처리할 수 없습니다.' });
+          return;
+        }
         fs.unlink(tmpPath, () => {});
-        res.status(400).json({ error: '이미지 파일을 처리할 수 없습니다.' });
-        return;
+      } else {
+        const origExt = path.extname(req.file.originalname).toLowerCase();
+        filename = `${userId}_${Date.now()}${AVATAR_FALLBACK_EXTS.has(origExt) ? origExt : '.jpg'}`;
+        fs.renameSync(tmpPath, path.join(AVATARS_DIR, filename));
       }
-      fs.unlink(tmpPath, () => {});
 
       const [prevRows] = await pool.execute(
         'SELECT avatar_url FROM users WHERE id = ?',
